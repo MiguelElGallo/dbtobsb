@@ -69,12 +69,16 @@ uv run --project capture --no-sync dbtobsb-capture inspect-artifact-pair \
 
 The exact output is:
 
+<!-- BEGIN: invalid-invocation-output -->
+
 ```text
 PAIR_INVALID
 code: DBT_INVOCATION_ID_MISMATCH
-impact: The files cannot be trusted as one dbt invocation.
-next_action: Collect both artifacts from the same build target directory.
+impact: The files do not have the same dbt invocation identity.
+next_action: Collect both closed artifacts from one completed pinned dbt build invocation before another dbt command runs.
 ```
+
+<!-- END: invalid-invocation-output -->
 
 Exit `10` means inspection completed and found invalid evidence. Follow the printed `next_action`; do not edit an artifact to make it pass.
 

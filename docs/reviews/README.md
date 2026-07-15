@@ -9,8 +9,11 @@ This directory preserves immutable findings and re-review verdicts for each inde
 | Databricks platform/security | [databricks-rereview-3.md](p1.1-artifact-pair-inspector/databricks-rereview-3.md) | `PASS_WITH_FOLLOW_UP` |
 | dbt Core/artifact contract | [dbt-core-rereview-3.md](p1.1-artifact-pair-inspector/dbt-core-rereview-3.md) | `PASS_WITH_FOLLOW_UP` |
 | Usability/onboarding | [usability-rereview-3.md](p1.1-artifact-pair-inspector/usability-rereview-3.md) | `PASS_WITH_FOLLOW_UP` |
+| Diátaxis information architecture | [documentation-ia-rereview-2.md](p1.1-artifact-pair-inspector/documentation-ia-rereview-2.md) | `PASS_WITH_FOLLOW_UP` |
+| Security/compliance documentation | [documentation-security-rereview-2.md](p1.1-artifact-pair-inspector/documentation-security-rereview-2.md) | `PASS` |
+| FastAPI-style writing | [documentation-style-rereview-2.md](p1.1-artifact-pair-inspector/documentation-style-rereview-2.md) | `PASS` |
 
-The initial reviews and the first two re-review cycles remain in the same directory as immutable `CHANGES_REQUIRED` evidence. Current follow-ups belong to later Databricks runtime, archive, full-lock, distributed-help, and rendered-site gates; they do not permit P1.1 to claim a complete capture or qualified production runtime.
+The initial reviews and failed re-review cycles remain in the same directory as immutable `CHANGES_REQUIRED` evidence. The latest source-level architecture, security, and writing reports are accepted. Current follow-ups belong to later Databricks runtime, archive, full-lock, distributed-help, rendered-site, and publication gates; they do not permit P1.1 to claim a complete capture or qualified production runtime.
 
 ## P0 planning and documentation
 

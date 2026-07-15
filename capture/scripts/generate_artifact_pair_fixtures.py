@@ -240,8 +240,11 @@ def _mismatch_report() -> dict[str, Any]:
         "component": "artifact_pair",
         "field": "metadata.invocation_id",
         "observed_category": "different_valid_values",
-        "impact": "The files cannot be trusted as one dbt invocation.",
-        "next_action": "Collect both artifacts from the same build target directory.",
+        "impact": "The files do not have the same dbt invocation identity.",
+        "next_action": (
+            "Collect both closed artifacts from one completed pinned dbt build invocation "
+            "before another dbt command runs."
+        ),
     }
     return {
         "schema_version": "dbtobsb.artifact-pair-report.v1",

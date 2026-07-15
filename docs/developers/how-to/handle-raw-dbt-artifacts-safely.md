@@ -10,7 +10,7 @@ You need:
 - a policy-approved local execution host and storage location;
 - least-privilege access for the people performing the inspection;
 - the applicable classification, retention, deletion, backup, and legal-hold decision; and
-- an installed P1.1 runtime from the customer-approved registry, mirror, or cache.
+- the repository root and a P1.1 runtime created by the tutorial's locked `uv sync --project capture --locked --no-dev` command from the customer-approved registry, mirror, or cache.
 
 Raw artifacts can contain Personal Data, credentials or other secrets, SQL, messages, paths, database and relation topology, project/resource/invocation identities, and operational metadata. P1.1 has no evidence-upload endpoint.
 
@@ -24,13 +24,17 @@ If the approved boundary or accountable owner is unclear, stop before reading th
 
 Run the inspector on two existing, closed, non-symlink regular files no larger than 128 MiB each:
 
+<!-- BEGIN: raw-handling-command -->
+
 ```bash
-dbtobsb-capture inspect-artifact-pair \
+uv run --project capture --no-sync dbtobsb-capture inspect-artifact-pair \
   --manifest /approved/path/manifest.json \
   --run-results /approved/path/run_results.json \
   --json \
   --no-color
 ```
+
+<!-- END: raw-handling-command -->
 
 The CLI reads caller-owned inputs and creates no durable raw-artifact copy or external transfer. It does not delete, encrypt, relocate, govern, or make the caller's files compliant. The JSON report contains only allowlisted pair facts or static issue text; keep the raw inputs governed independently.
 

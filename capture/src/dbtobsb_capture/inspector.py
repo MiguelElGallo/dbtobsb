@@ -154,14 +154,16 @@ _ISSUES: dict[str, _IssueTemplate] = {
         "metadata.invocation_id",
         "missing_or_invalid_uuid",
         "The files cannot be bound to one parseable dbt invocation.",
-        "Collect both artifacts from one completed pinned dbt build target directory.",
+        "Collect both closed artifacts from one completed pinned dbt build invocation "
+        "before another dbt command runs.",
     ),
     "DBT_INVOCATION_ID_MISMATCH": _IssueTemplate(
         "artifact_pair",
         "metadata.invocation_id",
         "different_valid_values",
-        "The files cannot be trusted as one dbt invocation.",
-        "Collect both artifacts from the same build target directory.",
+        "The files do not have the same dbt invocation identity.",
+        "Collect both closed artifacts from one completed pinned dbt build invocation "
+        "before another dbt command runs.",
     ),
     "DBT_ADAPTER_TYPE_UNSUPPORTED": _IssueTemplate(
         "manifest",

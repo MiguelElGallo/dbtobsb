@@ -24,7 +24,7 @@ Read the first `code` and its `next_action`. Issue order is deterministic, and t
 | `*_INPUT_READ_ERROR` exit path | Correct local input | Supply two existing, closed, regular files no larger than 128 MiB each; do not use symlinks, devices, or pipes. |
 | `*_JSON_*` | Recollect | Recollect the unmodified UTF-8 JSON file from the pinned build target directory. |
 | `*_SCHEMA_*`, `DBT_SCHEMA_VERSION_UNSUPPORTED`, or `DBT_CORE_VERSION_UNSUPPORTED` | Compatibility or recollect | Use the exact supported artifact schemas and Core version, or qualify a new compatibility row separately. |
-| `DBT_INVOCATION_ID_*` | Recollect pair | Recollect both files from the same completed build target directory. |
+| `DBT_INVOCATION_ID_*` | Recollect pair | Collect both closed files from one completed pinned `dbt build` invocation before another dbt command can overwrite its target artifacts. |
 | `DBT_ADAPTER_TYPE_UNSUPPORTED` or `DBT_COMMAND_UNSUPPORTED` | Unsupported compatibility | Use the pinned dbt-databricks `build` path; do not relabel another command. |
 | `DBT_EMPTY_EXECUTION` | Correct and rerun | Fix the selector or executable-node set, then run the approved build again. |
 | `DBT_RESULT*` or `DBT_MANIFEST_RESOURCE*` | Recollect pair | Recollect the pair; do not select, remove, or reinterpret a resource manually. |
@@ -36,11 +36,13 @@ For size, JSON, schema, or version issues, recollect the affected complete file 
 
 ### Recover pair metadata
 
-For invocation identity, adapter, or command issues, collect both files from one completed pinned Databricks `build`. Do not combine directories or relabel another adapter or command.
+For invocation identity, adapter, or command issues, give one approved pinned `dbt build` an empty attempt-specific target path. After that invocation closes both artifacts, collect them before any later dbt command can reuse or overwrite the target. The inspector then requires equal parseable `metadata.invocation_id` values. Co-location is not the pairing key; do not combine invocations or relabel another adapter or command.
 
 ### Recover result evidence
 
 For empty, duplicate, unresolved, ambiguous, mismatched, unsupported-resource, or unsupported-status results, fix an empty selector only when directed and run a new approved build; otherwise recollect the pair. Never delete, choose, or reinterpret a result inside an existing artifact.
+
+Use the exact [BuildTask result compatibility matrix](../reference/python-api.md#buildtask-result-compatibility) to distinguish supported results from evidence that needs a separately qualified contract.
 
 ### Recover numeric evidence
 

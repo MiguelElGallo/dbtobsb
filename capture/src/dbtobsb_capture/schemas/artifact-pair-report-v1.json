@@ -259,7 +259,7 @@
             "const": "The files cannot be bound to one parseable dbt invocation."
           },
           "next_action": {
-            "const": "Collect both artifacts from one completed pinned dbt build target directory."
+            "const": "Collect both closed artifacts from one completed pinned dbt build invocation before another dbt command runs."
           },
           "observed_category": {
             "const": "missing_or_invalid_uuid"
@@ -288,10 +288,10 @@
             "const": "metadata.invocation_id"
           },
           "impact": {
-            "const": "The files cannot be trusted as one dbt invocation."
+            "const": "The files do not have the same dbt invocation identity."
           },
           "next_action": {
-            "const": "Collect both artifacts from the same build target directory."
+            "const": "Collect both closed artifacts from one completed pinned dbt build invocation before another dbt command runs."
           },
           "observed_category": {
             "const": "different_valid_values"

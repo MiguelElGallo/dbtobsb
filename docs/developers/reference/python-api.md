@@ -75,14 +75,41 @@ The example reads files before calling the API. The API itself never opens a cal
 | Type | Public fields and invariant |
 | --- | --- |
 | `PairState` | `PAIR_VALID` or `PAIR_INVALID`. |
-| `ArtifactPairReport` | Frozen and slotted. `state: PairState`; `summary: ArtifactPairSummary | None`; `issues: tuple[ArtifactPairIssue, ...]`; `primary_issue: ArtifactPairIssue | None`; `to_dict()`. Valid means one summary and zero issues; invalid means no summary and 1–20 unique canonical issues. |
+| `ArtifactPairReport` | Frozen and slotted. `state: PairState`; `summary: ArtifactPairSummary &#124; None`; `issues: tuple[ArtifactPairIssue, ...]`; `primary_issue: ArtifactPairIssue &#124; None`; `to_dict()`. Valid means one summary and zero issues; invalid means no summary and 1–20 unique canonical issues. |
 | `ArtifactPairSummary` | Frozen and slotted. `manifest_schema: str`; `run_results_schema: str`; `dbt_version: str`; `adapter_type: str`; `command: str`; `status_counts: tuple[NativeStatusCount, ...]`; computed positive `result_count: int`. |
 | `NativeStatusCount` | `status: str` from the closed vocabulary below; `count: int` greater than zero. Status entries are unique and canonically ordered. |
 | `ArtifactPairIssue` | Static `code: str`; `component: str`; `field: str`; `observed_category: str`; `impact: str`; and `next_action: str`; never an observed value. |
 
 <!-- END: python-public-types -->
 
-The closed native-status vocabulary is `error`, `fail`, `no-op`, `partial success`, `pass`, `skipped`, `success`, and `warn`. A result's resource type determines which run or test statuses are valid.
+The closed native-status vocabulary is `error`, `fail`, `no-op`, `partial success`, `pass`, `skipped`, `success`, and `warn`. The matrix below determines which family applies to a resolved result.
+
+## BuildTask result compatibility
+
+<!-- BEGIN: buildtask-compatibility -->
+
+| Manifest collection | Accepted resource type | Accepted native status family |
+| --- | --- | --- |
+| `nodes` | `model`, `seed`, `snapshot` | Run: `error`, `no-op`, `partial success`, `skipped`, `success` |
+| `nodes` | `test` | Test: `error`, `fail`, `pass`, `skipped`, `warn` |
+| `unit_tests` | `unit_test` | Test: `error`, `fail`, `pass`, `skipped`, `warn` |
+| `saved_queries` | `saved_query` | Run: `error`, `no-op`, `partial success`, `skipped`, `success` |
+| `exposures` | `exposure` | Run: `error`, `no-op`, `partial success`, `skipped`, `success` |
+| `functions` | `function` | Run: `error`, `no-op`, `partial success`, `skipped`, `success` |
+
+<!-- END: buildtask-compatibility -->
+
+<!-- BEGIN: buildtask-unsupported -->
+
+Results that resolve only through `sources`, `macros`, `metrics`, or `semantic_models` are unsupported. Freshness-only `runtime error` is not an accepted `build` result status. A result that collides across supported collections, or across supported and unsupported collections, is ambiguous; P1.1 never chooses a resource manually.
+
+<!-- END: buildtask-unsupported -->
+
+<!-- BEGIN: status-counts-semantics -->
+
+`summary.status_counts` counts every accepted entry in this pair's `run_results.results`, grouped by its preserved native status. It does not count the manifest's complete enabled-project inventory. It is not an overall dbt success label, an outer Databricks or Lakeflow task state, or a future capture-completeness state.
+
+<!-- END: status-counts-semantics -->
 
 `ArtifactPairReport.to_dict()` returns the versioned JSON shape `dbtobsb.artifact-pair-report.v1`. It omits redundant `primary_issue` and `result_count` fields: `issues[0]` is primary under the shared v1 precedence registry, and the result total is the sum of the integer values in the closed `summary.status_counts` object. The JSON Schema conditionally rejects a first issue when an earlier-precedence issue is also present. This makes inconsistent duplicates impossible in the machine contract. The report never retains raw input bytes. Its ordinary representation and dictionary exclude SQL, result messages, adapter responses, variables, environment values, relation names, paths, resource IDs, project names, and invocation IDs.
 

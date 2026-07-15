@@ -8,6 +8,7 @@ The repository contains a reviewed product contract, an intentionally small P0 D
 - [Review process](plans/review-process.md)
 - [Documentation plan](plans/documentation-plan.md)
 - [Decision 0001: private Databricks App plus Bundle](decisions/0001-private-app-bundle.md)
+- [Decision 0002: correct P1.1 invocation recovery before first release](decisions/0002-correct-p1.1-invocation-recovery-text.md)
 - [Research source register](research/source-register.md)
 - [Review records](reviews/README.md)
 - [Sanitized P0 live-smoke evidence](evidence/p0-live-smoke-2026-07-15.md)

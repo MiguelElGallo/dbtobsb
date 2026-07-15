@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 import re
+import shlex
 import subprocess
 import sys
 import types
@@ -21,11 +22,18 @@ from dbtobsb_capture import (
     inspect_artifact_pair,
 )
 from dbtobsb_capture import inspector as inspector_module
-from dbtobsb_capture.registry import ISSUE_PRECEDENCE, MAX_REPORT_ISSUES, NATIVE_STATUSES
+from dbtobsb_capture.registry import (
+    ISSUE_PRECEDENCE,
+    MAX_REPORT_ISSUES,
+    NATIVE_STATUSES,
+    RUN_STATUSES,
+    TEST_STATUSES,
+)
 
 REPOSITORY_ROOT = Path(__file__).parents[2]
 PYTHON_REFERENCE = REPOSITORY_ROOT / "docs/developers/reference/python-api.md"
 CLI_REFERENCE = REPOSITORY_ROOT / "docs/developers/reference/cli-report-and-exit-codes.md"
+TUTORIAL = REPOSITORY_ROOT / "docs/developers/tutorials/inspect-an-artifact-pair.md"
 DIAGNOSIS_HOW_TO = REPOSITORY_ROOT / "docs/developers/how-to/diagnose-an-invalid-artifact-pair.md"
 RAW_HANDLING_HOW_TO = REPOSITORY_ROOT / "docs/developers/how-to/handle-raw-dbt-artifacts-safely.md"
 RAW_CUSTODY_EXPLANATION = REPOSITORY_ROOT / "docs/developers/explanation/raw-artifact-custody.md"
@@ -147,7 +155,12 @@ def test_displayed_python_example_and_output_match_execution() -> None:
 
 def test_python_reference_binds_closed_public_contract() -> None:
     contract = _marked_section(PYTHON_REFERENCE, "python-public-contract")
-    public_types = _marked_section(PYTHON_REFERENCE, "python-public-types")
+    public_types_source = _marked_section(PYTHON_REFERENCE, "python-public-types")
+    public_types = public_types_source.replace("&#124;", "|")
+
+    table_rows = [line for line in public_types_source.splitlines() if line.startswith("|")]
+    assert table_rows
+    assert all(len(line.strip("|").split("|")) == 2 for line in table_rows)
 
     artifact_limit = inspector_module.MAX_PRIMARY_ARTIFACT_BYTES
     limit_text = f"{artifact_limit:,} bytes ({artifact_limit // (1024 * 1024)} MiB)"
@@ -180,6 +193,57 @@ def test_python_reference_binds_closed_public_contract() -> None:
         type_hints = get_type_hints(public_type)
         for field in fields(public_type):
             assert f"`{field.name}: {_display_type(type_hints[field.name])}`" in public_types
+
+
+def test_buildtask_matrix_and_status_counts_match_implementation() -> None:
+    matrix = _marked_section(PYTHON_REFERENCE, "buildtask-compatibility")
+    actual_rows = tuple(
+        tuple(column.strip() for column in line.strip("|").split("|"))
+        for line in matrix.splitlines()
+        if line.startswith("| `")
+    )
+
+    run_statuses = ", ".join(f"`{status}`" for status in RUN_STATUSES)
+    test_statuses = ", ".join(f"`{status}`" for status in TEST_STATUSES)
+    expected_rows: list[tuple[str, str, str]] = []
+    for collection, resource_types in inspector_module._SUPPORTED_RESULT_COLLECTIONS.items():
+        run_types = sorted(resource_types - {"test", "unit_test"})
+        test_types = sorted(resource_types & {"test", "unit_test"})
+        if run_types:
+            expected_rows.append(
+                (
+                    f"`{collection}`",
+                    ", ".join(f"`{resource_type}`" for resource_type in run_types),
+                    f"Run: {run_statuses}",
+                )
+            )
+        if test_types:
+            expected_rows.append(
+                (
+                    f"`{collection}`",
+                    ", ".join(f"`{resource_type}`" for resource_type in test_types),
+                    f"Test: {test_statuses}",
+                )
+            )
+    assert actual_rows == tuple(expected_rows)
+
+    unsupported = _marked_section(PYTHON_REFERENCE, "buildtask-unsupported")
+    first_sentence = unsupported.split(".", 1)[0]
+    assert tuple(re.findall(r"`([^`]+)`", first_sentence)) == (
+        inspector_module._UNSUPPORTED_RESULT_COLLECTIONS
+    )
+    assert "Freshness-only `runtime error` is not an accepted `build` result status" in unsupported
+    assert "across supported and unsupported collections, is ambiguous" in unsupported
+
+    count_semantics = _marked_section(PYTHON_REFERENCE, "status-counts-semantics")
+    for boundary in (
+        "every accepted entry in this pair's `run_results.results`",
+        "does not count the manifest's complete enabled-project inventory",
+        "not an overall dbt success label",
+        "an outer Databricks or Lakeflow task state",
+        "a future capture-completeness state",
+    ):
+        assert boundary in count_semantics
 
 
 def test_issue_registry_binds_precedence_classification_and_recovery() -> None:
@@ -240,3 +304,47 @@ def test_real_artifact_routes_preserve_sensitive_input_boundary() -> None:
         "workstation-side candidate is not proof",
     ):
         assert required_boundary.casefold() in explanation
+
+
+def test_recovery_and_raw_handling_commands_match_runtime() -> None:
+    invalid_output = _fenced_content(TUTORIAL, "invalid-invocation-output", "text")
+    fixture = REPOSITORY_ROOT / "capture/tests/fixtures/artifact_pair"
+    invalid = fixture / "invalid_invocation_mismatch"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "dbtobsb_capture.cli",
+            "inspect-artifact-pair",
+            "--manifest",
+            invalid / "manifest.json",
+            "--run-results",
+            invalid / "run_results.json",
+            "--no-color",
+        ],
+        cwd=REPOSITORY_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 10
+    assert completed.stderr == ""
+    assert completed.stdout == invalid_output
+
+    command = _fenced_content(RAW_HANDLING_HOW_TO, "raw-handling-command", "bash")
+    arguments = shlex.split(command.replace("\\\n", " "))
+    success = fixture / "valid_success"
+    arguments[arguments.index("/approved/path/manifest.json")] = str(success / "manifest.json")
+    arguments[arguments.index("/approved/path/run_results.json")] = str(
+        success / "run_results.json"
+    )
+    completed = subprocess.run(
+        arguments,
+        cwd=REPOSITORY_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+    assert '"pair_state":"PAIR_VALID"' in completed.stdout
