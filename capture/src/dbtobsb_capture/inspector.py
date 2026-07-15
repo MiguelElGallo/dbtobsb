@@ -16,7 +16,12 @@ from dbtobsb_capture.contracts import (
     NativeStatusCount,
     PairState,
 )
-from dbtobsb_capture.registry import RUN_STATUSES, TEST_STATUSES
+from dbtobsb_capture.registry import (
+    ISSUE_PRECEDENCE,
+    MAX_REPORT_ISSUES,
+    RUN_STATUSES,
+    TEST_STATUSES,
+)
 from dbtobsb_capture.schemas import (
     MANIFEST_SCHEMA_NAME,
     RUN_RESULTS_SCHEMA_NAME,
@@ -30,7 +35,7 @@ SUPPORTED_MANIFEST_SCHEMA = "https://schemas.getdbt.com/dbt/manifest/v12.json"
 SUPPORTED_RUN_RESULTS_SCHEMA = "https://schemas.getdbt.com/dbt/run-results/v6.json"
 MAX_PRIMARY_ARTIFACT_BYTES = 128 * 1024 * 1024
 MAX_JSON_NESTING_DEPTH = 256
-MAX_ISSUES = 20
+MAX_ISSUES = MAX_REPORT_ISSUES
 
 _SUPPORTED_RESULT_COLLECTIONS: dict[str, frozenset[str]] = {
     "nodes": frozenset({"model", "seed", "snapshot", "test"}),
@@ -242,6 +247,8 @@ _ISSUES: dict[str, _IssueTemplate] = {
         "Collect a fresh unmodified run_results.json from the pinned dbt build.",
     ),
 }
+if tuple(_ISSUES) != ISSUE_PRECEDENCE:
+    raise RuntimeError("issue registry and shared precedence are inconsistent")
 
 
 class _DuplicateJsonKey(ValueError):

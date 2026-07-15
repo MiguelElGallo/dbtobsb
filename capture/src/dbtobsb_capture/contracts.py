@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from dbtobsb_capture.registry import NATIVE_STATUSES
+from dbtobsb_capture.registry import ISSUE_PRECEDENCE, MAX_REPORT_ISSUES, NATIVE_STATUSES
 
 type JsonValue = None | bool | int | float | str | list[JsonValue] | dict[str, JsonValue]
 
@@ -116,6 +116,10 @@ class ArtifactPairSummary:
         )
         if actual_contract != expected_contract:
             raise ValueError("summary must match the closed v1 compatibility contract")
+        if not isinstance(self.status_counts, tuple) or any(
+            not isinstance(item, NativeStatusCount) for item in self.status_counts
+        ):
+            raise ValueError("status counts must be a tuple of NativeStatusCount values")
         statuses = tuple(item.status for item in self.status_counts)
         if (
             not statuses
@@ -151,6 +155,22 @@ class ArtifactPairReport:
 
     def __post_init__(self) -> None:
         """Keep the state/summary/issue cardinality internally consistent."""
+        if not isinstance(self.state, PairState):
+            raise ValueError("state must be one closed v1 PairState")
+        if self.summary is not None and not isinstance(self.summary, ArtifactPairSummary):
+            raise ValueError("summary must be an ArtifactPairSummary or None")
+        if not isinstance(self.issues, tuple) or any(
+            not isinstance(issue, ArtifactPairIssue) for issue in self.issues
+        ):
+            raise ValueError("issues must be a tuple of ArtifactPairIssue values")
+        if len(self.issues) > MAX_REPORT_ISSUES:
+            raise ValueError("issues exceed the closed v1 maximum")
+        if len(self.issues) != len(set(self.issues)):
+            raise ValueError("issues must be unique")
+        issue_rank = {code: rank for rank, code in enumerate(ISSUE_PRECEDENCE)}
+        canonical_issues = tuple(sorted(self.issues, key=lambda issue: issue_rank[issue.code]))
+        if self.issues != canonical_issues:
+            raise ValueError("issues must follow the closed v1 precedence")
         if self.state is PairState.VALID and (self.summary is None or self.issues):
             raise ValueError("PAIR_VALID requires one summary and zero issues")
         if self.state is PairState.INVALID and (self.summary is not None or not self.issues):

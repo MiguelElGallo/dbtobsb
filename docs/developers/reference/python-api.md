@@ -48,7 +48,7 @@ Both arguments are keyword-only `bytes`. The function opens no caller-supplied p
 | `NativeStatusCount` | One allowlisted native dbt status and its count. |
 | `ArtifactPairIssue` | Static code, category, impact, and recovery text; no observed value. |
 
-`ArtifactPairReport.to_dict()` returns the versioned JSON shape `dbtobsb.artifact-pair-report.v1`. It omits redundant `primary_issue` and `result_count` fields: `issues[0]` is primary, and the result total is the sum of the integer values in the closed `summary.status_counts` object. This makes inconsistent duplicates impossible in the machine contract. The report never retains raw input bytes. Its ordinary representation and dictionary exclude SQL, result messages, adapter responses, variables, environment values, relation names, paths, resource IDs, project names, and invocation IDs.
+`ArtifactPairReport.to_dict()` returns the versioned JSON shape `dbtobsb.artifact-pair-report.v1`. It omits redundant `primary_issue` and `result_count` fields: `issues[0]` is primary under the shared v1 precedence registry, and the result total is the sum of the integer values in the closed `summary.status_counts` object. The JSON Schema conditionally rejects a first issue when an earlier-precedence issue is also present. This makes inconsistent duplicates impossible in the machine contract. The report never retains raw input bytes. Its ordinary representation and dictionary exclude SQL, result messages, adapter responses, variables, environment values, relation names, paths, resource IDs, project names, and invocation IDs.
 
 ## Supported P1.1 pair
 
@@ -63,4 +63,4 @@ The schemas are vendored and checksum-pinned. The manifest bytes come from the e
 
 ## Result interpretation
 
-A valid report always has one summary and no issues. An invalid report has no summary and at least one issue, bounded to 20 under a frozen precedence order. Every public constructor rejects invented status, code, category, impact, or action values. A dbt result such as `error`, `fail`, or `warn` can appear in a valid summary because evidence validity is not job success. For invalid evidence, use the first item in `issues` or the Python `primary_issue` convenience property, then follow its static next action.
+A valid report always has one summary and no issues. An invalid report has no summary and between one and 20 unique, canonically ordered issues. Public constructors reject wrong object types, invented state/status/code/text values, duplicates, over-limit issue sets, and noncanonical precedence before an instance exists. A dbt result such as `error`, `fail`, or `warn` can appear in a valid summary because evidence validity is not job success. For invalid evidence, use the first item in `issues` or the Python `primary_issue` convenience property, then follow its static next action.

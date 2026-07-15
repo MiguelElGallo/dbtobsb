@@ -42,11 +42,11 @@ The top-level fields are:
 | `schema_version` | Exactly `dbtobsb.artifact-pair-report.v1`. |
 | `pair_state` | `PAIR_VALID` or `PAIR_INVALID`. |
 | `summary` | Allowlisted pair facts for a valid pair; otherwise `null`. |
-| `issues` | Zero or more static issues, bounded to 20. |
+| `issues` | Zero for a valid pair; one to 20 unique static issues for an invalid pair. |
 
-The `summary` contains exact schema URLs, dbt version, adapter type, command, and a closed native-status count object. The result total is the sum of that object's integer values; the JSON omits a redundant total that could disagree. It contains no resource or invocation identity. Every issue contains only `code`, `component`, `field`, `observed_category`, `impact`, and `next_action`; observed evidence is never interpolated. `issues[0]` is the primary issue, so the JSON omits a second copy that could disagree.
+The `summary` contains exact schema URLs, dbt version, adapter type, command, and a closed native-status count object. The result total is the sum of that object's integer values; the JSON omits a redundant total that could disagree. It contains no resource or invocation identity. Every issue contains only `code`, `component`, `field`, `observed_category`, `impact`, and `next_action`; observed evidence is never interpolated. `issues[0]` is the primary issue under the shared v1 registry, so the JSON omits a second copy that could disagree. The schema rejects a first issue if an earlier-precedence issue is also present.
 
-The v1 schema is closed: it rejects invented status/code/text values, legacy redundant fields, and extra properties. Statuses are object keys, so one status cannot occur twice. Public Python constructors enforce the same vocabulary and canonical status ordering.
+The v1 schema is closed: it rejects invented state/status/code/text values, more than 20 or duplicate issues, reversed primary precedence, legacy redundant fields, and extra properties. Statuses are object keys, so one status cannot occur twice. Public Python constructors additionally reject wrong object types and require the complete issue tuple to use canonical precedence.
 
 ## Issue registry
 
@@ -59,4 +59,4 @@ The v1 schema is closed: it rejects invented status/code/text values, legacy red
 | Results | `DBT_EMPTY_EXECUTION`, `DBT_RESULTS_DUPLICATE_ID`, `DBT_RESULT_ID_UNRESOLVED`, `DBT_RESULT_ID_UNSUPPORTED_RESOURCE`, `DBT_RESULT_ID_AMBIGUOUS`, `DBT_MANIFEST_RESOURCE_ID_MISMATCH`, `DBT_RESULT_RESOURCE_TYPE_UNSUPPORTED`, `DBT_RESULT_STATUS_UNSUPPORTED` |
 | Numeric invariants | `DBT_TIMING_INVALID`, `DBT_FAILURE_COUNT_INVALID` |
 
-Codes, text, precedence, and JSON shape are versioned contract. Adding or changing one requires a reviewed contract version decision.
+Codes, text, primary-selection precedence, and JSON shape are versioned contract. Adding or changing one requires a reviewed contract version decision.

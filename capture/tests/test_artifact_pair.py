@@ -24,7 +24,7 @@ from dbtobsb_capture import (
 from dbtobsb_capture import inspector as inspector_module
 from dbtobsb_capture import schemas as schemas_module
 from dbtobsb_capture.inspector import _ISSUES, MAX_ISSUES
-from dbtobsb_capture.registry import NATIVE_STATUSES
+from dbtobsb_capture.registry import ISSUE_PRECEDENCE, MAX_REPORT_ISSUES, NATIVE_STATUSES
 from dbtobsb_capture.schemas import (
     MANIFEST_SCHEMA_NAME,
     MANIFEST_SCHEMA_SHA256,
@@ -83,6 +83,18 @@ def _primary_code(report: dict[str, Any]) -> str:
     code = primary["code"]
     assert isinstance(code, str)
     return code
+
+
+def _closed_issue(code: str) -> ArtifactPairIssue:
+    template = _ISSUES[code]
+    return ArtifactPairIssue(
+        code=code,
+        component=template.component,
+        field=template.field,
+        observed_category=template.observed_category,
+        impact=template.impact,
+        next_action=template.next_action,
+    )
 
 
 @pytest.mark.parametrize("fixture", ["valid_success", "valid_dbt_failure"])
@@ -525,6 +537,69 @@ def test_closed_python_contract_rejects_invented_status_and_issue_text() -> None
         )
 
 
+def test_top_level_python_contract_rejects_values_outside_the_json_protocol() -> None:
+    first_issue = _closed_issue(ISSUE_PRECEDENCE[0])
+    second_issue = _closed_issue(ISSUE_PRECEDENCE[1])
+
+    with pytest.raises(ValueError, match="PairState"):
+        ArtifactPairReport(cast(PairState, "INVENTED"), None, ())
+    with pytest.raises(ValueError, match="ArtifactPairSummary"):
+        ArtifactPairReport(PairState.VALID, cast(ArtifactPairSummary, object()), ())
+    with pytest.raises(ValueError, match="tuple"):
+        ArtifactPairReport(
+            PairState.INVALID,
+            None,
+            cast(tuple[ArtifactPairIssue, ...], [first_issue]),
+        )
+    with pytest.raises(ValueError, match="ArtifactPairIssue"):
+        ArtifactPairReport(
+            PairState.INVALID,
+            None,
+            (cast(ArtifactPairIssue, object()),),
+        )
+    with pytest.raises(ValueError, match="maximum"):
+        ArtifactPairReport(
+            PairState.INVALID,
+            None,
+            tuple(_closed_issue(code) for code in ISSUE_PRECEDENCE[: MAX_REPORT_ISSUES + 1]),
+        )
+    with pytest.raises(ValueError, match="unique"):
+        ArtifactPairReport(PairState.INVALID, None, (first_issue, first_issue))
+    with pytest.raises(ValueError, match="precedence"):
+        ArtifactPairReport(PairState.INVALID, None, (second_issue, first_issue))
+
+
+def test_summary_python_contract_rejects_wrong_status_count_container_and_object() -> None:
+    base = {
+        "manifest_schema": "https://schemas.getdbt.com/dbt/manifest/v12.json",
+        "run_results_schema": "https://schemas.getdbt.com/dbt/run-results/v6.json",
+        "dbt_version": "1.11.12",
+        "adapter_type": "databricks",
+        "command": "build",
+    }
+    status = NativeStatusCount(status="success", count=1)
+
+    with pytest.raises(ValueError, match="tuple"):
+        ArtifactPairSummary(
+            **base,
+            status_counts=cast(tuple[NativeStatusCount, ...], [status]),
+        )
+    with pytest.raises(ValueError, match="NativeStatusCount"):
+        ArtifactPairSummary(
+            **base,
+            status_counts=(cast(NativeStatusCount, object()),),
+        )
+
+
+def test_every_constructible_top_level_shape_validates_against_report_schema() -> None:
+    validator = Draft202012Validator(json.loads(REPORT_SCHEMA.read_bytes()))
+    issues = tuple(_closed_issue(code) for code in ISSUE_PRECEDENCE[:MAX_REPORT_ISSUES])
+
+    report = ArtifactPairReport(PairState.INVALID, None, issues)
+
+    validator.validate(report.to_dict())
+
+
 def test_every_closed_status_and_issue_variant_validates_against_report_schema() -> None:
     validator = Draft202012Validator(json.loads(REPORT_SCHEMA.read_bytes()))
     for status in NATIVE_STATUSES:
@@ -547,6 +622,20 @@ def test_every_closed_status_and_issue_variant_validates_against_report_schema()
             next_action=template.next_action,
         )
         validator.validate(ArtifactPairReport(PairState.INVALID, None, (issue,)).to_dict())
+
+
+def test_report_schema_rejects_reversed_primary_precedence() -> None:
+    validator = Draft202012Validator(json.loads(REPORT_SCHEMA.read_bytes()))
+    earlier = _closed_issue(ISSUE_PRECEDENCE[0]).to_dict()
+    later = _closed_issue(ISSUE_PRECEDENCE[1]).to_dict()
+    report = {
+        "schema_version": "dbtobsb.artifact-pair-report.v1",
+        "pair_state": "PAIR_INVALID",
+        "summary": None,
+        "issues": [later, earlier],
+    }
+
+    assert not validator.is_valid(report)
 
 
 @pytest.mark.parametrize(
