@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:dbtobsb:artifact-pair-report:v1",
+  "title": "dbtobsb artifact-pair inspection report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "pair_state",
+    "summary",
+    "primary_issue",
+    "issues"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dbtobsb.artifact-pair-report.v1"
+    },
+    "pair_state": {
+      "enum": ["PAIR_VALID", "PAIR_INVALID"]
+    },
+    "summary": {
+      "anyOf": [
+        {"$ref": "#/$defs/summary"},
+        {"type": "null"}
+      ]
+    },
+    "primary_issue": {
+      "anyOf": [
+        {"$ref": "#/$defs/issue"},
+        {"type": "null"}
+      ]
+    },
+    "issues": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {"$ref": "#/$defs/issue"}
+    }
+  },
+  "$defs": {
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest_schema",
+        "run_results_schema",
+        "dbt_version",
+        "adapter_type",
+        "command",
+        "result_count",
+        "status_counts"
+      ],
+      "properties": {
+        "manifest_schema": {
+          "const": "https://schemas.getdbt.com/dbt/manifest/v12.json"
+        },
+        "run_results_schema": {
+          "const": "https://schemas.getdbt.com/dbt/run-results/v6.json"
+        },
+        "dbt_version": {"const": "1.11.12"},
+        "adapter_type": {"const": "databricks"},
+        "command": {"const": "build"},
+        "result_count": {"type": "integer", "minimum": 1},
+        "status_counts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status", "count"],
+            "properties": {
+              "status": {"type": "string", "minLength": 1},
+              "count": {"type": "integer", "minimum": 1}
+            }
+          }
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "component",
+        "field",
+        "observed_category",
+        "impact",
+        "next_action"
+      ],
+      "properties": {
+        "code": {"type": "string", "pattern": "^DBT_[A-Z0-9_]+$"},
+        "component": {"type": "string", "minLength": 1},
+        "field": {"type": "string", "minLength": 1},
+        "observed_category": {"type": "string", "minLength": 1},
+        "impact": {"type": "string", "minLength": 1},
+        "next_action": {"type": "string", "minLength": 1}
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "pair_state": {"const": "PAIR_VALID"},
+        "summary": {"$ref": "#/$defs/summary"},
+        "primary_issue": {"type": "null"},
+        "issues": {"maxItems": 0}
+      }
+    },
+    {
+      "properties": {
+        "pair_state": {"const": "PAIR_INVALID"},
+        "summary": {"type": "null"},
+        "primary_issue": {"$ref": "#/$defs/issue"},
+        "issues": {"minItems": 1}
+      }
+    }
+  ]
+}

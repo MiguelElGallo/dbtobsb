@@ -1,0 +1,433 @@
+"""Contract tests for the pure P1.1 artifact-pair inspector."""
+
+from __future__ import annotations
+
+import copy
+import hashlib
+import json
+from pathlib import Path
+from typing import Any, cast
+
+import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
+from jsonschema import Draft202012Validator
+
+from dbtobsb_capture import PairState, inspect_artifact_pair
+from dbtobsb_capture import inspector as inspector_module
+from dbtobsb_capture.inspector import MAX_ISSUES
+from dbtobsb_capture.schemas import (
+    MANIFEST_SCHEMA_NAME,
+    MANIFEST_SCHEMA_SHA256,
+    RUN_RESULTS_SCHEMA_NAME,
+    RUN_RESULTS_SCHEMA_SHA256,
+    validator_for,
+)
+
+FIXTURES = Path(__file__).parent / "fixtures" / "artifact_pair"
+REPORT_SCHEMA = (
+    Path(__file__).parents[1]
+    / "src"
+    / "dbtobsb_capture"
+    / "schemas"
+    / "artifact-pair-report-v1.json"
+)
+MODEL_ID = "model.dbtobsb_capture_fixture.observed_model"
+UNIT_TEST_ID = "unit_test.dbtobsb_capture_fixture.observed_model.observed_model_returns_one"
+EXPOSURE_ID = "exposure.dbtobsb_capture_fixture.fixture_dashboard"
+SOURCE_ID = "source.dbtobsb_capture_fixture.fixture_source.fixture_table"
+CANARY_PREFIX = "CANARY_"
+
+
+def _bytes(fixture: str, name: str) -> bytes:
+    return (FIXTURES / fixture / name).read_bytes()
+
+
+def _json(fixture: str, name: str) -> dict[str, Any]:
+    value: Any = json.loads(_bytes(fixture, name))
+    assert isinstance(value, dict)
+    return value
+
+
+def _dump(value: object) -> bytes:
+    return (json.dumps(value, ensure_ascii=True, sort_keys=True) + "\n").encode()
+
+
+def _inspect_documents(
+    manifest: dict[str, Any], run_results: dict[str, Any]
+) -> tuple[str, dict[str, Any]]:
+    report = inspect_artifact_pair(manifest=_dump(manifest), run_results=_dump(run_results))
+    return report.state.value, report.to_dict()
+
+
+def _primary_code(report: dict[str, Any]) -> str:
+    primary = report["primary_issue"]
+    assert isinstance(primary, dict)
+    code = primary["code"]
+    assert isinstance(code, str)
+    return code
+
+
+@pytest.mark.parametrize("fixture", ["valid_success", "valid_dbt_failure"])
+def test_golden_valid_reports_match_reviewed_snapshots(fixture: str) -> None:
+    report = inspect_artifact_pair(
+        manifest=_bytes(fixture, "manifest.json"),
+        run_results=_bytes(fixture, "run_results.json"),
+    )
+
+    assert report.state is PairState.VALID
+    assert report.to_dict() == _json(fixture, "expected-report.json")
+    Draft202012Validator(json.loads(REPORT_SCHEMA.read_bytes())).validate(report.to_dict())
+
+
+def test_dbt_failure_is_valid_evidence_but_not_relabelled_success() -> None:
+    report = inspect_artifact_pair(
+        manifest=_bytes("valid_dbt_failure", "manifest.json"),
+        run_results=_bytes("valid_dbt_failure", "run_results.json"),
+    )
+
+    assert report.state is PairState.VALID
+    assert report.summary is not None
+    assert [(item.status, item.count) for item in report.summary.status_counts] == [("error", 1)]
+
+
+def test_invalid_fixture_matches_reviewed_snapshot() -> None:
+    report = inspect_artifact_pair(
+        manifest=_bytes("invalid_invocation_mismatch", "manifest.json"),
+        run_results=_bytes("invalid_invocation_mismatch", "run_results.json"),
+    )
+
+    assert report.state is PairState.INVALID
+    assert report.to_dict() == _json("invalid_invocation_mismatch", "expected-report.json")
+    Draft202012Validator(json.loads(REPORT_SCHEMA.read_bytes())).validate(report.to_dict())
+
+
+def test_report_and_repr_exclude_every_sensitive_canary_and_raw_identifier() -> None:
+    report = inspect_artifact_pair(
+        manifest=_bytes("valid_success", "manifest.json"),
+        run_results=_bytes("valid_success", "run_results.json"),
+    )
+    rendered = json.dumps(report.to_dict(), sort_keys=True) + repr(report) + str(report)
+
+    assert CANARY_PREFIX not in rendered
+    assert MODEL_ID not in rendered
+    assert "11111111-1111-4111-8111-111111111111" not in rendered
+
+
+def test_repeated_runs_produce_byte_identical_machine_reports() -> None:
+    manifest = _bytes("valid_success", "manifest.json")
+    run_results = _bytes("valid_success", "run_results.json")
+
+    reports = [
+        json.dumps(
+            inspect_artifact_pair(manifest=manifest, run_results=run_results).to_dict(),
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode()
+        for _ in range(5)
+    ]
+
+    assert len(set(reports)) == 1
+
+
+def test_vendored_schema_digests_and_drafts_are_frozen() -> None:
+    schema_root = Path(__file__).parents[1] / "src" / "dbtobsb_capture" / "schemas"
+    manifest_bytes = (schema_root / MANIFEST_SCHEMA_NAME).read_bytes()
+    run_results_bytes = (schema_root / RUN_RESULTS_SCHEMA_NAME).read_bytes()
+
+    assert hashlib.sha256(manifest_bytes).hexdigest() == MANIFEST_SCHEMA_SHA256
+    assert hashlib.sha256(run_results_bytes).hexdigest() == RUN_RESULTS_SCHEMA_SHA256
+    assert json.loads(manifest_bytes)["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    assert (
+        json.loads(run_results_bytes)["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    )
+
+
+def test_golden_artifacts_satisfy_the_exact_vendored_schemas() -> None:
+    for fixture in ("valid_success", "valid_dbt_failure", "invalid_invocation_mismatch"):
+        validator_for(MANIFEST_SCHEMA_NAME).validate(_json(fixture, "manifest.json"))
+        validator_for(RUN_RESULTS_SCHEMA_NAME).validate(_json(fixture, "run_results.json"))
+
+
+def test_fixture_provenance_never_claims_live_runtime_evidence() -> None:
+    for fixture in ("valid_success", "valid_dbt_failure", "invalid_invocation_mismatch"):
+        provenance = _json(fixture, "provenance.json")
+        assert provenance["runtime_evidence"] is False
+        assert "validates without an overlay" in provenance["schema_compatibility_note"]
+        assert (
+            provenance["artifact_sha256"]["manifest"]
+            == hashlib.sha256(_bytes(fixture, "manifest.json")).hexdigest()
+        )
+        assert (
+            provenance["artifact_sha256"]["run_results"]
+            == hashlib.sha256(_bytes(fixture, "run_results.json")).hexdigest()
+        )
+
+
+@pytest.mark.parametrize(
+    ("manifest", "run_results", "expected"),
+    [
+        (b"not-json", b"{}", "DBT_MANIFEST_JSON_INVALID"),
+        (b"{}", b"\xff", "DBT_RUN_RESULTS_JSON_INVALID"),
+        (b'{"metadata":{},"metadata":{}}', b"{}", "DBT_MANIFEST_JSON_DUPLICATE_KEY"),
+        (b"{}", b'{"results":[],"results":[]}', "DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"),
+        (b'{"value":NaN}', b"{}", "DBT_MANIFEST_JSON_INVALID"),
+    ],
+)
+def test_strict_json_failures_are_safe_and_stable(
+    manifest: bytes, run_results: bytes, expected: str
+) -> None:
+    report = inspect_artifact_pair(manifest=manifest, run_results=run_results)
+
+    assert report.state is PairState.INVALID
+    assert report.primary_issue is not None
+    assert report.primary_issue.code == expected
+    assert CANARY_PREFIX not in repr(report)
+
+
+def test_size_limit_rejects_before_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(inspector_module, "MAX_PRIMARY_ARTIFACT_BYTES", 3)
+
+    report = inspect_artifact_pair(manifest=b"four", run_results=b"also-four")
+
+    assert [issue.code for issue in report.issues] == [
+        "DBT_MANIFEST_SIZE_LIMIT_EXCEEDED",
+        "DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED",
+    ]
+
+
+def test_schema_failures_stop_before_semantic_interpretation() -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    del manifest["nodes"]
+    del run_results["elapsed_time"]
+
+    _, report = _inspect_documents(manifest, run_results)
+
+    assert [issue["code"] for issue in report["issues"]] == [
+        "DBT_MANIFEST_SCHEMA_INVALID",
+        "DBT_RUN_RESULTS_SCHEMA_INVALID",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("mutator", "expected"),
+    [
+        (
+            lambda manifest, run: manifest["metadata"].update(
+                dbt_schema_version="https://schemas.getdbt.com/dbt/manifest/v11.json"
+            ),
+            "DBT_SCHEMA_VERSION_UNSUPPORTED",
+        ),
+        (
+            lambda manifest, run: run["metadata"].update(dbt_version="1.11.11"),
+            "DBT_CORE_VERSION_UNSUPPORTED",
+        ),
+        (
+            lambda manifest, run: manifest["metadata"].update(invocation_id=None),
+            "DBT_INVOCATION_ID_INVALID",
+        ),
+        (
+            lambda manifest, run: manifest["metadata"].update(adapter_type="spark"),
+            "DBT_ADAPTER_TYPE_UNSUPPORTED",
+        ),
+        (
+            lambda manifest, run: run["args"].update(which="run"),
+            "DBT_COMMAND_UNSUPPORTED",
+        ),
+        (
+            lambda manifest, run: run.update(results=[]),
+            "DBT_EMPTY_EXECUTION",
+        ),
+    ],
+)
+def test_standalone_and_pair_semantic_mutations_have_stable_codes(
+    mutator: Any, expected: str
+) -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    mutator(manifest, run_results)
+
+    _, report = _inspect_documents(manifest, run_results)
+
+    assert _primary_code(report) == expected
+
+
+def test_duplicate_result_identifier_is_invalid() -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    run_results["results"].append(copy.deepcopy(run_results["results"][0]))
+
+    _, report = _inspect_documents(manifest, run_results)
+
+    assert _primary_code(report) == "DBT_RESULTS_DUPLICATE_ID"
+
+
+@pytest.mark.parametrize(
+    ("unique_id", "expected"),
+    [
+        ("model.dbtobsb_capture_fixture.missing", "DBT_RESULT_ID_UNRESOLVED"),
+        (SOURCE_ID, "DBT_RESULT_ID_UNSUPPORTED_RESOURCE"),
+    ],
+)
+def test_result_resolution_rejects_missing_and_prohibited_collections(
+    unique_id: str, expected: str
+) -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    run_results["results"][0]["unique_id"] = unique_id
+
+    _, report = _inspect_documents(manifest, run_results)
+
+    assert _primary_code(report) == expected
+
+
+def test_result_resolution_rejects_ambiguous_supported_collections() -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    duplicate = copy.deepcopy(manifest["exposures"][EXPOSURE_ID])
+    duplicate["unique_id"] = MODEL_ID
+    duplicate["name"] = "observed_model"
+    manifest["exposures"][MODEL_ID] = duplicate
+
+    _, report = _inspect_documents(manifest, run_results)
+
+    assert _primary_code(report) == "DBT_RESULT_ID_AMBIGUOUS"
+
+
+def test_result_resolution_rejects_inner_id_mismatch() -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    manifest["nodes"][MODEL_ID]["unique_id"] = "model.dbtobsb_capture_fixture.other"
+
+    _, report = _inspect_documents(manifest, run_results)
+
+    assert _primary_code(report) == "DBT_MANIFEST_RESOURCE_ID_MISMATCH"
+
+
+def test_resource_aware_status_rejects_test_status_for_model() -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    run_results["results"][0]["status"] = "pass"
+
+    _, report = _inspect_documents(manifest, run_results)
+
+    assert _primary_code(report) == "DBT_RESULT_STATUS_UNSUPPORTED"
+
+
+@pytest.mark.parametrize(
+    "status",
+    ["success", "error", "skipped", "partial success", "no-op"],
+)
+def test_every_supported_run_status_remains_native(status: str) -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    run_results["results"][0]["status"] = status
+
+    state, report = _inspect_documents(manifest, run_results)
+
+    assert state == "PAIR_VALID"
+    assert report["summary"]["status_counts"] == [{"status": status, "count": 1}]
+
+
+@pytest.mark.parametrize(
+    "status",
+    ["pass", "error", "fail", "warn", "skipped"],
+)
+def test_every_supported_test_status_remains_native(status: str) -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    run_results["results"][0]["unique_id"] = UNIT_TEST_ID
+    run_results["results"][0]["status"] = status
+
+    state, report = _inspect_documents(manifest, run_results)
+
+    assert state == "PAIR_VALID"
+    assert report["summary"]["status_counts"] == [{"status": status, "count": 1}]
+
+
+def test_freshness_only_runtime_error_status_is_not_accepted_for_build_result() -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    run_results["results"][0]["status"] = "runtime error"
+
+    _, report = _inspect_documents(manifest, run_results)
+
+    assert _primary_code(report) == "DBT_RESULT_STATUS_UNSUPPORTED"
+
+
+@pytest.mark.parametrize(
+    ("unique_id", "status"),
+    [(UNIT_TEST_ID, "pass"), (EXPOSURE_ID, "success")],
+)
+def test_supported_buildtask_collections_use_resource_aware_statuses(
+    unique_id: str, status: str
+) -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    run_results["results"][0]["unique_id"] = unique_id
+    run_results["results"][0]["status"] = status
+
+    state, report = _inspect_documents(manifest, run_results)
+
+    assert state == "PAIR_VALID"
+    assert report["summary"]["status_counts"] == [{"status": status, "count": 1}]
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected"),
+    [
+        ("elapsed", "DBT_TIMING_INVALID"),
+        ("execution", "DBT_TIMING_INVALID"),
+        ("failures", "DBT_FAILURE_COUNT_INVALID"),
+    ],
+)
+def test_numeric_semantics_reject_impossible_values(mutation: str, expected: str) -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    if mutation == "elapsed":
+        run_results["elapsed_time"] = -1
+    elif mutation == "execution":
+        run_results["results"][0]["execution_time"] = -1
+    else:
+        run_results["results"][0]["failures"] = -1
+
+    _, report = _inspect_documents(manifest, run_results)
+
+    assert _primary_code(report) == expected
+
+
+def test_issue_list_is_deduplicated_and_bounded() -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    run_results["results"] = [
+        {**copy.deepcopy(run_results["results"][0]), "unique_id": f"model.fixture.missing_{i}"}
+        for i in range(MAX_ISSUES + 10)
+    ]
+
+    _, report = _inspect_documents(manifest, run_results)
+
+    assert len(report["issues"]) == 1
+    assert _primary_code(report) == "DBT_RESULT_ID_UNRESOLVED"
+
+
+def test_programmer_misuse_exception_is_static_and_evidence_safe() -> None:
+    with pytest.raises(TypeError, match="manifest and run_results must be bytes") as error:
+        inspect_artifact_pair(manifest=cast(bytes, "CANARY_SECRET"), run_results=b"{}")
+
+    assert CANARY_PREFIX not in str(error.value)
+
+
+@settings(max_examples=100, deadline=500)
+@given(manifest=st.binary(max_size=512), run_results=st.binary(max_size=512))
+def test_arbitrary_bounded_bytes_never_crash_or_escape_input(
+    manifest: bytes, run_results: bytes
+) -> None:
+    first = inspect_artifact_pair(manifest=manifest, run_results=run_results)
+    second = inspect_artifact_pair(manifest=manifest, run_results=run_results)
+
+    assert first.state is PairState.INVALID
+    assert len(first.issues) <= MAX_ISSUES
+    assert first == second
+    assert all(issue.code.startswith("DBT_") for issue in first.issues)

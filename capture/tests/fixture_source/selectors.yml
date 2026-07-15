@@ -1,0 +1,5 @@
+selectors:
+  - name: observed
+    definition:
+      method: tag
+      value: observed

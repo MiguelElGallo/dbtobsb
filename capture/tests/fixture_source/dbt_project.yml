@@ -1,0 +1,16 @@
+name: dbtobsb_capture_fixture
+version: 1.0.0
+config-version: 2
+
+profile: dbtobsb_capture_fixture
+
+model-paths:
+  - models
+
+clean-targets:
+  - target
+  - logs
+
+models:
+  dbtobsb_capture_fixture:
+    +materialized: view

@@ -1,6 +1,6 @@
 # dbtobsb documentation
 
-The repository contains a reviewed product contract and an intentionally small P0 Databricks App smoke implementation.
+The repository contains a reviewed product contract, an intentionally small P0 Databricks App smoke, and the offline P1.1 artifact-pair inspector.
 
 ## Start here
 
@@ -12,7 +12,13 @@ The repository contains a reviewed product contract and an intentionally small P
 - [Review records](reviews/README.md)
 - [Sanitized P0 live-smoke evidence](evidence/p0-live-smoke-2026-07-15.md)
 - [P0 private run-record template](templates/p0-smoke-run-record.md)
+- [Developer documentation](developers/index.md)
+- [P1.1 local compatibility evidence](evidence/p1.1-local-artifact-pair-2026-07-15.md)
 
 ## Run the P0 smoke
 
 The [repository README](../README.md#run-the-p0-smoke) contains the local quality gates, exact live-smoke inputs, cost boundary, and cleanup contract. The P0 endpoint proves only App process liveness; dbt execution and artifact ingestion begin in later slices.
+
+## Inspect a dbt artifact pair
+
+Start with [Inspect an artifact pair](developers/tutorials/inspect-an-artifact-pair.md). P1.1 validates one pinned pair offline; it does not retrieve an archive, run dbt, prove a Databricks attempt, or assign a capture state.

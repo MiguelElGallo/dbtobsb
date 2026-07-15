@@ -1,0 +1,367 @@
+{
+  "child_map": {
+    "exposure.dbtobsb_capture_fixture.fixture_dashboard": [],
+    "model.dbtobsb_capture_fixture.observed_model": [
+      "exposure.dbtobsb_capture_fixture.fixture_dashboard",
+      "unit_test.dbtobsb_capture_fixture.observed_model.observed_model_returns_one"
+    ],
+    "source.dbtobsb_capture_fixture.fixture_source.fixture_table": [],
+    "unit_test.dbtobsb_capture_fixture.observed_model.observed_model_returns_one": []
+  },
+  "disabled": {},
+  "docs": {},
+  "exposures": {
+    "exposure.dbtobsb_capture_fixture.fixture_dashboard": {
+      "config": {
+        "enabled": true,
+        "meta": {},
+        "tags": []
+      },
+      "created_at": 1767225600.0,
+      "depends_on": {
+        "macros": [],
+        "nodes": [
+          "model.dbtobsb_capture_fixture.observed_model"
+        ]
+      },
+      "description": "Synthetic exposure used only to qualify result-ID resolution.",
+      "fqn": [
+        "dbtobsb_capture_fixture",
+        "fixture_dashboard"
+      ],
+      "label": null,
+      "maturity": "low",
+      "meta": {},
+      "metrics": [],
+      "name": "fixture_dashboard",
+      "original_file_path": "models/CANARY_PATH_INTERNAL/observed_model.sql",
+      "owner": {
+        "email": "CANARY_EMAIL@example.invalid",
+        "name": "CANARY_PERSON_NAME"
+      },
+      "package_name": "dbtobsb_capture_fixture",
+      "path": "sources.yml",
+      "refs": [
+        {
+          "name": "observed_model",
+          "package": null,
+          "version": null
+        }
+      ],
+      "resource_type": "exposure",
+      "sources": [],
+      "tags": [],
+      "type": "dashboard",
+      "unique_id": "exposure.dbtobsb_capture_fixture.fixture_dashboard",
+      "unrendered_config": {},
+      "url": "https://example.invalid/fixture"
+    }
+  },
+  "functions": {},
+  "group_map": {},
+  "groups": {},
+  "macros": {
+    "macro.dbtobsb_capture_fixture.fixture_macro": {
+      "arguments": [],
+      "config": {
+        "docs": {
+          "node_color": null,
+          "show": true
+        },
+        "meta": {}
+      },
+      "created_at": 1767225600.0,
+      "depends_on": {
+        "macros": []
+      },
+      "description": "",
+      "docs": {
+        "node_color": null,
+        "show": true
+      },
+      "macro_sql": "CANARY_TOKEN_NOT_A_REAL_CREDENTIAL",
+      "meta": {},
+      "name": "fixture_macro",
+      "original_file_path": "models/CANARY_PATH_INTERNAL/observed_model.sql",
+      "package_name": "dbtobsb_capture_fixture",
+      "patch_path": null,
+      "path": "macros/fixture_macro.sql",
+      "resource_type": "macro",
+      "supported_languages": null,
+      "unique_id": "macro.dbtobsb_capture_fixture.fixture_macro"
+    }
+  },
+  "metadata": {
+    "adapter_type": "databricks",
+    "dbt_schema_version": "https://schemas.getdbt.com/dbt/manifest/v12.json",
+    "dbt_version": "1.11.12",
+    "env": {
+      "SENSITIVE": "CANARY_ENVIRONMENT_PERSONAL_DATA"
+    },
+    "generated_at": "2026-01-01T00:00:01Z",
+    "invocation_id": "11111111-1111-4111-8111-111111111111",
+    "invocation_started_at": "2026-01-01T00:00:00Z",
+    "project_id": "00000000000000000000000000000000",
+    "project_name": "CANARY_PROJECT_PRIVATE_NAME",
+    "quoting": {
+      "column": null,
+      "database": true,
+      "identifier": true,
+      "schema": true
+    },
+    "run_started_at": "2026-01-01T00:00:00+00:00",
+    "send_anonymous_usage_stats": false,
+    "user_id": null
+  },
+  "metrics": {},
+  "nodes": {
+    "model.dbtobsb_capture_fixture.observed_model": {
+      "access": "protected",
+      "alias": "observed_model",
+      "build_path": null,
+      "checksum": {
+        "checksum": "bdf718387909883b3e06f339569d354ebad1b7e6e26de44c29fadbf4e6eccd8f",
+        "name": "sha256"
+      },
+      "columns": {},
+      "compiled_path": null,
+      "config": {
+        "access": "protected",
+        "alias": null,
+        "batch_size": null,
+        "begin": null,
+        "column_types": {},
+        "concurrent_batches": null,
+        "contract": {
+          "alias_types": true,
+          "enforced": false
+        },
+        "database": null,
+        "docs": {
+          "node_color": null,
+          "show": true
+        },
+        "enabled": true,
+        "event_time": null,
+        "freshness": null,
+        "full_refresh": null,
+        "grants": {},
+        "group": null,
+        "incremental_strategy": null,
+        "lookback": 1,
+        "materialized": "view",
+        "meta": {},
+        "on_configuration_change": "apply",
+        "on_schema_change": "ignore",
+        "packages": [],
+        "persist_docs": {},
+        "post-hook": [],
+        "pre-hook": [],
+        "quoting": {},
+        "schema": null,
+        "static_analysis": null,
+        "tags": [
+          "observed"
+        ],
+        "unique_key": null
+      },
+      "constraints": [],
+      "contract": {
+        "alias_types": true,
+        "checksum": null,
+        "enforced": false
+      },
+      "created_at": 1767225600.0,
+      "database": "fixture_catalog",
+      "depends_on": {
+        "macros": [],
+        "nodes": []
+      },
+      "deprecation_date": null,
+      "description": "",
+      "doc_blocks": [],
+      "docs": {
+        "node_color": null,
+        "show": true
+      },
+      "fqn": [
+        "dbtobsb_capture_fixture",
+        "observed_model"
+      ],
+      "functions": [],
+      "group": null,
+      "language": "sql",
+      "latest_version": null,
+      "meta": {},
+      "metrics": [],
+      "name": "observed_model",
+      "original_file_path": "models/CANARY_PATH_INTERNAL/observed_model.sql",
+      "package_name": "dbtobsb_capture_fixture",
+      "patch_path": null,
+      "path": "observed_model.sql",
+      "primary_key": [],
+      "raw_code": "CANARY_COMPILED_SQL_SELECT_SECRET",
+      "refs": [],
+      "relation_name": "`fixture_catalog`.`fixture_schema`.`observed_model`",
+      "resource_type": "model",
+      "schema": "fixture_schema",
+      "sources": [],
+      "tags": [
+        "observed"
+      ],
+      "time_spine": null,
+      "unique_id": "model.dbtobsb_capture_fixture.observed_model",
+      "unrendered_config": {
+        "materialized": "view",
+        "tags": [
+          "observed"
+        ]
+      },
+      "version": null
+    }
+  },
+  "parent_map": {
+    "exposure.dbtobsb_capture_fixture.fixture_dashboard": [
+      "model.dbtobsb_capture_fixture.observed_model"
+    ],
+    "model.dbtobsb_capture_fixture.observed_model": [],
+    "source.dbtobsb_capture_fixture.fixture_source.fixture_table": [],
+    "unit_test.dbtobsb_capture_fixture.observed_model.observed_model_returns_one": [
+      "model.dbtobsb_capture_fixture.observed_model"
+    ]
+  },
+  "saved_queries": {},
+  "selectors": {
+    "observed": {
+      "definition": {
+        "method": "tag",
+        "value": "observed"
+      },
+      "name": "observed"
+    }
+  },
+  "semantic_models": {},
+  "sources": {
+    "source.dbtobsb_capture_fixture.fixture_source.fixture_table": {
+      "columns": {},
+      "config": {
+        "enabled": true,
+        "event_time": null,
+        "freshness": {
+          "error_after": {
+            "count": null,
+            "period": null
+          },
+          "filter": null,
+          "warn_after": {
+            "count": null,
+            "period": null
+          }
+        },
+        "loaded_at_field": null,
+        "loaded_at_query": null,
+        "meta": {},
+        "static_analysis": null,
+        "tags": []
+      },
+      "created_at": 1767225600.0,
+      "database": "fixture_catalog",
+      "description": "",
+      "doc_blocks": [],
+      "external": null,
+      "fqn": [
+        "dbtobsb_capture_fixture",
+        "fixture_source",
+        "fixture_table"
+      ],
+      "freshness": {
+        "error_after": {
+          "count": null,
+          "period": null
+        },
+        "filter": null,
+        "warn_after": {
+          "count": null,
+          "period": null
+        }
+      },
+      "identifier": "fixture_table",
+      "loaded_at_field": null,
+      "loaded_at_query": null,
+      "loader": "",
+      "meta": {},
+      "name": "fixture_table",
+      "original_file_path": "models/CANARY_PATH_INTERNAL/observed_model.sql",
+      "package_name": "dbtobsb_capture_fixture",
+      "patch_path": null,
+      "path": "models/sources.yml",
+      "quoting": {
+        "column": null,
+        "database": null,
+        "identifier": null,
+        "schema": null
+      },
+      "relation_name": "`fixture_catalog`.`fixture_schema`.`fixture_table`",
+      "resource_type": "source",
+      "schema": "fixture_schema",
+      "source_description": "",
+      "source_meta": {},
+      "source_name": "fixture_source",
+      "tags": [],
+      "unique_id": "source.dbtobsb_capture_fixture.fixture_source.fixture_table",
+      "unrendered_config": {
+        "loaded_at_field": null,
+        "loaded_at_query": null,
+        "meta": {},
+        "tags": []
+      },
+      "unrendered_database": "fixture_catalog",
+      "unrendered_schema": "fixture_schema"
+    }
+  },
+  "unit_tests": {
+    "unit_test.dbtobsb_capture_fixture.observed_model.observed_model_returns_one": {
+      "checksum": "b1337d974b001f7aca7779b99f5d8dd006ea3d19bbf3bbec23e2a5a65ee4c812",
+      "config": {
+        "enabled": true,
+        "meta": {},
+        "static_analysis": null,
+        "tags": []
+      },
+      "created_at": 1767225600.0,
+      "depends_on": {
+        "macros": [],
+        "nodes": [
+          "model.dbtobsb_capture_fixture.observed_model"
+        ]
+      },
+      "description": "",
+      "expect": {
+        "fixture": null,
+        "format": "dict",
+        "rows": [
+          {
+            "fixture_id": 1
+          }
+        ]
+      },
+      "fqn": [
+        "dbtobsb_capture_fixture",
+        "observed_model",
+        "observed_model_returns_one"
+      ],
+      "given": [],
+      "model": "observed_model",
+      "name": "observed_model_returns_one",
+      "original_file_path": "models/CANARY_PATH_INTERNAL/observed_model.sql",
+      "overrides": null,
+      "package_name": "dbtobsb_capture_fixture",
+      "path": "sources.yml",
+      "resource_type": "unit_test",
+      "schema": "fixture_schema",
+      "unique_id": "unit_test.dbtobsb_capture_fixture.observed_model.observed_model_returns_one",
+      "version": null,
+      "versions": null
+    }
+  }
+}

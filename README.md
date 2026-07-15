@@ -10,6 +10,22 @@ P0 is a deliberately narrow FastAPI App smoke. It proves that the locked source 
 
 The first paid-workspace run passed the health/log/stop checks. Its [sanitized evidence record](docs/evidence/p0-live-smoke-2026-07-15.md) preserves both the technical result and the original cost-approval process finding. Later compute-size and dedicated-workspace guardrails have passed local tests but were not used to justify another paid run.
 
+P1.1 can validate one pinned artifact pair locally. It does not retrieve Databricks archives, classify capture states, parse structured logs, write observability tables, or run dbt. Its three synthetic, sanitized fixtures make pair validity, native dbt outcome, and future capture state visibly separate.
+
+## Inspect one artifact pair locally
+
+P1.1 runs offline and requires Python 3.12 plus [uv](https://docs.astral.sh/uv/). Install the locked development environment and inspect the successful fixture:
+
+```bash
+uv sync --project capture --locked
+uv run --project capture dbtobsb-capture inspect-artifact-pair \
+  --manifest capture/tests/fixtures/artifact_pair/valid_success/manifest.json \
+  --run-results capture/tests/fixtures/artifact_pair/valid_success/run_results.json \
+  --no-color
+```
+
+The first line is `PAIR_VALID`. That means only that the two files satisfy the pinned P1.1 contract. Follow the [developer tutorial](docs/developers/tutorials/inspect-an-artifact-pair.md) for the valid-failure and invalid-pair examples, or use the [CLI report and exit-code reference](docs/developers/reference/cli-report-and-exit-codes.md) for automation.
+
 ## Run the P0 smoke
 
 ### 1. Check the supported workspace and tools
@@ -125,4 +141,4 @@ Detailed migration, trust, deployment, controlled-action, and dbt contracts live
 
 ## Current baseline
 
-Planning baseline: **0.20**. Every independently deliverable slice requires Databricks, dbt Core, and usability reviews. Documentation additionally requires Diataxis, FastAPI-style, security/compliance, and usability/accessibility passes. The exact working agreement is in [AGENTS.md](AGENTS.md).
+Planning baseline: **0.20**. Implemented product slice: **P1.1 candidate**. Every independently deliverable slice requires Databricks, dbt Core, and usability reviews. Documentation additionally requires Diataxis, FastAPI-style, security/compliance, and usability/accessibility passes. The exact working agreement is in [AGENTS.md](AGENTS.md).

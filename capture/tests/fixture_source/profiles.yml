@@ -1,0 +1,11 @@
+dbtobsb_capture_fixture:
+  target: fixture
+  outputs:
+    fixture:
+      type: databricks
+      catalog: fixture_catalog
+      schema: fixture_schema
+      host: https://placeholder.azuredatabricks.net
+      http_path: /sql/1.0/warehouses/placeholder
+      token: fixture-placeholder-not-a-credential
+      threads: 1

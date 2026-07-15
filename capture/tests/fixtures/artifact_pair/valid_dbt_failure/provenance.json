@@ -1,0 +1,47 @@
+{
+  "artifact_sha256": {
+    "manifest": "f164c3bf8291b75ca05dc387f9810b97a23f350933c2cb0db3e0a28adf7eee58",
+    "run_results": "5c73625525e88efbc6a302f2c2cab9f9ef1c0e8083c7a383290a5dc329a70691"
+  },
+  "canary_categories": [
+    "compiled_sql",
+    "email",
+    "environment",
+    "message",
+    "path",
+    "relation",
+    "token",
+    "vars"
+  ],
+  "candidate": {
+    "dbt_adapters": "1.23.0",
+    "dbt_adapters_wheel_sha256": "6c6c9cb6fca5d01324b5c39961c8b16b985b1ac7b701909f4416ce9dad66e288",
+    "dbt_common": "1.37.5",
+    "dbt_common_wheel_sha256": "432e3f2f9ca61eace65d4d1cb99a715c3ffc343b7190a692c39f126eedf0c077",
+    "dbt_core": "1.11.12",
+    "dbt_core_wheel_sha256": "3b7760a3760a6db8a14a6ef38fb86532b2c2b150d49beaa1feb0f50170baa86e",
+    "dbt_databricks": "1.12.2",
+    "dbt_databricks_wheel_sha256": "158d76c940f3f0b0a8229203d9efb0752c73b881ede21c8f0696cfe9484aec43",
+    "dbt_protos": "1.0.541",
+    "dbt_protos_wheel_sha256": "4e03f88e6b5c13a8cac68c6aa78267d8eb4396e6341a807112d619ab938318d5",
+    "dbt_spark": "1.10.3",
+    "dbt_spark_wheel_sha256": "1906f4cb507c931c4988ea6074603769da7466788b53483546e3abf6eabbf04d",
+    "python": "3.12.3"
+  },
+  "fixture_kind": "valid_dbt_failure",
+  "runtime_evidence": false,
+  "sanitizer": "capture/scripts/generate_artifact_pair_fixtures.py",
+  "schema_compatibility_note": "The exact Core 1.11.12 tag schema is pinned because the generic published v12 endpoint was stale on 2026-07-15. The candidate locks dbt-adapters 1.23.0, whose raw parsed manifest validates without an overlay. This fixture is not runtime evidence.",
+  "schema_sha256": {
+    "manifest_v12_core_1_11_12": "b290bb419026be3fa361ead7f0d8e3bb0eb6bca8c3a3fb7971f5d252fd0825b3",
+    "run_results_v6": "1783bda55656bde624ed67640375640a2919a8608e2505e3a02c04cd139e2cdf"
+  },
+  "source_environment": {
+    "dbt_command": "parse",
+    "machine": "arm64",
+    "python": "3.12.13",
+    "system": "Darwin"
+  },
+  "source_kind": "pinned_local_dbt_parse_plus_synthetic_run_results",
+  "source_manifest_sha256": "79bcff94392125cd0a0c55f51c419572a6d81bcd564047d5da559ebfbbd28707"
+}
