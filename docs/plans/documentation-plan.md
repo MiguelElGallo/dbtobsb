@@ -16,6 +16,15 @@ Documentation is part of the product contract. If a required flag, path, privile
 
 Use the four Diataxis modes inside an audience- and task-oriented hierarchy. The future product-documentation home is `index.md`; each mode has an overview landing page, and long lists are grouped by a reader-recognizable concern. The current `docs/index.md` remains a planning index until D0 replaces it deliberately.
 
+P1.1 additionally has an implemented developer/integrator route under `developers/`. It uses the same four modes while the future customer/operator site remains planned:
+
+- tutorial: `developers/tutorials/inspect-an-artifact-pair.md`;
+- how-to: `developers/how-to/diagnose-an-invalid-artifact-pair.md` and `developers/how-to/handle-raw-dbt-artifacts-safely.md`;
+- reference: `developers/reference/python-api.md` and `developers/reference/cli-report-and-exit-codes.md`; and
+- explanation: `developers/explanation/pair-validity-vs-dbt-outcome-vs-capture-state.md` and `developers/explanation/raw-artifact-custody.md`.
+
+This route labels all examples synthetic and sanitized. It never presents local pair validation as archive retrieval, Databricks runtime evidence, dbt success, capture completeness, or a qualified support row.
+
 ### Tutorials
 
 One learning-oriented, safe, choice-free experience starts in a dedicated non-production fixture environment and ends with mandatory cleanup:
@@ -220,18 +229,19 @@ Application and operations:
 
 D0 must produce the home, four mode landing pages, grouped side navigation, and these visible task routes:
 
-1. Learn safely with fixtures.
-2. Check, install, verify, and hand off the base product.
-3. Create or connect a dbt Job.
-4. Investigate and reconcile a run.
-5. Govern cost, retention, and evidence.
-6. Upgrade, stop, remove, export, delete, or uninstall through a lifecycle chooser.
-7. Decide whether to enable, verify, and remove optional system enrichment.
-8. Enable and administer optional controlled actions.
-9. Use optional AI with the core product still functional when AI is disabled.
-10. Understand the future Marketplace path without mistaking it for an available capability.
+1. Validate one pinned dbt artifact pair locally as a developer/integrator.
+2. Learn safely with fixtures.
+3. Check, install, verify, and hand off the base product.
+4. Create or connect a dbt Job.
+5. Investigate and reconcile a run.
+6. Govern cost, retention, and evidence.
+7. Upgrade, stop, remove, export, delete, or uninstall through a lifecycle chooser.
+8. Decide whether to enable, verify, and remove optional system enrichment.
+9. Enable and administer optional controlled actions.
+10. Use optional AI with the core product still functional when AI is disabled.
+11. Understand the future Marketplace path without mistaking it for an available capability.
 
-Audience entry points map combined personal administrators, workstation administrators, deployment operators, and UC/data-plan operators to route 2, with deployment and UC/data-plan operators also using route 6; dbt/Job owners to route 3; read-only operators to route 4; governance/product administrators to routes 5 and 6; optional system-data owners to route 7; and action-role administrators/action users to route 8. Setup is not primary navigation for read-only operators.
+Audience entry points map library developers/integrators to route 1; combined personal administrators, workstation administrators, deployment operators, and UC/data-plan operators to route 3, with deployment and UC/data-plan operators also using route 7; dbt/Job owners to route 4; read-only operators to route 5; governance/product administrators to routes 6 and 7; optional system-data owners to route 8; and action-role administrators/action users to route 9. Setup is not primary navigation for read-only operators.
 
 Every planned page record includes audience, product-part dependency, documentation stage, accountable owner, prerequisite/next pages, publication state (`base`, `optional installed capability`, or `future/not available`), search synonyms and stable error codes, and required evidence. Site/category landing pages provide overviews rather than file lists. Breadcrumbs, tutorial previous/next links, related-task links, version/feature-status markers, and the lifecycle chooser are required navigation, and affected routes are re-reviewed whenever a page moves, splits, changes name, or changes optionality.
 
@@ -240,6 +250,7 @@ The D0 page registry expands these mandatory inheritance rules; no page can ente
 | Page family | Audience and product dependency | Stage and owner | Publication state and minimum evidence |
 |---|---|---|---|
 | Home, mode/category landing pages, glossary, product tour | All audiences; P0 terminology/routes | D0; documentation lead plus IA owner | `base`; route and search-term review |
+| P1.1 developer tutorial, invalid-pair and raw-artifact-handling how-tos, API/CLI reference, and pair/outcome/capture plus raw-custody explanations | Library developer/integrator; P1.1 | D1P; capture-library owner plus dbt and security documentation owners | `base`; exact runnable fixture commands/output, synthetic-data notice, issue/exit/API contracts, input-custody/support/lifecycle controls, deterministic and installed-wheel tests, and explicit non-claim of dbt success, capture completeness, or Databricks-local custody |
 | All `tutorials/` chapters | Learner; P3/P4 fixture path | D1; tutorial owner | `base`; ordered fixture checkpoints, mandatory cleanup, non-author walkthrough |
 | Installation/handoff how-tos and deployment/migration/base-permission references/explanations | Combined administrator, workstation administrator, verifier administrator, and UC/data-plan operator; P2/P3/P4 | D2; platform documentation owner | `base`; immutable modes; combined false independence flags; exactly-two-person separated topology and third-reviewer rejection; customer schema; warehouse direct/effective authority and full-query disclosure; marked Statement Execution/Query History recovery; one recovery-actor table; pending data attestation versus composite seal; current-DML/self-grant/group roots; App stage-plan/apply, paginated deployment reconciliation, stop, fresh-final-plan/approval/apply, start sequence; one-row-per-event ledger/latest-generation summary; native SP-role attestation by the verifier; pre-start audit plus post-start-machine/original-roster validity times and oldest validity age; Direct versus runtime DML; mode gates and bounded cost |
 | dbt Job onboarding how-tos and command/artifact/flag references | dbt/Job owner; P1/P5 | D3; dbt documentation owner | `base`; scanner/source-patch fixtures and semantic-change proof |
@@ -249,6 +260,20 @@ The D0 page registry expands these mandatory inheritance rules; no page can ente
 | Controlled-action how-tos plus every action/identity/role/fence/dispatch reference or explanation | Action user/approver/verifier/administrator; P6/P7 | D6; controlled-actions documentation owner | `optional installed capability`; exact ordered singleton create/collation/property/eleven-constraint/row envelope and partial-state recovery; state/phase/grants; admission/drain/quiescence linearization; same-token dispatch recovery; current-first/legacy-fallback Get Run table including terminal `INTERNAL_ERROR`; final inventory; lease-takeover rule; explicit reopen/retire; App/external-caller residual; cost/downtime evidence; P6 task evidence; and AI/Preview-disabled proof |
 | Genie Code/Agent how-tos and optional-AI explanation | dbt author or read-only analyst; P9 | D7; optional-intelligence owner | `optional installed capability`; current feature status, curated-input proof, AI-disabled core test |
 | Marketplace roadmap/provider material | Prospective provider/customer administrator; post-P10 | D8; distribution owner | `future/not available`; written provider/install/update/rollback confirmation before capability language |
+
+### Implemented P1.1 page registry
+
+Every implemented P1.1 page is `base` and depends on the offline capture library only. It must not imply archive retrieval, live Databricks execution, dbt success, capture completeness, or production compatibility.
+
+| Page | Audience and dependency | Stage and accountable owner | Prerequisite and next route | Search synonyms and stable codes | Required evidence |
+| --- | --- | --- | --- | --- | --- |
+| `developers/tutorials/inspect-an-artifact-pair.md` | Library developer/integrator; P1.1 synthetic fixtures | D1P; capture-library owner plus dbt documentation owner | Python 3.12, uv, approved dependency source; next invalid-pair recovery or pair-state explanation | inspect artifacts, `PAIR_VALID`, `PAIR_INVALID`, dbt outcome | Exact commands/output, sanitized fixture proof, documentation contract, installed-wheel gate |
+| `developers/how-to/diagnose-an-invalid-artifact-pair.md` | Library developer/integrator; P1.1 inspector | D1P; capture-library owner plus dbt documentation owner | Existing inspection failure and safe report; next CLI registry or pair-state explanation | diagnose invalid pair, exit `3`, exit `10`, `DBTOBSB_INPUT_READ_ERROR`, `DBT_*` | Every issue in canonical precedence, exact action/classification, real recovery fragments, safe-support boundary |
+| `developers/how-to/handle-raw-dbt-artifacts-safely.md` | Library developer/integrator and accountable data/security owner; caller-owned real artifacts | D1P; security documentation owner plus capture-library owner | Approved host/storage/access/lifecycle decision; next inspection, failure recovery, or custody explanation | raw artifacts, Personal Data, secrets, retention, legal hold, support payload | Input warning, ordered custody/support/lifecycle controls, verification and deletion consequence, security review |
+| `developers/reference/python-api.md` | Python integrator; P1.1 library API | D1P; capture-library owner | Installed runtime; next tutorial for first use or recovery how-to for invalid output | Python API, `inspect_artifact_pair`, `ArtifactPairReport`, 128 MiB, nesting | Reflected signature/types/limits/statuses, exact executable example/output, constructor/schema tests |
+| `developers/reference/cli-report-and-exit-codes.md` | CLI integrator and support engineer; P1.1 console contract | D1P; capture-library owner plus dbt documentation owner | Installed runtime; next symptom-specific recovery how-to | CLI, exit codes, report schema, `DBT_*`, `DBTOBSB_*` | Exact exits/output, full issue registry, static-text and fragment binding, installed console-entry-point gate |
+| `developers/explanation/pair-validity-vs-dbt-outcome-vs-capture-state.md` | Library developer/integrator; P1.1 interpretation boundary | D1P; dbt documentation owner | Tutorial or report result; next tutorial, recovery how-to, or CLI reference | pair validity, dbt outcome, capture state, `COMPLETE` | Valid-success, valid-dbt-failure, and mismatched-pair fixtures plus explicit completeness non-claim |
+| `developers/explanation/raw-artifact-custody.md` | Library developer/integrator and security reviewer; P1.1 data-flow boundary | D1P; security documentation owner plus capture-library owner | Raw-artifact handling how-to or API/CLI reference; next handling how-to or machine reference | safe report, sensitive input, custody, workstation-local, Databricks-local | First-party dbt artifact sources, implementation data-flow check, security review, explicit future-product non-claim |
 
 ## Page contract
 
@@ -305,7 +330,7 @@ Both procedures show envelope/execution digests; warehouse privacy/direct/effect
 - Give the physical fence states/phases and their plain-language projections exact meanings. Say **new actions blocked** at the drain commit and **maintenance safe to begin** only after terminal reconciliation, final paginated inventory, and `CLOSED`. Show the one-action limit, same-token Jobs recovery, asynchronous cancel, current-status-first/legacy-fallback Get Run terminal proof, terminal-failure `INTERNAL_ERROR`, unknown/conflicting evidence that remains held, takeover-without-release, explicit reopen, irreversible retire, and append-only milestones. Never call Delta plus Jobs atomic, say `DRAINING` means no run can launch, promise that a new trust generation stops an earlier admission, claim all Job callers are fenced, or imply resistance to compromised App/admin roots.
 - State that every granted group principal is a customer-governed authority root. Use `SHOW GROUPS WITH USER`/`WITH GROUP` only to classify the named migration actors/groups; do not claim to list every direct/indirect member or detect membership changes continuously.
 - Distinguish a group's direct warehouse `CAN_MONITOR` row from an actor's effective authority. The workspace-admin verifier can stop, edit, delete, and change ACLs on the warehouse; another named manager is the procedural escalation owner, not the exclusive technical manager.
-- State plainly that the collector has no DDL and that App bindings require independently verified existing objects. Its immutable trust tuple is observation-time provenance on the AttemptKey root and is excluded from AttemptKey, dbt hashes/validation, capture precedence, and native outcomes.
+- State plainly that the collector implementation executes fixed DML only and that App bindings require independently verified existing objects. The principal has no schema ownership, `MANAGE`, `CREATE TABLE`, or schema-level write grant, but table-level `MODIFY` remains residual schema-alter authority; name the collector principal, its code deployers, and Job managers as trusted roots. Its immutable trust tuple is observation-time provenance on the AttemptKey root and is excluded from AttemptKey, dbt hashes/validation, capture precedence, and native outcomes.
 - State plainly that optional system enrichment is absent from the base manifest and grants. Its separate pages name the dedicated principal/paused Job, Lakeflow's account/current-region and billing's account-global source visibility, the attended signed migration plane as sole writer of the `(workspace_id, job_id)` scope table through approved fixed DML-only Statement Execution updates, immediate pair filter, three snapshots plus sanitized views, excluded identity/user-controlled fields, snapshot semantics, freshness, cost, retention, denial-to-`DEGRADED`, and uninstall; the App never receives `system` access.
 - Give every machine state a plain-language label and stable code. Keep Job, dbt invocation, node/test, collector, and capture outcomes separate.
 - Keep capture state separate from structured-log state; document unavailable, logger-not-initialized, truncated, malformed, missing, unknown, and valid `log_version` evidence per command ordinal without weakening a valid primary artifact pair. A `deps` event cannot prove the primary build started.

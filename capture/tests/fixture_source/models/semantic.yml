@@ -1,0 +1,33 @@
+semantic_models:
+  - name: fixture_semantic
+    model: ref('observed_model')
+    defaults:
+      agg_time_dimension: created_at
+    entities:
+      - name: fixture_id
+        type: primary
+    dimensions:
+      - name: created_at
+        type: time
+        type_params:
+          time_granularity: day
+    measures:
+      - name: fixture_row_count
+        expr: 1
+        agg: count
+
+metrics:
+  - name: fixture_row_count
+    label: Fixture row count
+    type: simple
+    type_params:
+      measure: fixture_row_count
+
+saved_queries:
+  - name: fixture_saved_query
+    label: Fixture saved query
+    query_params:
+      metrics:
+        - fixture_row_count
+      group_by:
+        - "Dimension('fixture_id__created_at')"

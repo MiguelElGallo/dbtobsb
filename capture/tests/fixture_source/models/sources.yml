@@ -1,0 +1,41 @@
+version: 2
+
+sources:
+  - name: fixture_source
+    database: fixture_catalog
+    schema: fixture_schema
+    tables:
+      - name: fixture_table
+
+exposures:
+  - name: fixture_dashboard
+    type: dashboard
+    maturity: low
+    url: https://example.invalid/fixture
+    description: Synthetic exposure used only to qualify result-ID resolution.
+    depends_on:
+      - ref('observed_model')
+    owner:
+      name: Fixture Owner
+      email: fixture-owner@example.invalid
+
+unit_tests:
+  - name: observed_model_returns_one
+    model: observed_model
+    given: []
+    expect:
+      rows:
+        - fixture_id: 1
+
+models:
+  - name: observed_model
+    data_tests:
+      - not_null:
+          arguments:
+            column_name: fixture_id
+  - name: metricflow_time_spine
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        granularity: day

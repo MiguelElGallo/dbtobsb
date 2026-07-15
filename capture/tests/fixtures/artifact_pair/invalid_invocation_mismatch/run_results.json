@@ -1,0 +1,46 @@
+{
+  "args": {
+    "vars": {
+      "private": "CANARY_VARS_PRIVATE_VALUE"
+    },
+    "which": "build"
+  },
+  "elapsed_time": 0.25,
+  "metadata": {
+    "dbt_schema_version": "https://schemas.getdbt.com/dbt/run-results/v6.json",
+    "dbt_version": "1.11.12",
+    "env": {
+      "SENSITIVE": "CANARY_ENVIRONMENT_PERSONAL_DATA"
+    },
+    "generated_at": "2026-01-01T00:00:02Z",
+    "invocation_id": "22222222-2222-4222-8222-222222222222",
+    "invocation_started_at": "2026-01-01T00:00:00Z"
+  },
+  "results": [
+    {
+      "adapter_response": {
+        "_message": "CANARY_RESULT_MESSAGE_DATABASE_ERROR",
+        "job_id": "101",
+        "job_run_id": "202",
+        "task_run_id": "303",
+        "token_like": "CANARY_TOKEN_NOT_A_REAL_CREDENTIAL"
+      },
+      "compiled": true,
+      "compiled_code": "CANARY_COMPILED_SQL_SELECT_SECRET",
+      "execution_time": 0.125,
+      "failures": null,
+      "message": "CANARY_RESULT_MESSAGE_DATABASE_ERROR",
+      "relation_name": "CANARY_RELATION_CUSTOMER_SECRET",
+      "status": "success",
+      "thread_id": "Thread-1",
+      "timing": [
+        {
+          "completed_at": "2026-01-01T00:00:02Z",
+          "name": "execute",
+          "started_at": "2026-01-01T00:00:01Z"
+        }
+      ],
+      "unique_id": "model.dbtobsb_capture_fixture.observed_model"
+    }
+  ]
+}
