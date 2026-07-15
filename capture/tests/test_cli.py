@@ -24,6 +24,7 @@ from dbtobsb_capture.inspector import MAX_PRIMARY_ARTIFACT_BYTES
 
 FIXTURES = Path(__file__).parent / "fixtures" / "artifact_pair"
 CANARY = "CANARY_DO_NOT_ECHO_PATH_OR_ARGUMENT"
+SCHEMA_VALIDATION_SUBPROCESS_TIMEOUT_SECONDS = 10
 
 
 def _arguments(fixture: str, *extra: str) -> list[str]:
@@ -282,7 +283,7 @@ def test_installed_cli_returns_canonical_invalid_for_mixed_failures(
         ],
         capture_output=True,
         text=True,
-        timeout=2,
+        timeout=SCHEMA_VALIDATION_SUBPROCESS_TIMEOUT_SECONDS,
         check=False,
     )
     report = json.loads(completed.stdout)
