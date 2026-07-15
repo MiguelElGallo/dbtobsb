@@ -75,7 +75,7 @@ The example reads files before calling the API. The API itself never opens a cal
 | Type | Public fields and invariant |
 | --- | --- |
 | `PairState` | `PAIR_VALID` or `PAIR_INVALID`. |
-| `ArtifactPairReport` | Frozen and slotted. `state: PairState`; `summary: ArtifactPairSummary &#124; None`; `issues: tuple[ArtifactPairIssue, ...]`; `primary_issue: ArtifactPairIssue &#124; None`; `to_dict()`. Valid means one summary and zero issues; invalid means no summary and 1–20 unique canonical issues. |
+| `ArtifactPairReport` | Frozen and slotted. `state: PairState`; `summary: ArtifactPairSummary \| None`; `issues: tuple[ArtifactPairIssue, ...]`; `primary_issue: ArtifactPairIssue \| None`; `to_dict()`. Valid means one summary and zero issues; invalid means no summary and 1–20 unique canonical issues. |
 | `ArtifactPairSummary` | Frozen and slotted. `manifest_schema: str`; `run_results_schema: str`; `dbt_version: str`; `adapter_type: str`; `command: str`; `status_counts: tuple[NativeStatusCount, ...]`; computed positive `result_count: int`. |
 | `NativeStatusCount` | `status: str` from the closed vocabulary below; `count: int` greater than zero. Status entries are unique and canonically ordered. |
 | `ArtifactPairIssue` | Static `code: str`; `component: str`; `field: str`; `observed_category: str`; `impact: str`; and `next_action: str`; never an observed value. |

@@ -156,11 +156,11 @@ def test_displayed_python_example_and_output_match_execution() -> None:
 def test_python_reference_binds_closed_public_contract() -> None:
     contract = _marked_section(PYTHON_REFERENCE, "python-public-contract")
     public_types_source = _marked_section(PYTHON_REFERENCE, "python-public-types")
-    public_types = public_types_source.replace("&#124;", "|")
+    public_types = public_types_source.replace(r"\|", "|")
 
     table_rows = [line for line in public_types_source.splitlines() if line.startswith("|")]
     assert table_rows
-    assert all(len(line.strip("|").split("|")) == 2 for line in table_rows)
+    assert all(len(re.split(r"(?<!\\)\|", line)[1:-1]) == 2 for line in table_rows)
 
     artifact_limit = inspector_module.MAX_PRIMARY_ARTIFACT_BYTES
     limit_text = f"{artifact_limit:,} bytes ({artifact_limit // (1024 * 1024)} MiB)"
