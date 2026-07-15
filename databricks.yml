@@ -1,0 +1,23 @@
+bundle:
+  name: dbtobsb
+  databricks_cli_version: ">= 1.7.0, <= 1.7.0"
+  engine: direct
+
+sync:
+  exclude:
+    - app/tests/**
+
+resources:
+  apps:
+    dbtobsb_smoke:
+      name: dbtobsb-smoke
+      description: P0 process-liveness smoke; stopped by default. Explicit start uses billable App compute. No data or compute bindings.
+      source_code_path: ./app
+      lifecycle:
+        started: false
+
+targets:
+  smoke:
+    default: true
+    workspace:
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}

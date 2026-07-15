@@ -1,0 +1,3 @@
+command:
+  - uvicorn
+  - dbtobsb_app.main:app
