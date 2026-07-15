@@ -1,0 +1,3905 @@
+{
+  "$defs": {
+    "issue": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_MISMATCH"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_ADAPTER_TYPE_UNSUPPORTED"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_COMMAND_UNSUPPORTED"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_EMPTY_EXECUTION"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_RESULTS_DUPLICATE_ID"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNRESOLVED"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNSUPPORTED_RESOURCE"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_AMBIGUOUS"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_MANIFEST_RESOURCE_ID_MISMATCH"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_RESULT_RESOURCE_TYPE_UNSUPPORTED"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_RESULT_STATUS_UNSUPPORTED"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_TIMING_INVALID"
+        },
+        {
+          "$ref": "#/$defs/issue_variants/DBT_FAILURE_COUNT_INVALID"
+        }
+      ]
+    },
+    "issue_variants": {
+      "DBT_ADAPTER_TYPE_UNSUPPORTED": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_ADAPTER_TYPE_UNSUPPORTED"
+          },
+          "component": {
+            "const": "manifest"
+          },
+          "field": {
+            "const": "metadata.adapter_type"
+          },
+          "impact": {
+            "const": "The manifest is not from the qualified Databricks adapter path."
+          },
+          "next_action": {
+            "const": "Use the pinned dbt-databricks job or qualify another adapter separately."
+          },
+          "observed_category": {
+            "const": "not_databricks"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_COMMAND_UNSUPPORTED": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_COMMAND_UNSUPPORTED"
+          },
+          "component": {
+            "const": "run_results"
+          },
+          "field": {
+            "const": "args.which"
+          },
+          "impact": {
+            "const": "The result artifact is not evidence from the supported primary dbt build command."
+          },
+          "next_action": {
+            "const": "Run the approved named-selector dbt build and collect that run_results.json."
+          },
+          "observed_category": {
+            "const": "not_build"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_CORE_VERSION_UNSUPPORTED": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_CORE_VERSION_UNSUPPORTED"
+          },
+          "component": {
+            "const": "artifact_pair"
+          },
+          "field": {
+            "const": "metadata.dbt_version"
+          },
+          "impact": {
+            "const": "The files were not both produced by the qualified dbt Core version."
+          },
+          "next_action": {
+            "const": "Run the supported job with dbt-core 1.11.12 and collect both artifacts again."
+          },
+          "observed_category": {
+            "const": "not_exact_1_11_12_pair"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_EMPTY_EXECUTION": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_EMPTY_EXECUTION"
+          },
+          "component": {
+            "const": "run_results"
+          },
+          "field": {
+            "const": "results"
+          },
+          "impact": {
+            "const": "An empty result array does not satisfy the supported execution contract."
+          },
+          "next_action": {
+            "const": "Fix the selector or executable-node set, then run the pinned dbt build again."
+          },
+          "observed_category": {
+            "const": "empty"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_FAILURE_COUNT_INVALID": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_FAILURE_COUNT_INVALID"
+          },
+          "component": {
+            "const": "run_results"
+          },
+          "field": {
+            "const": "results.failures"
+          },
+          "impact": {
+            "const": "The artifact contains a negative dbt failure count."
+          },
+          "next_action": {
+            "const": "Collect a fresh unmodified run_results.json from the pinned dbt build."
+          },
+          "observed_category": {
+            "const": "negative"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_INVOCATION_ID_INVALID": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_INVOCATION_ID_INVALID"
+          },
+          "component": {
+            "const": "artifact_pair"
+          },
+          "field": {
+            "const": "metadata.invocation_id"
+          },
+          "impact": {
+            "const": "The files cannot be bound to one parseable dbt invocation."
+          },
+          "next_action": {
+            "const": "Collect both closed artifacts from one completed pinned dbt build invocation before another dbt command runs."
+          },
+          "observed_category": {
+            "const": "missing_or_invalid_uuid"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_INVOCATION_ID_MISMATCH": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_INVOCATION_ID_MISMATCH"
+          },
+          "component": {
+            "const": "artifact_pair"
+          },
+          "field": {
+            "const": "metadata.invocation_id"
+          },
+          "impact": {
+            "const": "The files do not have the same dbt invocation identity."
+          },
+          "next_action": {
+            "const": "Collect both closed artifacts from one completed pinned dbt build invocation before another dbt command runs."
+          },
+          "observed_category": {
+            "const": "different_valid_values"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_MANIFEST_JSON_DUPLICATE_KEY": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_MANIFEST_JSON_DUPLICATE_KEY"
+          },
+          "component": {
+            "const": "manifest"
+          },
+          "field": {
+            "const": "document"
+          },
+          "impact": {
+            "const": "A duplicate JSON key makes the manifest interpretation ambiguous."
+          },
+          "next_action": {
+            "const": "Collect a new manifest from the pinned dbt build; do not repair it by hand."
+          },
+          "observed_category": {
+            "const": "duplicate_object_key"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_MANIFEST_JSON_INVALID": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_MANIFEST_JSON_INVALID"
+          },
+          "component": {
+            "const": "manifest"
+          },
+          "field": {
+            "const": "document"
+          },
+          "impact": {
+            "const": "The manifest is not one unambiguous UTF-8 JSON document."
+          },
+          "next_action": {
+            "const": "Collect manifest.json again from the pinned dbt build target directory."
+          },
+          "observed_category": {
+            "const": "invalid_utf8_or_json"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+          },
+          "component": {
+            "const": "manifest"
+          },
+          "field": {
+            "const": "document"
+          },
+          "impact": {
+            "const": "The manifest exceeds the bounded JSON nesting policy."
+          },
+          "next_action": {
+            "const": "Collect a normal unmodified manifest from the pinned dbt build."
+          },
+          "observed_category": {
+            "const": "over_256_levels"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_MANIFEST_RESOURCE_ID_MISMATCH": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_MANIFEST_RESOURCE_ID_MISMATCH"
+          },
+          "component": {
+            "const": "manifest"
+          },
+          "field": {
+            "const": "resource.unique_id"
+          },
+          "impact": {
+            "const": "A matched manifest resource contradicts its enclosing identifier."
+          },
+          "next_action": {
+            "const": "Collect a fresh unmodified manifest from the pinned dbt build."
+          },
+          "observed_category": {
+            "const": "mapping_key_and_resource_disagree"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_MANIFEST_SCHEMA_INVALID": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_MANIFEST_SCHEMA_INVALID"
+          },
+          "component": {
+            "const": "manifest"
+          },
+          "field": {
+            "const": "document"
+          },
+          "impact": {
+            "const": "The manifest does not satisfy the vendored dbt manifest v12 schema."
+          },
+          "next_action": {
+            "const": "Re-run the pinned dbt build and collect its unmodified manifest.json."
+          },
+          "observed_category": {
+            "const": "schema_violation"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_MANIFEST_SIZE_LIMIT_EXCEEDED": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+          },
+          "component": {
+            "const": "manifest"
+          },
+          "field": {
+            "const": "document"
+          },
+          "impact": {
+            "const": "The manifest cannot be inspected within the bounded local memory policy."
+          },
+          "next_action": {
+            "const": "Collect a complete manifest within 128 MiB; do not split or truncate it."
+          },
+          "observed_category": {
+            "const": "over_128_mib"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_RESULTS_DUPLICATE_ID": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_RESULTS_DUPLICATE_ID"
+          },
+          "component": {
+            "const": "run_results"
+          },
+          "field": {
+            "const": "results.unique_id"
+          },
+          "impact": {
+            "const": "One dbt resource appears more than once in the execution results."
+          },
+          "next_action": {
+            "const": "Collect a fresh unmodified artifact pair from the pinned dbt build."
+          },
+          "observed_category": {
+            "const": "duplicate"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_RESULT_ID_AMBIGUOUS": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_RESULT_ID_AMBIGUOUS"
+          },
+          "component": {
+            "const": "artifact_pair"
+          },
+          "field": {
+            "const": "results.unique_id"
+          },
+          "impact": {
+            "const": "A result identifier has more than one possible manifest resource."
+          },
+          "next_action": {
+            "const": "Collect a fresh unmodified artifact pair; do not choose a resource manually."
+          },
+          "observed_category": {
+            "const": "multiple_manifest_matches"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_RESULT_ID_UNRESOLVED": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_RESULT_ID_UNRESOLVED"
+          },
+          "component": {
+            "const": "artifact_pair"
+          },
+          "field": {
+            "const": "results.unique_id"
+          },
+          "impact": {
+            "const": "An executed result cannot be resolved to the supported manifest inventory."
+          },
+          "next_action": {
+            "const": "Collect manifest.json and run_results.json from the same build invocation."
+          },
+          "observed_category": {
+            "const": "missing_from_supported_manifest_collections"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_RESULT_ID_UNSUPPORTED_RESOURCE": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_RESULT_ID_UNSUPPORTED_RESOURCE"
+          },
+          "component": {
+            "const": "artifact_pair"
+          },
+          "field": {
+            "const": "results.unique_id"
+          },
+          "impact": {
+            "const": "A result resolves only to a resource type that P1.1 does not accept for build results."
+          },
+          "next_action": {
+            "const": "Use the supported dbt build contract or qualify this evidence type separately."
+          },
+          "observed_category": {
+            "const": "unsupported_manifest_collection"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_RESULT_RESOURCE_TYPE_UNSUPPORTED": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_RESULT_RESOURCE_TYPE_UNSUPPORTED"
+          },
+          "component": {
+            "const": "artifact_pair"
+          },
+          "field": {
+            "const": "resource.resource_type"
+          },
+          "impact": {
+            "const": "A matched manifest collection contains a resource type that BuildTask does not accept."
+          },
+          "next_action": {
+            "const": "Collect a fresh pair from the pinned build or qualify the resource type separately."
+          },
+          "observed_category": {
+            "const": "not_allowed_for_buildtask_collection"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_RESULT_STATUS_UNSUPPORTED": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_RESULT_STATUS_UNSUPPORTED"
+          },
+          "component": {
+            "const": "artifact_pair"
+          },
+          "field": {
+            "const": "results.status"
+          },
+          "impact": {
+            "const": "The native dbt status is not valid for the matched resource type."
+          },
+          "next_action": {
+            "const": "Collect a fresh pair from the pinned build; do not reinterpret the status."
+          },
+          "observed_category": {
+            "const": "not_allowed_for_resource_type"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_RUN_RESULTS_JSON_DUPLICATE_KEY": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+          },
+          "component": {
+            "const": "run_results"
+          },
+          "field": {
+            "const": "document"
+          },
+          "impact": {
+            "const": "A duplicate JSON key makes the run-results interpretation ambiguous."
+          },
+          "next_action": {
+            "const": "Collect new run results from the pinned dbt build; do not repair them by hand."
+          },
+          "observed_category": {
+            "const": "duplicate_object_key"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_RUN_RESULTS_JSON_INVALID": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_RUN_RESULTS_JSON_INVALID"
+          },
+          "component": {
+            "const": "run_results"
+          },
+          "field": {
+            "const": "document"
+          },
+          "impact": {
+            "const": "The run-results file is not one unambiguous UTF-8 JSON document."
+          },
+          "next_action": {
+            "const": "Collect run_results.json again from the pinned dbt build target directory."
+          },
+          "observed_category": {
+            "const": "invalid_utf8_or_json"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+          },
+          "component": {
+            "const": "run_results"
+          },
+          "field": {
+            "const": "document"
+          },
+          "impact": {
+            "const": "The run-results file exceeds the bounded JSON nesting policy."
+          },
+          "next_action": {
+            "const": "Collect normal unmodified run results from the pinned dbt build."
+          },
+          "observed_category": {
+            "const": "over_256_levels"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_RUN_RESULTS_SCHEMA_INVALID": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_RUN_RESULTS_SCHEMA_INVALID"
+          },
+          "component": {
+            "const": "run_results"
+          },
+          "field": {
+            "const": "document"
+          },
+          "impact": {
+            "const": "The run-results file does not satisfy the vendored dbt run-results v6 schema."
+          },
+          "next_action": {
+            "const": "Re-run the pinned dbt build and collect its unmodified run_results.json."
+          },
+          "observed_category": {
+            "const": "schema_violation"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+          },
+          "component": {
+            "const": "run_results"
+          },
+          "field": {
+            "const": "document"
+          },
+          "impact": {
+            "const": "The run-results file cannot be inspected within the bounded local memory policy."
+          },
+          "next_action": {
+            "const": "Collect a complete run_results.json within 128 MiB; do not split or truncate it."
+          },
+          "observed_category": {
+            "const": "over_128_mib"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_SCHEMA_VERSION_UNSUPPORTED": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_SCHEMA_VERSION_UNSUPPORTED"
+          },
+          "component": {
+            "const": "artifact_pair"
+          },
+          "field": {
+            "const": "metadata.dbt_schema_version"
+          },
+          "impact": {
+            "const": "The files are not the exact artifact-schema pair qualified by P1.1."
+          },
+          "next_action": {
+            "const": "Use manifest v12 and run-results v6, or qualify a new pair before inspection."
+          },
+          "observed_category": {
+            "const": "not_exact_v12_v6_pair"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      },
+      "DBT_TIMING_INVALID": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "DBT_TIMING_INVALID"
+          },
+          "component": {
+            "const": "run_results"
+          },
+          "field": {
+            "const": "elapsed_time_or_results.execution_time"
+          },
+          "impact": {
+            "const": "The artifact contains a timing value that cannot represent elapsed execution time."
+          },
+          "next_action": {
+            "const": "Collect a fresh unmodified run_results.json from the pinned dbt build."
+          },
+          "observed_category": {
+            "const": "negative_or_non_finite"
+          }
+        },
+        "required": [
+          "code",
+          "component",
+          "field",
+          "observed_category",
+          "impact",
+          "next_action"
+        ],
+        "type": "object"
+      }
+    },
+    "summary": {
+      "additionalProperties": false,
+      "properties": {
+        "adapter_type": {
+          "const": "databricks"
+        },
+        "command": {
+          "const": "build"
+        },
+        "dbt_version": {
+          "const": "1.11.12"
+        },
+        "manifest_schema": {
+          "const": "https://schemas.getdbt.com/dbt/manifest/v12.json"
+        },
+        "run_results_schema": {
+          "const": "https://schemas.getdbt.com/dbt/run-results/v6.json"
+        },
+        "status_counts": {
+          "additionalProperties": false,
+          "maxProperties": 8,
+          "minProperties": 1,
+          "properties": {
+            "error": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "fail": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "no-op": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "partial success": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "pass": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "skipped": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "success": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "warn": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "manifest_schema",
+        "run_results_schema",
+        "dbt_version",
+        "adapter_type",
+        "command",
+        "status_counts"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "urn:dbtobsb:artifact-pair-report:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "issues": {
+          "maxItems": 0
+        },
+        "pair_state": {
+          "const": "PAIR_VALID"
+        },
+        "summary": {
+          "$ref": "#/$defs/summary"
+        }
+      }
+    },
+    {
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": []
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_MISMATCH"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_ADAPTER_TYPE_UNSUPPORTED"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_MISMATCH"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_COMMAND_UNSUPPORTED"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_MISMATCH"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_ADAPTER_TYPE_UNSUPPORTED"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_EMPTY_EXECUTION"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_MISMATCH"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_ADAPTER_TYPE_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_COMMAND_UNSUPPORTED"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_RESULTS_DUPLICATE_ID"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_MISMATCH"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_ADAPTER_TYPE_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_COMMAND_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_EMPTY_EXECUTION"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNRESOLVED"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_MISMATCH"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_ADAPTER_TYPE_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_COMMAND_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_EMPTY_EXECUTION"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULTS_DUPLICATE_ID"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNSUPPORTED_RESOURCE"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_MISMATCH"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_ADAPTER_TYPE_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_COMMAND_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_EMPTY_EXECUTION"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULTS_DUPLICATE_ID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNRESOLVED"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_AMBIGUOUS"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_MISMATCH"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_ADAPTER_TYPE_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_COMMAND_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_EMPTY_EXECUTION"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULTS_DUPLICATE_ID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNRESOLVED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNSUPPORTED_RESOURCE"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_MANIFEST_RESOURCE_ID_MISMATCH"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_MISMATCH"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_ADAPTER_TYPE_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_COMMAND_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_EMPTY_EXECUTION"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULTS_DUPLICATE_ID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNRESOLVED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNSUPPORTED_RESOURCE"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_AMBIGUOUS"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_RESULT_RESOURCE_TYPE_UNSUPPORTED"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_MISMATCH"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_ADAPTER_TYPE_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_COMMAND_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_EMPTY_EXECUTION"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULTS_DUPLICATE_ID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNRESOLVED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNSUPPORTED_RESOURCE"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_AMBIGUOUS"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_RESOURCE_ID_MISMATCH"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_RESULT_STATUS_UNSUPPORTED"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_MISMATCH"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_ADAPTER_TYPE_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_COMMAND_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_EMPTY_EXECUTION"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULTS_DUPLICATE_ID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNRESOLVED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNSUPPORTED_RESOURCE"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_AMBIGUOUS"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_RESOURCE_ID_MISMATCH"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_RESOURCE_TYPE_UNSUPPORTED"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_TIMING_INVALID"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_MISMATCH"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_ADAPTER_TYPE_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_COMMAND_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_EMPTY_EXECUTION"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULTS_DUPLICATE_ID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNRESOLVED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNSUPPORTED_RESOURCE"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_AMBIGUOUS"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_RESOURCE_ID_MISMATCH"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_RESOURCE_TYPE_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_STATUS_UNSUPPORTED"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issues": {
+                "minItems": 1,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/issue_variants/DBT_FAILURE_COUNT_INVALID"
+                  }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "issues": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_DUPLICATE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RUN_RESULTS_SCHEMA_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_SCHEMA_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_CORE_VERSION_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_INVALID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_INVOCATION_ID_MISMATCH"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_ADAPTER_TYPE_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_COMMAND_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_EMPTY_EXECUTION"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULTS_DUPLICATE_ID"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNRESOLVED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_UNSUPPORTED_RESOURCE"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_ID_AMBIGUOUS"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_MANIFEST_RESOURCE_ID_MISMATCH"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_RESOURCE_TYPE_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_RESULT_STATUS_UNSUPPORTED"
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "$ref": "#/$defs/issue_variants/DBT_TIMING_INVALID"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "issues": {
+          "minItems": 1
+        },
+        "pair_state": {
+          "const": "PAIR_INVALID"
+        },
+        "summary": {
+          "type": "null"
+        }
+      }
+    }
+  ],
+  "properties": {
+    "issues": {
+      "items": {
+        "$ref": "#/$defs/issue"
+      },
+      "maxItems": 20,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "pair_state": {
+      "enum": [
+        "PAIR_VALID",
+        "PAIR_INVALID"
+      ]
+    },
+    "schema_version": {
+      "const": "dbtobsb.artifact-pair-report.v1"
+    },
+    "summary": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/summary"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "pair_state",
+    "summary",
+    "issues"
+  ],
+  "title": "dbtobsb artifact-pair inspection report v1",
+  "type": "object"
+}

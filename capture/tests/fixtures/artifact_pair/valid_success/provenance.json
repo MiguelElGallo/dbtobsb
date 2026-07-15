@@ -1,0 +1,44 @@
+{
+  "artifact_sha256": {
+    "manifest": "14d1b3c6f54831fcc004bfad548578c0b955e03f41db786bba7f484391be419c",
+    "run_results": "4465791113cec78b9267697585952c4cfc4a1ef60c71ea07456c6766cb5e3f70"
+  },
+  "canary_categories": [
+    "compiled_sql",
+    "email",
+    "environment",
+    "message",
+    "path",
+    "relation",
+    "token",
+    "vars"
+  ],
+  "candidate_context": {
+    "dbt_adapters": "1.23.0",
+    "dbt_adapters_wheel_sha256": "6c6c9cb6fca5d01324b5c39961c8b16b985b1ac7b701909f4416ce9dad66e288",
+    "dbt_common": "1.37.5",
+    "dbt_common_wheel_sha256": "432e3f2f9ca61eace65d4d1cb99a715c3ffc343b7190a692c39f126eedf0c077",
+    "dbt_core": "1.11.12",
+    "dbt_core_wheel_sha256": "3b7760a3760a6db8a14a6ef38fb86532b2c2b150d49beaa1feb0f50170baa86e",
+    "dbt_databricks": "1.12.2",
+    "dbt_databricks_wheel_sha256": "158d76c940f3f0b0a8229203d9efb0752c73b881ede21c8f0696cfe9484aec43",
+    "dbt_protos": "1.0.541",
+    "dbt_protos_wheel_sha256": "4e03f88e6b5c13a8cac68c6aa78267d8eb4396e6341a807112d619ab938318d5",
+    "dbt_spark": "1.10.3",
+    "dbt_spark_wheel_sha256": "1906f4cb507c931c4988ea6074603769da7466788b53483546e3abf6eabbf04d",
+    "note": "Reviewed compatibility context only; the source manifest does not attest these transitive package versions or wheel digests.",
+    "python": "3.12.3",
+    "runtime_attestation": false
+  },
+  "fixture_kind": "valid_success",
+  "runtime_evidence": false,
+  "sanitizer": "capture/scripts/generate_artifact_pair_fixtures.py",
+  "schema_compatibility_note": "The exact Core 1.11.12 tag schema is pinned because the generic published v12 endpoint was stale on 2026-07-15. The candidate locks dbt-adapters 1.23.0, whose raw parsed manifest validates without an overlay. This fixture is not runtime evidence.",
+  "schema_sha256": {
+    "manifest_v12_core_1_11_12": "b290bb419026be3fa361ead7f0d8e3bb0eb6bca8c3a3fb7971f5d252fd0825b3",
+    "run_results_v6": "1783bda55656bde624ed67640375640a2919a8608e2505e3a02c04cd139e2cdf"
+  },
+  "source_command": "project fixture parsed with dbt; reviewed projection checked into fixture_source",
+  "source_kind": "reviewed_synthetic_manifest_projection_plus_synthetic_run_results",
+  "source_manifest_sha256": "14d1b3c6f54831fcc004bfad548578c0b955e03f41db786bba7f484391be419c"
+}

@@ -1,0 +1,9 @@
+functions:
+  - name: fixture_double
+    description: Synthetic scalar function used only for artifact contract tests.
+    arguments:
+      - name: fixture_value
+        data_type: bigint
+        description: Synthetic integer input.
+    returns:
+      data_type: bigint

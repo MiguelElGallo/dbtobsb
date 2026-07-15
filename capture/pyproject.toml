@@ -1,0 +1,49 @@
+[project]
+name = "dbtobsb-capture"
+version = "0.1.0"
+description = "Offline dbt Core artifact validation for dbtobsb"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "attrs==26.1.0",
+    "jsonschema==4.26.0",
+    "jsonschema-specifications==2025.9.1",
+    "referencing==0.37.0",
+    "rpds-py==2026.6.3",
+    "typing-extensions==4.16.0",
+]
+
+[build-system]
+requires = ["hatchling==1.28.0"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+dbtobsb-capture = "dbtobsb_capture.cli:main"
+
+[dependency-groups]
+dev = [
+    "hypothesis==6.136.9",
+    "pytest==8.4.1",
+    "ruff==0.15.21",
+    "ty==0.0.58",
+]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers -q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ty.environment]
+python-version = "3.12"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dbtobsb_capture"]
