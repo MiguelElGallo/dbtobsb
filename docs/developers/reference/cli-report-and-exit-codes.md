@@ -35,7 +35,7 @@ help: docs/developers/how-to/diagnose-an-invalid-artifact-pair.md#recover-an-inp
 
 ## Sensitive input boundary
 
-The CLI reads caller-owned raw artifacts but does not persist, copy, upload, delete, or govern them. Those files can contain Personal Data, secrets, SQL, messages, paths, topology, and identities. Use policy-approved storage and least-privilege access; never commit, upload, paste, or attach them to an ordinary ticket. Apply the custody, support, retention, backup, and deletion rules in [Handle raw dbt artifacts safely](../explanation/raw-artifact-custody.md).
+The CLI reads caller-owned raw artifacts but does not persist, copy, upload, delete, or govern them. Those files can contain Personal Data, secrets, SQL, messages, paths, topology, and identities. Use policy-approved storage and least-privilege access; never commit, upload, paste, or attach them to an ordinary ticket. Apply the custody, support, retention, backup, and deletion controls in [Handle raw dbt artifacts safely](../how-to/handle-raw-dbt-artifacts-safely.md).
 
 ## Machine report
 

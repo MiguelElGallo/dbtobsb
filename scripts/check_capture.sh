@@ -12,9 +12,10 @@ trap 'rm -rf "$temporary_root"' EXIT
 uv sync --project capture --locked --python "$capture_python"
 uv run --project capture python capture/scripts/generate_report_schema.py --check
 uv run --project capture pytest capture/tests
-uv run --project capture ruff check capture
-uv run --project capture ruff format --check capture
-uv run --project capture ty check capture
+uv run --project capture python scripts/check_markdown_links.py --revision HEAD
+uv run --project capture ruff check capture scripts/check_markdown_links.py
+uv run --project capture ruff format --check capture scripts/check_markdown_links.py
+uv run --project capture ty check capture scripts/check_markdown_links.py
 
 uv run --project capture python capture/scripts/generate_artifact_pair_fixtures.py \
   --source-manifest capture/tests/fixture_source/approved-manifest.json \

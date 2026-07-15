@@ -21,4 +21,4 @@ The [repository README](../README.md#run-the-p0-smoke) contains the local qualit
 
 ## Inspect a dbt artifact pair
 
-Start with [Inspect an artifact pair](developers/tutorials/inspect-an-artifact-pair.md). Before substituting real files, read [Handle raw dbt artifacts safely](developers/explanation/raw-artifact-custody.md). After its locked runtime is installed, P1.1 validates one pinned pair offline; it does not retrieve an archive, run dbt, prove a Databricks attempt, or assign a capture state.
+Start with [Inspect an artifact pair](developers/tutorials/inspect-an-artifact-pair.md). Before substituting real files, follow [Handle raw dbt artifacts safely](developers/how-to/handle-raw-dbt-artifacts-safely.md). After its locked runtime is installed, P1.1 validates one pinned pair offline; it does not retrieve an archive, run dbt, prove a Databricks attempt, or assign a capture state.

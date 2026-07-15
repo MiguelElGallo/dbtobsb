@@ -8,7 +8,7 @@ You need Python 3.12 and [uv](https://docs.astral.sh/uv/). Run commands from the
 
 On a clean machine, the first command can download the locked runtime packages from the configured Python index. In a regulated environment, configure the customer-approved registry or mirror first, or use a policy-approved populated uv cache. P1.1 does not yet ship a disconnected wheelhouse; without an approved reachable source or complete cache, stop before installation.
 
-> **Sensitive input boundary:** This tutorial uses synthetic sanitized fixtures. Real `manifest.json` and `run_results.json` files can contain Personal Data, secrets, SQL, messages, paths, topology, and identities. Keep them in policy-approved storage with least-privilege access; do not commit, upload, paste, or attach them to an ordinary support ticket. Read [Handle raw dbt artifacts safely](../explanation/raw-artifact-custody.md) before substituting real files.
+> **Sensitive input boundary:** This tutorial uses synthetic sanitized fixtures. Real `manifest.json` and `run_results.json` files can contain Personal Data, secrets, SQL, messages, paths, topology, and identities. Keep them in policy-approved storage with least-privilege access; do not commit, upload, paste, or attach them to an ordinary support ticket. Follow [Handle raw dbt artifacts safely](../how-to/handle-raw-dbt-artifacts-safely.md) before substituting real files.
 
 Create the locked environment:
 

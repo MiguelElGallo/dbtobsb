@@ -57,22 +57,30 @@ print(json.dumps(report.to_dict(), ensure_ascii=True, separators=(",", ":"), sor
 
 The exact output is:
 
+<!-- BEGIN: inspect-valid-fixture-output -->
+
 ```text
 PAIR_VALID
 {"issues":[],"pair_state":"PAIR_VALID","schema_version":"dbtobsb.artifact-pair-report.v1","summary":{"adapter_type":"databricks","command":"build","dbt_version":"1.11.12","manifest_schema":"https://schemas.getdbt.com/dbt/manifest/v12.json","run_results_schema":"https://schemas.getdbt.com/dbt/run-results/v6.json","status_counts":{"success":1}}}
 ```
 
+<!-- END: inspect-valid-fixture-output -->
+
 The example reads files before calling the API. The API itself never opens a caller path.
 
 ## Public types
+
+<!-- BEGIN: python-public-types -->
 
 | Type | Public fields and invariant |
 | --- | --- |
 | `PairState` | `PAIR_VALID` or `PAIR_INVALID`. |
 | `ArtifactPairReport` | Frozen and slotted. `state: PairState`; `summary: ArtifactPairSummary | None`; `issues: tuple[ArtifactPairIssue, ...]`; `primary_issue: ArtifactPairIssue | None`; `to_dict()`. Valid means one summary and zero issues; invalid means no summary and 1–20 unique canonical issues. |
-| `ArtifactPairSummary` | Frozen and slotted. Exact string fields `manifest_schema`, `run_results_schema`, `dbt_version`, `adapter_type`, and `command`; `status_counts: tuple[NativeStatusCount, ...]`; computed positive `result_count: int`. |
+| `ArtifactPairSummary` | Frozen and slotted. `manifest_schema: str`; `run_results_schema: str`; `dbt_version: str`; `adapter_type: str`; `command: str`; `status_counts: tuple[NativeStatusCount, ...]`; computed positive `result_count: int`. |
 | `NativeStatusCount` | `status: str` from the closed vocabulary below; `count: int` greater than zero. Status entries are unique and canonically ordered. |
-| `ArtifactPairIssue` | Static strings `code`, `component`, `field`, `observed_category`, `impact`, and `next_action`; never an observed value. |
+| `ArtifactPairIssue` | Static `code: str`; `component: str`; `field: str`; `observed_category: str`; `impact: str`; and `next_action: str`; never an observed value. |
+
+<!-- END: python-public-types -->
 
 The closed native-status vocabulary is `error`, `fail`, `no-op`, `partial success`, `pass`, `skipped`, `success`, and `warn`. A result's resource type determines which run or test statuses are valid.
 
@@ -80,7 +88,7 @@ The closed native-status vocabulary is `error`, `fail`, `no-op`, `partial succes
 
 ## Sensitive input boundary
 
-The safe report does not make its raw inputs safe to retain or share. `manifest.json` and `run_results.json` can contain Personal Data, secrets, SQL, messages, paths, topology, and identities. The API receives caller-owned bytes and does not persist, copy, upload, delete, or govern the caller's originals or other copies. Use policy-approved storage and the lifecycle in [Handle raw dbt artifacts safely](../explanation/raw-artifact-custody.md).
+The safe report does not make its raw inputs safe to retain or share. `manifest.json` and `run_results.json` can contain Personal Data, secrets, SQL, messages, paths, topology, and identities. The API receives caller-owned bytes and does not persist, copy, upload, delete, or govern the caller's originals or other copies. Use policy-approved storage and follow [Handle raw dbt artifacts safely](../how-to/handle-raw-dbt-artifacts-safely.md).
 
 ## Supported P1.1 pair
 

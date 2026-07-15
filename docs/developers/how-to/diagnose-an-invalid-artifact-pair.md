@@ -2,7 +2,7 @@
 
 Use this guide when the inspector returns `PAIR_INVALID`, exits `10`, or emits `DBTOBSB_INPUT_READ_ERROR` with exit `3`.
 
-> **Before using real files:** Raw dbt artifacts can contain Personal Data, secrets, SQL, messages, paths, topology, and identities. Use policy-approved local storage and least-privilege access. Do not commit, upload, paste, or attach the files to an ordinary ticket. Inspection does not delete or govern the originals; follow [Handle raw dbt artifacts safely](../explanation/raw-artifact-custody.md).
+> **Before using real files:** Raw dbt artifacts can contain Personal Data, secrets, SQL, messages, paths, topology, and identities. Use policy-approved local storage and least-privilege access. Do not commit, upload, paste, or attach the files to an ordinary ticket. Inspection does not delete or govern the originals; follow [Handle raw dbt artifacts safely](handle-raw-dbt-artifacts-safely.md).
 
 ## Get the primary recovery action
 
@@ -60,4 +60,4 @@ If the error is exit `3`, follow its static next action; the tool never echoes t
 
 For any issue, the ordinary support payload is limited to the product version, safe command shape, exit or static issue code, and allowlisted report. Never attach raw artifacts to an ordinary ticket. If an accountable support owner exceptionally requires raw evidence, use a separately approved restricted-evidence process that names the authorized recipient, transfer method, access boundary, and retention/deletion decision; P1.1 provides no upload endpoint.
 
-For the interpretation behind the recovery check, read [Pair validity, dbt outcome, and capture state](../explanation/pair-validity-vs-dbt-outcome-vs-capture-state.md). For input custody and lifecycle, read [Handle raw dbt artifacts safely](../explanation/raw-artifact-custody.md).
+For the interpretation behind the recovery check, read [Pair validity, dbt outcome, and capture state](../explanation/pair-validity-vs-dbt-outcome-vs-capture-state.md). For input custody and lifecycle, follow [Handle raw dbt artifacts safely](handle-raw-dbt-artifacts-safely.md).
