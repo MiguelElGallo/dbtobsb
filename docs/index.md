@@ -1,6 +1,6 @@
 # dbtobsb documentation
 
-The repository contains a reviewed product contract, an intentionally small P0 Databricks App smoke, and the offline P1.1 artifact-pair inspector.
+The repository contains a reviewed product contract, an intentionally small P0 Databricks App smoke, and the offline-after-installation P1.1 artifact-pair inspector.
 
 ## Start here
 
@@ -21,4 +21,4 @@ The [repository README](../README.md#run-the-p0-smoke) contains the local qualit
 
 ## Inspect a dbt artifact pair
 
-Start with [Inspect an artifact pair](developers/tutorials/inspect-an-artifact-pair.md). P1.1 validates one pinned pair offline; it does not retrieve an archive, run dbt, prove a Databricks attempt, or assign a capture state.
+Start with [Inspect an artifact pair](developers/tutorials/inspect-an-artifact-pair.md). After its locked runtime is installed, P1.1 validates one pinned pair offline; it does not retrieve an archive, run dbt, prove a Databricks attempt, or assign a capture state.

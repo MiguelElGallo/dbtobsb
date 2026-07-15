@@ -1,6 +1,16 @@
 # Review records
 
-This directory preserves immutable findings and re-review verdicts for each independently deliverable part. The latest reports below are authoritative for baseline 0.20; earlier numbered reports remain as the audit trail and are not rewritten to hide failed passes.
+This directory preserves immutable findings and re-review verdicts for each independently deliverable part. The latest reports below are authoritative for their named slice; earlier numbered reports remain as the audit trail and are not rewritten to hide failed passes.
+
+## P1.1 local artifact-pair inspector
+
+| Review lens | Latest report | Verdict |
+| --- | --- | --- |
+| Databricks platform/security | [databricks-rereview-3.md](p1.1-artifact-pair-inspector/databricks-rereview-3.md) | `PASS_WITH_FOLLOW_UP` |
+| dbt Core/artifact contract | [dbt-core-rereview-3.md](p1.1-artifact-pair-inspector/dbt-core-rereview-3.md) | `PASS_WITH_FOLLOW_UP` |
+| Usability/onboarding | [usability-rereview-3.md](p1.1-artifact-pair-inspector/usability-rereview-3.md) | `PASS_WITH_FOLLOW_UP` |
+
+The initial reviews and the first two re-review cycles remain in the same directory as immutable `CHANGES_REQUIRED` evidence. Current follow-ups belong to later Databricks runtime, archive, full-lock, distributed-help, and rendered-site gates; they do not permit P1.1 to claim a complete capture or qualified production runtime.
 
 ## P0 planning and documentation
 
