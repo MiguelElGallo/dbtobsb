@@ -33,7 +33,7 @@ There is no open P1.1 blocker. Every `PASS_WITH_FOLLOW_UP` item names a later ru
 
 ## Accepted product contract
 
-P1.1 accepts keyword-only `manifest: bytes` and `run_results: bytes`, validates the complete pinned dbt Core 1.11.12 manifest-v12 and run-results-v6 schemas, and applies the exact Databricks `build` resource/status matrix. A valid report preserves native executed-result status counts; it does not reinterpret them as dbt success, Lakeflow task state, or capture completeness.
+P1.1 accepts keyword-only `manifest: bytes` and `run_results: bytes`, validates the complete pinned dbt Core 1.11.12 manifest-v12 and run-results-v6 schemas for a manifest whose `adapter_type` is `databricks`, and applies the exact dbt Core `BuildTask` collection/resource plus `RunStatus`/`TestStatus` matrix. A valid report preserves native executed-result status counts; it does not reinterpret them as dbt success, Lakeflow task state, or capture completeness.
 
 The CLI accepts closed regular files up to 128 MiB, fails safely for paths, links, pipes, devices, and oversized input, and emits only allowlisted output. The API and CLI use no Databricks, dbt, network, environment, clock, or subprocess runtime dependency during inspection. Raw input bytes, SQL, messages, adapter responses, paths, relations, project/resource/invocation identity, and other artifact content are excluded from ordinary reports.
 
