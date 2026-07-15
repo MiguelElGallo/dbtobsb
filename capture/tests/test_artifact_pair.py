@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+from itertools import combinations
 from pathlib import Path
 from typing import Any, cast
 
@@ -241,6 +242,20 @@ def test_strict_json_failures_are_safe_and_stable(
     assert report.primary_issue is not None
     assert report.primary_issue.code == expected
     assert CANARY_PREFIX not in repr(report)
+
+
+def test_mixed_parse_failures_return_canonical_invalid_report() -> None:
+    report = inspect_artifact_pair(
+        manifest=b'{"metadata":{},"metadata":{}}',
+        run_results=b"not-json",
+    )
+
+    assert report.state is PairState.INVALID
+    assert [issue.code for issue in report.issues] == [
+        "DBT_RUN_RESULTS_JSON_INVALID",
+        "DBT_MANIFEST_JSON_DUPLICATE_KEY",
+    ]
+    Draft202012Validator(json.loads(REPORT_SCHEMA.read_bytes())).validate(report.to_dict())
 
 
 def test_size_limit_rejects_before_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -499,6 +514,28 @@ def test_numeric_semantics_reject_impossible_values(mutation: str, expected: str
     _, report = _inspect_documents(manifest, run_results)
 
     assert _primary_code(report) == expected
+
+
+def test_mixed_semantic_failures_return_canonical_invalid_report() -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    run_results["elapsed_time"] = -1
+    run_results["results"].append(copy.deepcopy(run_results["results"][0]))
+
+    _, report = _inspect_documents(manifest, run_results)
+
+    assert [issue["code"] for issue in report["issues"]] == [
+        "DBT_RESULTS_DUPLICATE_ID",
+        "DBT_TIMING_INVALID",
+    ]
+    Draft202012Validator(json.loads(REPORT_SCHEMA.read_bytes())).validate(report)
+
+
+def test_invalid_report_factory_canonicalizes_every_issue_pair() -> None:
+    for earlier, later in combinations(ISSUE_PRECEDENCE, 2):
+        report = inspector_module._invalid([later, earlier, later])
+
+        assert [issue.code for issue in report.issues] == [earlier, later]
 
 
 def test_issue_list_is_deduplicated_and_bounded() -> None:

@@ -52,6 +52,7 @@ _UNSUPPORTED_RESULT_COLLECTIONS = (
 )
 _RUN_STATUSES = frozenset(RUN_STATUSES)
 _TEST_STATUSES = frozenset(TEST_STATUSES)
+_ISSUE_RANK = {code: rank for rank, code in enumerate(ISSUE_PRECEDENCE)}
 
 
 @dataclass(frozen=True, slots=True)
@@ -387,7 +388,7 @@ def _is_nonnegative_finite_number(value: Any) -> bool:
 
 
 def _invalid(codes: list[str]) -> ArtifactPairReport:
-    unique_codes = tuple(dict.fromkeys(codes))[:MAX_ISSUES]
+    unique_codes = tuple(sorted(dict.fromkeys(codes), key=_ISSUE_RANK.__getitem__)[:MAX_ISSUES])
     return ArtifactPairReport(
         state=PairState.INVALID,
         summary=None,

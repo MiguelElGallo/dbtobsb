@@ -239,6 +239,61 @@ def test_installed_cli_rejects_device_without_blocking() -> None:
     assert completed.stderr == f"{INPUT_READ_ERROR}\n"
 
 
+@pytest.mark.parametrize(
+    ("kind", "expected_codes"),
+    [
+        (
+            "parse",
+            ["DBT_RUN_RESULTS_JSON_INVALID", "DBT_MANIFEST_JSON_DUPLICATE_KEY"],
+        ),
+        ("semantic", ["DBT_RESULTS_DUPLICATE_ID", "DBT_TIMING_INVALID"]),
+    ],
+)
+def test_installed_cli_returns_canonical_invalid_for_mixed_failures(
+    tmp_path: Path, kind: str, expected_codes: list[str]
+) -> None:
+    executable = shutil.which("dbtobsb-capture")
+    assert executable is not None
+    manifest_path = tmp_path / "manifest.json"
+    run_results_path = tmp_path / "run_results.json"
+    if kind == "parse":
+        manifest_path.write_bytes(b'{"metadata":{},"metadata":{}}')
+        run_results_path.write_bytes(b"not-json")
+    else:
+        manifest_path.write_bytes((FIXTURES / "valid_success" / "manifest.json").read_bytes())
+        run_results: Any = json.loads(
+            (FIXTURES / "valid_success" / "run_results.json").read_bytes()
+        )
+        assert isinstance(run_results, dict)
+        run_results["elapsed_time"] = -1
+        run_results["results"].append(dict(run_results["results"][0]))
+        run_results_path.write_text(json.dumps(run_results), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            executable,
+            "inspect-artifact-pair",
+            "--manifest",
+            str(manifest_path),
+            "--run-results",
+            str(run_results_path),
+            "--json",
+            "--no-color",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=2,
+        check=False,
+    )
+    report = json.loads(completed.stdout)
+
+    assert completed.returncode == EXIT_INVALID
+    assert completed.stderr == ""
+    assert report["pair_state"] == "PAIR_INVALID"
+    assert [issue["code"] for issue in report["issues"]] == expected_codes
+    assert CANARY not in completed.stdout
+
+
 def test_cli_disables_abbreviated_flags_and_sanitizes_usage_error(capsys: Any) -> None:
     with pytest.raises(SystemExit) as error:
         main(["inspect-artifact-pair", "--man", CANARY])
