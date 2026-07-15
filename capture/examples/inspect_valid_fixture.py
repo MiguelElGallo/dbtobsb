@@ -7,7 +7,7 @@ from pathlib import Path
 
 from dbtobsb_capture import inspect_artifact_pair
 
-fixture = Path(__file__).parents[1] / "tests" / "fixtures" / "artifact_pair" / "valid_success"
+fixture = Path("capture/tests/fixtures/artifact_pair/valid_success")
 report = inspect_artifact_pair(
     manifest=(fixture / "manifest.json").read_bytes(),
     run_results=(fixture / "run_results.json").read_bytes(),

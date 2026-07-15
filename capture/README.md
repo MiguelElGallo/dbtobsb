@@ -11,4 +11,5 @@ succeeded and does not prove the later dbtobsb capture state.
 Start with the
 [artifact-pair tutorial](../docs/developers/tutorials/inspect-an-artifact-pair.md),
 then use the [CLI reference](../docs/developers/reference/cli-report-and-exit-codes.md)
-or [Python API reference](../docs/developers/reference/python-api.md).
+or [Python API reference](../docs/developers/reference/python-api.md). Before substituting
+real artifacts, read [Handle raw dbt artifacts safely](../docs/developers/explanation/raw-artifact-custody.md).

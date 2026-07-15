@@ -33,6 +33,10 @@ next_action: Provide existing, closed, non-symlink regular files no larger than 
 help: docs/developers/how-to/diagnose-an-invalid-artifact-pair.md#recover-an-input-read-error
 ```
 
+## Sensitive input boundary
+
+The CLI reads caller-owned raw artifacts but does not persist, copy, upload, delete, or govern them. Those files can contain Personal Data, secrets, SQL, messages, paths, topology, and identities. Use policy-approved storage and least-privilege access; never commit, upload, paste, or attach them to an ordinary ticket. Apply the custody, support, retention, backup, and deletion rules in [Handle raw dbt artifacts safely](../explanation/raw-artifact-custody.md).
+
 ## Machine report
 
 The top-level fields are:
@@ -50,13 +54,39 @@ The v1 schema is closed: it rejects invented state/status/code/text values, more
 
 ## Issue registry
 
-| Stage | Codes |
-| --- | --- |
-| Size | `DBT_MANIFEST_SIZE_LIMIT_EXCEEDED`, `DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED` |
-| Strict JSON | `DBT_MANIFEST_JSON_INVALID`, `DBT_RUN_RESULTS_JSON_INVALID`, `DBT_MANIFEST_JSON_DUPLICATE_KEY`, `DBT_RUN_RESULTS_JSON_DUPLICATE_KEY`, `DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED`, `DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED` |
-| Full schema | `DBT_MANIFEST_SCHEMA_INVALID`, `DBT_RUN_RESULTS_SCHEMA_INVALID` |
-| Pair metadata | `DBT_SCHEMA_VERSION_UNSUPPORTED`, `DBT_CORE_VERSION_UNSUPPORTED`, `DBT_INVOCATION_ID_INVALID`, `DBT_INVOCATION_ID_MISMATCH`, `DBT_ADAPTER_TYPE_UNSUPPORTED`, `DBT_COMMAND_UNSUPPORTED` |
-| Results | `DBT_EMPTY_EXECUTION`, `DBT_RESULTS_DUPLICATE_ID`, `DBT_RESULT_ID_UNRESOLVED`, `DBT_RESULT_ID_UNSUPPORTED_RESOURCE`, `DBT_RESULT_ID_AMBIGUOUS`, `DBT_MANIFEST_RESOURCE_ID_MISMATCH`, `DBT_RESULT_RESOURCE_TYPE_UNSUPPORTED`, `DBT_RESULT_STATUS_UNSUPPORTED` |
-| Numeric invariants | `DBT_TIMING_INVALID`, `DBT_FAILURE_COUNT_INVALID` |
+The rows follow primary-selection precedence. “Recollect” means obtain fresh unmodified output from the pinned build; it never means editing evidence to pass.
+
+<!-- BEGIN: issue-registry -->
+
+| Code | Exact safe impact | Classification | Exact primary action | Recovery |
+| --- | --- | --- | --- | --- |
+| `DBT_MANIFEST_SIZE_LIMIT_EXCEEDED` | The manifest cannot be inspected within the bounded local memory policy. | Correct input or recollect | Collect a complete manifest within 128 MiB; do not split or truncate it. | [Recover file, JSON, or schema inputs](../how-to/diagnose-an-invalid-artifact-pair.md#recover-file-json-or-schema-inputs) |
+| `DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED` | The run-results file cannot be inspected within the bounded local memory policy. | Correct input or recollect | Collect a complete run_results.json within 128 MiB; do not split or truncate it. | [Recover file, JSON, or schema inputs](../how-to/diagnose-an-invalid-artifact-pair.md#recover-file-json-or-schema-inputs) |
+| `DBT_MANIFEST_JSON_INVALID` | The manifest is not one unambiguous UTF-8 JSON document. | Recollect | Collect manifest.json again from the pinned dbt build target directory. | [Recover file, JSON, or schema inputs](../how-to/diagnose-an-invalid-artifact-pair.md#recover-file-json-or-schema-inputs) |
+| `DBT_RUN_RESULTS_JSON_INVALID` | The run-results file is not one unambiguous UTF-8 JSON document. | Recollect | Collect run_results.json again from the pinned dbt build target directory. | [Recover file, JSON, or schema inputs](../how-to/diagnose-an-invalid-artifact-pair.md#recover-file-json-or-schema-inputs) |
+| `DBT_MANIFEST_JSON_DUPLICATE_KEY` | A duplicate JSON key makes the manifest interpretation ambiguous. | Recollect | Collect a new manifest from the pinned dbt build; do not repair it by hand. | [Recover file, JSON, or schema inputs](../how-to/diagnose-an-invalid-artifact-pair.md#recover-file-json-or-schema-inputs) |
+| `DBT_RUN_RESULTS_JSON_DUPLICATE_KEY` | A duplicate JSON key makes the run-results interpretation ambiguous. | Recollect | Collect new run results from the pinned dbt build; do not repair them by hand. | [Recover file, JSON, or schema inputs](../how-to/diagnose-an-invalid-artifact-pair.md#recover-file-json-or-schema-inputs) |
+| `DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED` | The manifest exceeds the bounded JSON nesting policy. | Recollect | Collect a normal unmodified manifest from the pinned dbt build. | [Recover file, JSON, or schema inputs](../how-to/diagnose-an-invalid-artifact-pair.md#recover-file-json-or-schema-inputs) |
+| `DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED` | The run-results file exceeds the bounded JSON nesting policy. | Recollect | Collect normal unmodified run results from the pinned dbt build. | [Recover file, JSON, or schema inputs](../how-to/diagnose-an-invalid-artifact-pair.md#recover-file-json-or-schema-inputs) |
+| `DBT_MANIFEST_SCHEMA_INVALID` | The manifest does not satisfy the vendored dbt manifest v12 schema. | Recollect or compatibility review | Re-run the pinned dbt build and collect its unmodified manifest.json. | [Recover file, JSON, or schema inputs](../how-to/diagnose-an-invalid-artifact-pair.md#recover-file-json-or-schema-inputs) |
+| `DBT_RUN_RESULTS_SCHEMA_INVALID` | The run-results file does not satisfy the vendored dbt run-results v6 schema. | Recollect or compatibility review | Re-run the pinned dbt build and collect its unmodified run_results.json. | [Recover file, JSON, or schema inputs](../how-to/diagnose-an-invalid-artifact-pair.md#recover-file-json-or-schema-inputs) |
+| `DBT_SCHEMA_VERSION_UNSUPPORTED` | The files are not the exact artifact-schema pair qualified by P1.1. | Unsupported compatibility | Use manifest v12 and run-results v6, or qualify a new pair before inspection. | [Recover file, JSON, or schema inputs](../how-to/diagnose-an-invalid-artifact-pair.md#recover-file-json-or-schema-inputs) |
+| `DBT_CORE_VERSION_UNSUPPORTED` | The files were not both produced by the qualified dbt Core version. | Unsupported compatibility | Run the supported job with dbt-core 1.11.12 and collect both artifacts again. | [Recover file, JSON, or schema inputs](../how-to/diagnose-an-invalid-artifact-pair.md#recover-file-json-or-schema-inputs) |
+| `DBT_INVOCATION_ID_INVALID` | The files cannot be bound to one parseable dbt invocation. | Recollect pair | Collect both artifacts from one completed pinned dbt build target directory. | [Recover pair metadata](../how-to/diagnose-an-invalid-artifact-pair.md#recover-pair-metadata) |
+| `DBT_INVOCATION_ID_MISMATCH` | The files cannot be trusted as one dbt invocation. | Recollect pair | Collect both artifacts from the same build target directory. | [Recover pair metadata](../how-to/diagnose-an-invalid-artifact-pair.md#recover-pair-metadata) |
+| `DBT_ADAPTER_TYPE_UNSUPPORTED` | The manifest is not from the qualified Databricks adapter path. | Unsupported compatibility | Use the pinned dbt-databricks job or qualify another adapter separately. | [Recover pair metadata](../how-to/diagnose-an-invalid-artifact-pair.md#recover-pair-metadata) |
+| `DBT_COMMAND_UNSUPPORTED` | The result artifact is not evidence from the supported primary dbt build command. | Unsupported compatibility | Run the approved named-selector dbt build and collect that run_results.json. | [Recover pair metadata](../how-to/diagnose-an-invalid-artifact-pair.md#recover-pair-metadata) |
+| `DBT_EMPTY_EXECUTION` | An empty result array does not satisfy the supported execution contract. | Correct and rerun | Fix the selector or executable-node set, then run the pinned dbt build again. | [Recover result evidence](../how-to/diagnose-an-invalid-artifact-pair.md#recover-result-evidence) |
+| `DBT_RESULTS_DUPLICATE_ID` | One dbt resource appears more than once in the execution results. | Recollect pair | Collect a fresh unmodified artifact pair from the pinned dbt build. | [Recover result evidence](../how-to/diagnose-an-invalid-artifact-pair.md#recover-result-evidence) |
+| `DBT_RESULT_ID_UNRESOLVED` | An executed result cannot be resolved to the supported manifest inventory. | Recollect pair | Collect manifest.json and run_results.json from the same build invocation. | [Recover result evidence](../how-to/diagnose-an-invalid-artifact-pair.md#recover-result-evidence) |
+| `DBT_RESULT_ID_UNSUPPORTED_RESOURCE` | A result resolves only to a resource type that P1.1 does not accept for build results. | Unsupported compatibility | Use the supported dbt build contract or qualify this evidence type separately. | [Recover result evidence](../how-to/diagnose-an-invalid-artifact-pair.md#recover-result-evidence) |
+| `DBT_RESULT_ID_AMBIGUOUS` | A result identifier has more than one possible manifest resource. | Recollect pair | Collect a fresh unmodified artifact pair; do not choose a resource manually. | [Recover result evidence](../how-to/diagnose-an-invalid-artifact-pair.md#recover-result-evidence) |
+| `DBT_MANIFEST_RESOURCE_ID_MISMATCH` | A matched manifest resource contradicts its enclosing identifier. | Recollect pair | Collect a fresh unmodified manifest from the pinned dbt build. | [Recover result evidence](../how-to/diagnose-an-invalid-artifact-pair.md#recover-result-evidence) |
+| `DBT_RESULT_RESOURCE_TYPE_UNSUPPORTED` | A matched manifest collection contains a resource type that BuildTask does not accept. | Unsupported compatibility | Collect a fresh pair from the pinned build or qualify the resource type separately. | [Recover result evidence](../how-to/diagnose-an-invalid-artifact-pair.md#recover-result-evidence) |
+| `DBT_RESULT_STATUS_UNSUPPORTED` | The native dbt status is not valid for the matched resource type. | Unsupported compatibility | Collect a fresh pair from the pinned build; do not reinterpret the status. | [Recover result evidence](../how-to/diagnose-an-invalid-artifact-pair.md#recover-result-evidence) |
+| `DBT_TIMING_INVALID` | The artifact contains a timing value that cannot represent elapsed execution time. | Recollect | Collect a fresh unmodified run_results.json from the pinned dbt build. | [Recover numeric evidence](../how-to/diagnose-an-invalid-artifact-pair.md#recover-numeric-evidence) |
+| `DBT_FAILURE_COUNT_INVALID` | The artifact contains a negative dbt failure count. | Recollect | Collect a fresh unmodified run_results.json from the pinned dbt build. | [Recover numeric evidence](../how-to/diagnose-an-invalid-artifact-pair.md#recover-numeric-evidence) |
+
+<!-- END: issue-registry -->
 
 Codes, text, primary-selection precedence, and JSON shape are versioned contract. Adding or changing one requires a reviewed contract version decision.

@@ -15,5 +15,6 @@ P1.1 gives library consumers one offline-after-installation operation: validate 
 ## Understand the boundaries
 
 - [Pair validity, dbt outcome, and capture state](explanation/pair-validity-vs-dbt-outcome-vs-capture-state.md)
+- [Handle raw dbt artifacts safely](explanation/raw-artifact-custody.md) — understand input sensitivity, caller custody, support, retention, and workstation-local scope.
 
 The checked-in fixtures are synthetic and sanitized. They prove deterministic local behavior, not a live Databricks capture or a qualified production compatibility row.

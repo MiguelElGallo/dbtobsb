@@ -1,16 +1,59 @@
 # Python API
 
-P1.1 exposes one deterministic function and immutable report types from `dbtobsb_capture`.
+P1.1 exposes one deterministic function and immutable report types from `dbtobsb_capture`. For installation and a guided first result, use [Inspect an artifact pair](../tutorials/inspect-an-artifact-pair.md#4-use-the-python-api).
 
-## Run a first inspection
+<a id="run-a-first-inspection"></a>
 
-After completing the runtime-only sync in the [tutorial](../tutorials/inspect-an-artifact-pair.md), run this copy-ready example from the repository root:
+## Function
 
-```bash
-uv run --project capture --no-sync python capture/examples/inspect_valid_fixture.py
+```text
+inspect_artifact_pair(*, manifest: bytes, run_results: bytes) -> ArtifactPairReport
 ```
 
-The checked-in script contains the complete API example: it reads the sanitized fixture into bytes, calls `inspect_artifact_pair`, prints `PairState`, and serializes the safe dictionary with deterministic JSON settings.
+<!-- BEGIN: python-public-contract -->
+
+| Contract item | Exact P1.1 value |
+| --- | --- |
+| `manifest` | Keyword-only `bytes`; at most 134,217,728 bytes (128 MiB); JSON nesting at most 256 structural levels. |
+| `run_results` | Keyword-only `bytes`; at most 134,217,728 bytes (128 MiB); JSON nesting at most 256 structural levels. |
+| Return | `ArtifactPairReport`; expected evidence failures, including size and nesting failures, return `PAIR_INVALID` instead of raising. |
+| Non-byte input | Raises static `TypeError`. |
+| Internal invariant failure | May raise a static exception without artifact content. |
+| External access | Opens no caller path; reads only installed checksum-pinned schemas; no network, environment, clock, subprocess, dbt, or Databricks access. |
+| Raw-input classification | Potentially sensitive and Personal Data-bearing; caller-owned lifecycle and custody apply. |
+| Native status vocabulary | Exactly `error`, `fail`, `no-op`, `partial success`, `pass`, `skipped`, `success`, and `warn`. |
+| Invalid issue cardinality | One to 20 unique issues in canonical precedence order. |
+
+<!-- END: python-public-contract -->
+
+Size and depth failures use the static `*_SIZE_LIMIT_EXCEEDED` and `*_JSON_NESTING_LIMIT_EXCEEDED` issues. Follow [Recover file, JSON, or schema inputs](../how-to/diagnose-an-invalid-artifact-pair.md#recover-file-json-or-schema-inputs).
+
+## Example
+
+This complete example is also checked in as [inspect_valid_fixture.py](../../../capture/examples/inspect_valid_fixture.py). It uses only the sanitized repository fixture.
+
+<!-- BEGIN: inspect-valid-fixture.py -->
+
+```python
+"""Copy-ready Python API first-success example used by the documentation gate."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from dbtobsb_capture import inspect_artifact_pair
+
+fixture = Path("capture/tests/fixtures/artifact_pair/valid_success")
+report = inspect_artifact_pair(
+    manifest=(fixture / "manifest.json").read_bytes(),
+    run_results=(fixture / "run_results.json").read_bytes(),
+)
+print(report.state.value)
+print(json.dumps(report.to_dict(), ensure_ascii=True, separators=(",", ":"), sort_keys=True))
+```
+
+<!-- END: inspect-valid-fixture.py -->
 
 The exact output is:
 
@@ -21,34 +64,23 @@ PAIR_VALID
 
 The example reads files before calling the API. The API itself never opens a caller path.
 
-## Function
-
-```python
-from dbtobsb_capture import inspect_artifact_pair
-
-report = inspect_artifact_pair(
-    manifest=manifest_bytes,
-    run_results=run_results_bytes,
-)
-```
-
-```text
-inspect_artifact_pair(*, manifest: bytes, run_results: bytes) -> ArtifactPairReport
-```
-
-Both arguments are keyword-only `bytes`. The function opens no caller-supplied path and reads only its installed checksum-pinned schema resources. It performs no network, environment, clock, subprocess, dbt, or Databricks access. Expected evidence failures—including over-deep JSON—return `PAIR_INVALID`; they do not raise. Non-`bytes` inputs raise `TypeError`, and internal invariant failures may raise an exception without including artifact content.
-
 ## Public types
 
-| Type | Purpose |
+| Type | Public fields and invariant |
 | --- | --- |
 | `PairState` | `PAIR_VALID` or `PAIR_INVALID`. |
-| `ArtifactPairReport` | Frozen, slotted top-level result with `state`, optional `summary`, `issues`, `primary_issue`, and `to_dict()`. |
-| `ArtifactPairSummary` | Allowlisted facts emitted only for a valid pair; `result_count` is computed from the status counts. |
-| `NativeStatusCount` | One allowlisted native dbt status and its count. |
-| `ArtifactPairIssue` | Static code, category, impact, and recovery text; no observed value. |
+| `ArtifactPairReport` | Frozen and slotted. `state: PairState`; `summary: ArtifactPairSummary | None`; `issues: tuple[ArtifactPairIssue, ...]`; `primary_issue: ArtifactPairIssue | None`; `to_dict()`. Valid means one summary and zero issues; invalid means no summary and 1–20 unique canonical issues. |
+| `ArtifactPairSummary` | Frozen and slotted. Exact string fields `manifest_schema`, `run_results_schema`, `dbt_version`, `adapter_type`, and `command`; `status_counts: tuple[NativeStatusCount, ...]`; computed positive `result_count: int`. |
+| `NativeStatusCount` | `status: str` from the closed vocabulary below; `count: int` greater than zero. Status entries are unique and canonically ordered. |
+| `ArtifactPairIssue` | Static strings `code`, `component`, `field`, `observed_category`, `impact`, and `next_action`; never an observed value. |
+
+The closed native-status vocabulary is `error`, `fail`, `no-op`, `partial success`, `pass`, `skipped`, `success`, and `warn`. A result's resource type determines which run or test statuses are valid.
 
 `ArtifactPairReport.to_dict()` returns the versioned JSON shape `dbtobsb.artifact-pair-report.v1`. It omits redundant `primary_issue` and `result_count` fields: `issues[0]` is primary under the shared v1 precedence registry, and the result total is the sum of the integer values in the closed `summary.status_counts` object. The JSON Schema conditionally rejects a first issue when an earlier-precedence issue is also present. This makes inconsistent duplicates impossible in the machine contract. The report never retains raw input bytes. Its ordinary representation and dictionary exclude SQL, result messages, adapter responses, variables, environment values, relation names, paths, resource IDs, project names, and invocation IDs.
+
+## Sensitive input boundary
+
+The safe report does not make its raw inputs safe to retain or share. `manifest.json` and `run_results.json` can contain Personal Data, secrets, SQL, messages, paths, topology, and identities. The API receives caller-owned bytes and does not persist, copy, upload, delete, or govern the caller's originals or other copies. Use policy-approved storage and the lifecycle in [Handle raw dbt artifacts safely](../explanation/raw-artifact-custody.md).
 
 ## Supported P1.1 pair
 

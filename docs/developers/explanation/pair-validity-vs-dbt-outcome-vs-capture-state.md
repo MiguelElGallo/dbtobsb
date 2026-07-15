@@ -21,3 +21,5 @@ Use `PAIR_VALID` and `PAIR_INVALID` only for this local contract. Use native sta
 ## Security benefit
 
 This separation allows ordinary output to stay allowlisted. P1.1 can answer the pair question without reproducing raw SQL, messages, environment values, paths, relations, project names, resource IDs, or invocation IDs. Restricted raw evidence remains outside the ordinary report.
+
+To learn with fixtures, use [Inspect an artifact pair](../tutorials/inspect-an-artifact-pair.md). To recover from a failure, use [Diagnose an invalid artifact pair](../how-to/diagnose-an-invalid-artifact-pair.md). Before substituting real files, read [Handle raw dbt artifacts safely](raw-artifact-custody.md).
