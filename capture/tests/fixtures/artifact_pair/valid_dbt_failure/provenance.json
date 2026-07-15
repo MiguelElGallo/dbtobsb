@@ -1,6 +1,6 @@
 {
   "artifact_sha256": {
-    "manifest": "f164c3bf8291b75ca05dc387f9810b97a23f350933c2cb0db3e0a28adf7eee58",
+    "manifest": "14d1b3c6f54831fcc004bfad548578c0b955e03f41db786bba7f484391be419c",
     "run_results": "5c73625525e88efbc6a302f2c2cab9f9ef1c0e8083c7a383290a5dc329a70691"
   },
   "canary_categories": [
@@ -13,7 +13,7 @@
     "token",
     "vars"
   ],
-  "candidate": {
+  "candidate_context": {
     "dbt_adapters": "1.23.0",
     "dbt_adapters_wheel_sha256": "6c6c9cb6fca5d01324b5c39961c8b16b985b1ac7b701909f4416ce9dad66e288",
     "dbt_common": "1.37.5",
@@ -26,7 +26,9 @@
     "dbt_protos_wheel_sha256": "4e03f88e6b5c13a8cac68c6aa78267d8eb4396e6341a807112d619ab938318d5",
     "dbt_spark": "1.10.3",
     "dbt_spark_wheel_sha256": "1906f4cb507c931c4988ea6074603769da7466788b53483546e3abf6eabbf04d",
-    "python": "3.12.3"
+    "note": "Reviewed compatibility context only; the source manifest does not attest these transitive package versions or wheel digests.",
+    "python": "3.12.3",
+    "runtime_attestation": false
   },
   "fixture_kind": "valid_dbt_failure",
   "runtime_evidence": false,
@@ -36,12 +38,7 @@
     "manifest_v12_core_1_11_12": "b290bb419026be3fa361ead7f0d8e3bb0eb6bca8c3a3fb7971f5d252fd0825b3",
     "run_results_v6": "1783bda55656bde624ed67640375640a2919a8608e2505e3a02c04cd139e2cdf"
   },
-  "source_environment": {
-    "dbt_command": "parse",
-    "machine": "arm64",
-    "python": "3.12.13",
-    "system": "Darwin"
-  },
-  "source_kind": "pinned_local_dbt_parse_plus_synthetic_run_results",
-  "source_manifest_sha256": "79bcff94392125cd0a0c55f51c419572a6d81bcd564047d5da559ebfbbd28707"
+  "source_command": "project fixture parsed with dbt; reviewed projection checked into fixture_source",
+  "source_kind": "reviewed_synthetic_manifest_projection_plus_synthetic_run_results",
+  "source_manifest_sha256": "14d1b3c6f54831fcc004bfad548578c0b955e03f41db786bba7f484391be419c"
 }

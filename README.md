@@ -14,11 +14,13 @@ P1.1 can validate one pinned artifact pair locally. It does not retrieve Databri
 
 ## Inspect one artifact pair locally
 
-P1.1 runs offline and requires Python 3.12 plus [uv](https://docs.astral.sh/uv/). Install the locked development environment and inspect the successful fixture:
+P1.1 inspection is offline after installation and requires Python 3.12 plus [uv](https://docs.astral.sh/uv/). On a clean machine, the first sync can download Python packages from the configured index; regulated environments must use an approved registry, mirror, or populated cache. A disconnected installation artifact is not shipped yet.
+
+Install runtime dependencies only, then inspect the successful fixture without synchronizing or contacting an index again:
 
 ```bash
-uv sync --project capture --locked
-uv run --project capture dbtobsb-capture inspect-artifact-pair \
+uv sync --project capture --locked --no-dev
+uv run --project capture --no-sync dbtobsb-capture inspect-artifact-pair \
   --manifest capture/tests/fixtures/artifact_pair/valid_success/manifest.json \
   --run-results capture/tests/fixtures/artifact_pair/valid_success/run_results.json \
   --no-color

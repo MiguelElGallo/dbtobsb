@@ -1,8 +1,9 @@
 # dbtobsb capture
 
-`dbtobsb-capture` is the offline P1.1 artifact-pair inspector. It validates one
-pinned dbt Core `manifest.json` v12 and `run_results.json` v6 pair without
-Databricks, dbt, network, environment, clock, or subprocess access.
+`dbtobsb-capture` is the P1.1 artifact-pair inspector. After its locked runtime
+dependencies are installed, it validates one pinned dbt Core `manifest.json` v12
+and `run_results.json` v6 pair without Databricks, dbt, network, environment,
+clock, or subprocess access.
 
 The result is `PAIR_VALID` or `PAIR_INVALID`. Pair validity does not say that dbt
 succeeded and does not prove the later dbtobsb capture state.

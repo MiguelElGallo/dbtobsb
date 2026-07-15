@@ -1,20 +1,15 @@
 {
   "issues": [],
   "pair_state": "PAIR_VALID",
-  "primary_issue": null,
   "schema_version": "dbtobsb.artifact-pair-report.v1",
   "summary": {
     "adapter_type": "databricks",
     "command": "build",
     "dbt_version": "1.11.12",
     "manifest_schema": "https://schemas.getdbt.com/dbt/manifest/v12.json",
-    "result_count": 1,
     "run_results_schema": "https://schemas.getdbt.com/dbt/run-results/v6.json",
-    "status_counts": [
-      {
-        "count": 1,
-        "status": "error"
-      }
-    ]
+    "status_counts": {
+      "error": 1
+    }
   }
 }

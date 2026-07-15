@@ -10,14 +10,6 @@
     }
   ],
   "pair_state": "PAIR_INVALID",
-  "primary_issue": {
-    "code": "DBT_INVOCATION_ID_MISMATCH",
-    "component": "artifact_pair",
-    "field": "metadata.invocation_id",
-    "impact": "The files cannot be trusted as one dbt invocation.",
-    "next_action": "Collect both artifacts from the same build target directory.",
-    "observed_category": "different_valid_values"
-  },
   "schema_version": "dbtobsb.artifact-pair-report.v1",
   "summary": null
 }

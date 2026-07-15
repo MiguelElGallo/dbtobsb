@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from dbtobsb_capture.registry import NATIVE_STATUSES
+
 type JsonValue = None | bool | int | float | str | list[JsonValue] | dict[str, JsonValue]
 
 REPORT_SCHEMA_VERSION = "dbtobsb.artifact-pair-report.v1"
@@ -28,6 +30,32 @@ class ArtifactPairIssue:
     impact: str
     next_action: str
 
+    def __post_init__(self) -> None:
+        """Reject invented codes or text at the public construction boundary."""
+        from dbtobsb_capture.inspector import _ISSUES
+
+        template = _ISSUES.get(self.code)
+        actual = (
+            self.component,
+            self.field,
+            self.observed_category,
+            self.impact,
+            self.next_action,
+        )
+        expected = (
+            (
+                template.component,
+                template.field,
+                template.observed_category,
+                template.impact,
+                template.next_action,
+            )
+            if template is not None
+            else None
+        )
+        if actual != expected:
+            raise ValueError("issue must match one closed v1 issue contract")
+
     def to_dict(self) -> dict[str, JsonValue]:
         """Return the versioned JSON representation."""
         return {
@@ -47,6 +75,13 @@ class NativeStatusCount:
     status: str
     count: int
 
+    def __post_init__(self) -> None:
+        """Accept only the pinned native vocabulary and a positive count."""
+        if self.status not in NATIVE_STATUSES:
+            raise ValueError("status is not in the closed v1 native vocabulary")
+        if not isinstance(self.count, int) or isinstance(self.count, bool) or self.count < 1:
+            raise ValueError("status count must be a positive integer")
+
     def to_dict(self) -> dict[str, JsonValue]:
         """Return the versioned JSON representation."""
         return {"status": self.status, "count": self.count}
@@ -61,8 +96,38 @@ class ArtifactPairSummary:
     dbt_version: str
     adapter_type: str
     command: str
-    result_count: int
     status_counts: tuple[NativeStatusCount, ...]
+
+    def __post_init__(self) -> None:
+        """Enforce the exact v1 summary rather than a loose data container."""
+        actual_contract = (
+            self.manifest_schema,
+            self.run_results_schema,
+            self.dbt_version,
+            self.adapter_type,
+            self.command,
+        )
+        expected_contract = (
+            "https://schemas.getdbt.com/dbt/manifest/v12.json",
+            "https://schemas.getdbt.com/dbt/run-results/v6.json",
+            "1.11.12",
+            "databricks",
+            "build",
+        )
+        if actual_contract != expected_contract:
+            raise ValueError("summary must match the closed v1 compatibility contract")
+        statuses = tuple(item.status for item in self.status_counts)
+        if (
+            not statuses
+            or statuses != tuple(sorted(statuses))
+            or len(statuses) != len(set(statuses))
+        ):
+            raise ValueError("status counts must be nonempty, unique, and sorted")
+
+    @property
+    def result_count(self) -> int:
+        """Derive the total so the machine contract carries no inconsistent duplicate."""
+        return sum(item.count for item in self.status_counts)
 
     def to_dict(self) -> dict[str, JsonValue]:
         """Return the versioned JSON representation."""
@@ -72,8 +137,7 @@ class ArtifactPairSummary:
             "dbt_version": self.dbt_version,
             "adapter_type": self.adapter_type,
             "command": self.command,
-            "result_count": self.result_count,
-            "status_counts": [item.to_dict() for item in self.status_counts],
+            "status_counts": {item.status: item.count for item in self.status_counts},
         }
 
 
@@ -99,11 +163,9 @@ class ArtifactPairReport:
 
     def to_dict(self) -> dict[str, JsonValue]:
         """Return the versioned machine contract without evidence fragments."""
-        primary = self.primary_issue
         return {
             "schema_version": REPORT_SCHEMA_VERSION,
             "pair_state": self.state.value,
             "summary": self.summary.to_dict() if self.summary is not None else None,
-            "primary_issue": primary.to_dict() if primary is not None else None,
             "issues": [issue.to_dict() for issue in self.issues],
         }

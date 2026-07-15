@@ -26,3 +26,16 @@ unit_tests:
     expect:
       rows:
         - fixture_id: 1
+
+models:
+  - name: observed_model
+    data_tests:
+      - not_null:
+          arguments:
+            column_name: fixture_id
+  - name: metricflow_time_spine
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        granularity: day

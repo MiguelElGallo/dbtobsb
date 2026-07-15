@@ -1,4 +1,4 @@
-"""Pure validation of one dbt manifest/run-results pair."""
+"""Deterministic local validation of one dbt manifest/run-results pair."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from dbtobsb_capture.contracts import (
     NativeStatusCount,
     PairState,
 )
+from dbtobsb_capture.registry import RUN_STATUSES, TEST_STATUSES
 from dbtobsb_capture.schemas import (
     MANIFEST_SCHEMA_NAME,
     RUN_RESULTS_SCHEMA_NAME,
@@ -28,6 +29,7 @@ SUPPORTED_COMMAND = "build"
 SUPPORTED_MANIFEST_SCHEMA = "https://schemas.getdbt.com/dbt/manifest/v12.json"
 SUPPORTED_RUN_RESULTS_SCHEMA = "https://schemas.getdbt.com/dbt/run-results/v6.json"
 MAX_PRIMARY_ARTIFACT_BYTES = 128 * 1024 * 1024
+MAX_JSON_NESTING_DEPTH = 256
 MAX_ISSUES = 20
 
 _SUPPORTED_RESULT_COLLECTIONS: dict[str, frozenset[str]] = {
@@ -43,8 +45,8 @@ _UNSUPPORTED_RESULT_COLLECTIONS = (
     "metrics",
     "semantic_models",
 )
-_RUN_STATUSES = frozenset({"success", "error", "skipped", "partial success", "no-op"})
-_TEST_STATUSES = frozenset({"pass", "error", "fail", "warn", "skipped"})
+_RUN_STATUSES = frozenset(RUN_STATUSES)
+_TEST_STATUSES = frozenset(TEST_STATUSES)
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,6 +100,20 @@ _ISSUES: dict[str, _IssueTemplate] = {
         "duplicate_object_key",
         "A duplicate JSON key makes the run-results interpretation ambiguous.",
         "Collect new run results from the pinned dbt build; do not repair them by hand.",
+    ),
+    "DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED": _IssueTemplate(
+        "manifest",
+        "document",
+        "over_256_levels",
+        "The manifest exceeds the bounded JSON nesting policy.",
+        "Collect a normal unmodified manifest from the pinned dbt build.",
+    ),
+    "DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED": _IssueTemplate(
+        "run_results",
+        "document",
+        "over_256_levels",
+        "The run-results file exceeds the bounded JSON nesting policy.",
+        "Collect normal unmodified run results from the pinned dbt build.",
     ),
     "DBT_MANIFEST_SCHEMA_INVALID": _IssueTemplate(
         "manifest",
@@ -257,6 +273,30 @@ def _reject_json_constant(_: str) -> None:
     raise ValueError
 
 
+def _json_nesting_exceeds_limit(raw: bytes) -> bool:
+    """Bound structural depth before the recursive standard decoder runs."""
+    depth = 0
+    in_string = False
+    escaped = False
+    for byte in raw:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif byte == 0x5C:  # backslash
+                escaped = True
+            elif byte == 0x22:  # quote
+                in_string = False
+        elif byte == 0x22:
+            in_string = True
+        elif byte in (0x5B, 0x7B):  # opening bracket or brace
+            depth += 1
+            if depth > MAX_JSON_NESTING_DEPTH:
+                return True
+        elif byte in (0x5D, 0x7D) and depth:
+            depth -= 1
+    return False
+
+
 def _parse_json(raw: bytes, *, component: str) -> tuple[dict[str, Any] | None, str | None]:
     duplicate_code = f"DBT_{component.upper()}_JSON_DUPLICATE_KEY"
     invalid_code = f"DBT_{component.upper()}_JSON_INVALID"
@@ -269,6 +309,8 @@ def _parse_json(raw: bytes, *, component: str) -> tuple[dict[str, Any] | None, s
         )
     except _DuplicateJsonKey:
         return None, duplicate_code
+    except RecursionError:
+        return None, f"DBT_{component.upper()}_JSON_NESTING_LIMIT_EXCEEDED"
     except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
         return None, invalid_code
     if not isinstance(value, dict):
@@ -347,11 +389,13 @@ def _invalid(codes: list[str]) -> ArtifactPairReport:
 
 
 def inspect_artifact_pair(*, manifest: bytes, run_results: bytes) -> ArtifactPairReport:
-    """Inspect one in-memory pair without filesystem, network, dbt, or Databricks access.
+    """Inspect one in-memory pair without opening caller paths or external services.
 
     Expected evidence failures return ``PAIR_INVALID`` with static issue text. The
     returned object never retains raw bytes, SQL, messages, paths, environment values,
-    node identifiers, project names, relation names, or invocation identifiers.
+    node identifiers, project names, relation names, or invocation identifiers. Validation
+    reads only the installed checksum-pinned schema resources; it performs no network,
+    environment, clock, subprocess, dbt, or Databricks access.
     """
     if not isinstance(manifest, bytes) or not isinstance(run_results, bytes):
         raise TypeError("manifest and run_results must be bytes")
@@ -364,6 +408,14 @@ def inspect_artifact_pair(*, manifest: bytes, run_results: bytes) -> ArtifactPai
     if size_codes:
         return _invalid(size_codes)
 
+    nesting_codes: list[str] = []
+    if _json_nesting_exceeds_limit(manifest):
+        nesting_codes.append("DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED")
+    if _json_nesting_exceeds_limit(run_results):
+        nesting_codes.append("DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED")
+    if nesting_codes:
+        return _invalid(nesting_codes)
+
     manifest_document, manifest_error = _parse_json(manifest, component="manifest")
     run_document, run_error = _parse_json(run_results, component="run_results")
     parse_codes = [code for code in (manifest_error, run_error) if code is not None]
@@ -373,12 +425,18 @@ def inspect_artifact_pair(*, manifest: bytes, run_results: bytes) -> ArtifactPai
         raise RuntimeError("artifact parsing invariant failed")
 
     schema_codes: list[str] = []
-    manifest_errors = iter(validator_for(MANIFEST_SCHEMA_NAME).iter_errors(manifest_document))
-    if next(manifest_errors, None) is not None:
-        schema_codes.append("DBT_MANIFEST_SCHEMA_INVALID")
-    run_errors = iter(validator_for(RUN_RESULTS_SCHEMA_NAME).iter_errors(run_document))
-    if next(run_errors, None) is not None:
-        schema_codes.append("DBT_RUN_RESULTS_SCHEMA_INVALID")
+    try:
+        manifest_errors = iter(validator_for(MANIFEST_SCHEMA_NAME).iter_errors(manifest_document))
+        if next(manifest_errors, None) is not None:
+            schema_codes.append("DBT_MANIFEST_SCHEMA_INVALID")
+    except RecursionError:
+        schema_codes.append("DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED")
+    try:
+        run_errors = iter(validator_for(RUN_RESULTS_SCHEMA_NAME).iter_errors(run_document))
+        if next(run_errors, None) is not None:
+            schema_codes.append("DBT_RUN_RESULTS_SCHEMA_INVALID")
+    except RecursionError:
+        schema_codes.append("DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED")
     if schema_codes:
         return _invalid(schema_codes)
 
@@ -477,7 +535,6 @@ def inspect_artifact_pair(*, manifest: bytes, run_results: bytes) -> ArtifactPai
         dbt_version=SUPPORTED_DBT_VERSION,
         adapter_type=SUPPORTED_ADAPTER_TYPE,
         command=SUPPORTED_COMMAND,
-        result_count=len(results),
         status_counts=tuple(
             NativeStatusCount(status=status, count=count)
             for status, count in sorted(statuses.items())

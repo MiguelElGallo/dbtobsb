@@ -6,6 +6,12 @@ profile: dbtobsb_capture_fixture
 
 model-paths:
   - models
+seed-paths:
+  - seeds
+snapshot-paths:
+  - snapshots
+function-paths:
+  - functions
 
 clean-targets:
   - target

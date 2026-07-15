@@ -1,21 +1,23 @@
 # Inspect an artifact pair
 
-In this tutorial you will validate a successful pair, a pair whose dbt result is an error, and an invalid pair. The entire journey is offline and normally takes less than five minutes.
+In this tutorial you will validate a successful pair, a pair whose dbt result is an error, and an invalid pair. After the one-time runtime installation, all three inspections are offline and normally take less than five minutes.
 
 ## Prerequisites
 
 You need Python 3.12 and [uv](https://docs.astral.sh/uv/). Run commands from the repository root. You do not need Databricks credentials, dbt, a SQL warehouse, or any other compute.
 
+On a clean machine, the first command can download the locked runtime packages from the configured Python index. In a regulated environment, configure the customer-approved registry or mirror first, or use a policy-approved populated uv cache. P1.1 does not yet ship a disconnected wheelhouse; without an approved reachable source or complete cache, stop before installation.
+
 Create the locked environment:
 
 ```bash
-uv sync --project capture --locked
+uv sync --project capture --locked --no-dev
 ```
 
 ## 1. Inspect a valid successful pair
 
 ```bash
-uv run --project capture dbtobsb-capture inspect-artifact-pair \
+uv run --project capture --no-sync dbtobsb-capture inspect-artifact-pair \
   --manifest capture/tests/fixtures/artifact_pair/valid_success/manifest.json \
   --run-results capture/tests/fixtures/artifact_pair/valid_success/run_results.json \
   --no-color
@@ -39,7 +41,7 @@ The command exits `0`. The pair is valid and its one native dbt result is `succe
 ## 2. Keep pair validity separate from dbt success
 
 ```bash
-uv run --project capture dbtobsb-capture inspect-artifact-pair \
+uv run --project capture --no-sync dbtobsb-capture inspect-artifact-pair \
   --manifest capture/tests/fixtures/artifact_pair/valid_dbt_failure/manifest.json \
   --run-results capture/tests/fixtures/artifact_pair/valid_dbt_failure/run_results.json \
   --json \
@@ -49,7 +51,7 @@ uv run --project capture dbtobsb-capture inspect-artifact-pair \
 This command also exits `0`. Its compact JSON contains:
 
 ```json
-{"issues":[],"pair_state":"PAIR_VALID","primary_issue":null,"schema_version":"dbtobsb.artifact-pair-report.v1","summary":{"adapter_type":"databricks","command":"build","dbt_version":"1.11.12","manifest_schema":"https://schemas.getdbt.com/dbt/manifest/v12.json","result_count":1,"run_results_schema":"https://schemas.getdbt.com/dbt/run-results/v6.json","status_counts":[{"count":1,"status":"error"}]}}
+{"issues":[],"pair_state":"PAIR_VALID","schema_version":"dbtobsb.artifact-pair-report.v1","summary":{"adapter_type":"databricks","command":"build","dbt_version":"1.11.12","manifest_schema":"https://schemas.getdbt.com/dbt/manifest/v12.json","run_results_schema":"https://schemas.getdbt.com/dbt/run-results/v6.json","status_counts":{"error":1}}}
 ```
 
 `PAIR_VALID` says the evidence pair is internally valid. `status_counts.error=1` says dbt did not succeed. These facts are intentionally independent.
@@ -57,7 +59,7 @@ This command also exits `0`. Its compact JSON contains:
 ## 3. Inspect an invalid pair
 
 ```bash
-uv run --project capture dbtobsb-capture inspect-artifact-pair \
+uv run --project capture --no-sync dbtobsb-capture inspect-artifact-pair \
   --manifest capture/tests/fixtures/artifact_pair/invalid_invocation_mismatch/manifest.json \
   --run-results capture/tests/fixtures/artifact_pair/invalid_invocation_mismatch/run_results.json \
   --no-color

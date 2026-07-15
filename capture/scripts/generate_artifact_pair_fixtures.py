@@ -10,17 +10,26 @@ import argparse
 import copy
 import hashlib
 import json
-import platform
 from pathlib import Path
 from typing import Any
+
+from dbtobsb_capture.schemas import MANIFEST_SCHEMA_NAME, validator_for
 
 FIXED_INVOCATION_ID = "11111111-1111-4111-8111-111111111111"
 MISMATCHED_INVOCATION_ID = "22222222-2222-4222-8222-222222222222"
 MODEL_ID = "model.dbtobsb_capture_fixture.observed_model"
+SEED_ID = "seed.dbtobsb_capture_fixture.observed_seed"
+SNAPSHOT_ID = "snapshot.dbtobsb_capture_fixture.observed_snapshot"
+DATA_TEST_ID = "test.dbtobsb_capture_fixture.not_null_observed_model_fixture_id.397be03b66"
 UNIT_TEST_ID = "unit_test.dbtobsb_capture_fixture.observed_model.observed_model_returns_one"
+SAVED_QUERY_ID = "saved_query.dbtobsb_capture_fixture.fixture_saved_query"
 EXPOSURE_ID = "exposure.dbtobsb_capture_fixture.fixture_dashboard"
+FUNCTION_ID = "function.dbtobsb_capture_fixture.fixture_double"
 SOURCE_ID = "source.dbtobsb_capture_fixture.fixture_source.fixture_table"
 MACRO_ID = "macro.dbtobsb_capture_fixture.fixture_macro"
+METRIC_ID = "metric.dbtobsb_capture_fixture.fixture_row_count"
+SEMANTIC_MODEL_ID = "semantic_model.dbtobsb_capture_fixture.fixture_semantic"
+APPROVED_SOURCE_MANIFEST_SHA256 = "14d1b3c6f54831fcc004bfad548578c0b955e03f41db786bba7f484391be419c"
 
 CANARIES = {
     "compiled_sql": "CANARY_COMPILED_SQL_SELECT_SECRET",
@@ -53,7 +62,17 @@ def _filtered_mapping(value: Any, keys: set[str]) -> dict[str, Any]:
 
 
 def _manifest(source: dict[str, Any]) -> dict[str, Any]:
-    kept_ids = {MODEL_ID, UNIT_TEST_ID, EXPOSURE_ID, SOURCE_ID}
+    node_ids = {MODEL_ID, SEED_ID, SNAPSHOT_ID, DATA_TEST_ID}
+    kept_ids = {
+        *node_ids,
+        UNIT_TEST_ID,
+        SAVED_QUERY_ID,
+        EXPOSURE_ID,
+        FUNCTION_ID,
+        SOURCE_ID,
+        METRIC_ID,
+        SEMANTIC_MODEL_ID,
+    }
     manifest = {
         "metadata": {
             "dbt_schema_version": "https://schemas.getdbt.com/dbt/manifest/v12.json",
@@ -75,22 +94,22 @@ def _manifest(source: dict[str, Any]) -> dict[str, Any]:
             },
             "run_started_at": "2026-01-01T00:00:00+00:00",
         },
-        "nodes": _filtered_mapping(source.get("nodes"), {MODEL_ID}),
+        "nodes": _filtered_mapping(source.get("nodes"), node_ids),
         "sources": _filtered_mapping(source.get("sources"), {SOURCE_ID}),
         "macros": _filtered_mapping(source.get("macros"), {MACRO_ID}),
         "docs": {},
         "exposures": _filtered_mapping(source.get("exposures"), {EXPOSURE_ID}),
-        "metrics": {},
+        "metrics": _filtered_mapping(source.get("metrics"), {METRIC_ID}),
         "groups": {},
         "selectors": copy.deepcopy(source.get("selectors", {})),
         "disabled": {},
         "parent_map": _filtered_mapping(source.get("parent_map"), kept_ids),
         "child_map": _filtered_mapping(source.get("child_map"), kept_ids),
         "group_map": {},
-        "saved_queries": {},
-        "semantic_models": {},
+        "saved_queries": _filtered_mapping(source.get("saved_queries"), {SAVED_QUERY_ID}),
+        "semantic_models": _filtered_mapping(source.get("semantic_models"), {SEMANTIC_MODEL_ID}),
         "unit_tests": _filtered_mapping(source.get("unit_tests"), {UNIT_TEST_ID}),
-        "functions": {},
+        "functions": _filtered_mapping(source.get("functions"), {FUNCTION_ID}),
     }
 
     node = manifest["nodes"][MODEL_ID]
@@ -116,6 +135,45 @@ def _manifest(source: dict[str, Any]) -> dict[str, Any]:
     macro["original_file_path"] = CANARIES["path"]
     macro["macro_sql"] = CANARIES["token"]
     return manifest
+
+
+def _validate_approved_source(source_bytes: bytes, source: dict[str, Any]) -> str:
+    """Authenticate the reviewed synthetic parse before copying any resource."""
+    source_hash = hashlib.sha256(source_bytes).hexdigest()
+    if source_hash != APPROVED_SOURCE_MANIFEST_SHA256:
+        raise ValueError("source manifest is not the reviewed synthetic parse")
+    if next(iter(validator_for(MANIFEST_SCHEMA_NAME).iter_errors(source)), None) is not None:
+        raise ValueError("source manifest does not satisfy the pinned schema")
+    metadata = source.get("metadata")
+    if not isinstance(metadata, dict) or (
+        metadata.get("dbt_schema_version"),
+        metadata.get("dbt_version"),
+        metadata.get("adapter_type"),
+    ) != (
+        "https://schemas.getdbt.com/dbt/manifest/v12.json",
+        "1.11.12",
+        "databricks",
+    ):
+        raise ValueError("source manifest origin is not the reviewed candidate")
+    macros = source.get("macros")
+    if not isinstance(macros, dict) or len(macros) != 1:
+        raise ValueError("source manifest macro inventory is not the reviewed candidate")
+    required = {
+        "nodes": {MODEL_ID, SEED_ID, SNAPSHOT_ID, DATA_TEST_ID},
+        "unit_tests": {UNIT_TEST_ID},
+        "saved_queries": {SAVED_QUERY_ID},
+        "exposures": {EXPOSURE_ID},
+        "functions": {FUNCTION_ID},
+        "sources": {SOURCE_ID},
+        "metrics": {METRIC_ID},
+        "semantic_models": {SEMANTIC_MODEL_ID},
+        "macros": {MACRO_ID},
+    }
+    for collection_name, identifiers in required.items():
+        collection = _filtered_mapping(source.get(collection_name), identifiers)
+        if set(collection) != identifiers:
+            raise ValueError("source manifest inventory is not the reviewed candidate")
+    return source_hash
 
 
 def _run_results(*, status: str, invocation_id: str) -> dict[str, Any]:
@@ -170,10 +228,8 @@ def _valid_report(status: str) -> dict[str, Any]:
             "dbt_version": "1.11.12",
             "adapter_type": "databricks",
             "command": "build",
-            "result_count": 1,
-            "status_counts": [{"status": status, "count": 1}],
+            "status_counts": {status: 1},
         },
-        "primary_issue": None,
         "issues": [],
     }
 
@@ -191,7 +247,6 @@ def _mismatch_report() -> dict[str, Any]:
         "schema_version": "dbtobsb.artifact-pair-report.v1",
         "pair_state": "PAIR_INVALID",
         "summary": None,
-        "primary_issue": issue,
         "issues": [issue],
     }
 
@@ -206,13 +261,10 @@ def _provenance(
     return {
         "fixture_kind": fixture_kind,
         "runtime_evidence": False,
-        "source_kind": "pinned_local_dbt_parse_plus_synthetic_run_results",
-        "source_environment": {
-            "python": platform.python_version(),
-            "system": platform.system(),
-            "machine": platform.machine(),
-            "dbt_command": "parse",
-        },
+        "source_kind": "reviewed_synthetic_manifest_projection_plus_synthetic_run_results",
+        "source_command": (
+            "project fixture parsed with dbt; reviewed projection checked into fixture_source"
+        ),
         "source_manifest_sha256": source_manifest_sha256,
         "sanitizer": "capture/scripts/generate_artifact_pair_fixtures.py",
         "schema_compatibility_note": (
@@ -221,7 +273,12 @@ def _provenance(
             "raw parsed manifest validates without an overlay. This fixture is not runtime "
             "evidence."
         ),
-        "candidate": {
+        "candidate_context": {
+            "runtime_attestation": False,
+            "note": (
+                "Reviewed compatibility context only; the source manifest does not attest "
+                "these transitive package versions or wheel digests."
+            ),
             "python": "3.12.3",
             "dbt_core": "1.11.12",
             "dbt_core_wheel_sha256": (
@@ -267,7 +324,7 @@ def generate(*, source_manifest_path: Path, output_root: Path) -> None:
     source: Any = json.loads(source_bytes)
     if not isinstance(source, dict):
         raise ValueError("source manifest root must be an object")
-    source_hash = hashlib.sha256(source_bytes).hexdigest()
+    source_hash = _validate_approved_source(source_bytes, source)
     manifest = _manifest(source)
 
     fixtures = (

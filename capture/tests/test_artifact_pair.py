@@ -1,4 +1,4 @@
-"""Contract tests for the pure P1.1 artifact-pair inspector."""
+"""Contract tests for the deterministic P1.1 artifact-pair inspector."""
 
 from __future__ import annotations
 
@@ -13,9 +13,18 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 from jsonschema import Draft202012Validator
 
-from dbtobsb_capture import PairState, inspect_artifact_pair
+from dbtobsb_capture import (
+    ArtifactPairIssue,
+    ArtifactPairReport,
+    ArtifactPairSummary,
+    NativeStatusCount,
+    PairState,
+    inspect_artifact_pair,
+)
 from dbtobsb_capture import inspector as inspector_module
-from dbtobsb_capture.inspector import MAX_ISSUES
+from dbtobsb_capture import schemas as schemas_module
+from dbtobsb_capture.inspector import _ISSUES, MAX_ISSUES
+from dbtobsb_capture.registry import NATIVE_STATUSES
 from dbtobsb_capture.schemas import (
     MANIFEST_SCHEMA_NAME,
     MANIFEST_SCHEMA_SHA256,
@@ -33,9 +42,17 @@ REPORT_SCHEMA = (
     / "artifact-pair-report-v1.json"
 )
 MODEL_ID = "model.dbtobsb_capture_fixture.observed_model"
+SEED_ID = "seed.dbtobsb_capture_fixture.observed_seed"
+SNAPSHOT_ID = "snapshot.dbtobsb_capture_fixture.observed_snapshot"
+DATA_TEST_ID = "test.dbtobsb_capture_fixture.not_null_observed_model_fixture_id.397be03b66"
 UNIT_TEST_ID = "unit_test.dbtobsb_capture_fixture.observed_model.observed_model_returns_one"
+SAVED_QUERY_ID = "saved_query.dbtobsb_capture_fixture.fixture_saved_query"
 EXPOSURE_ID = "exposure.dbtobsb_capture_fixture.fixture_dashboard"
+FUNCTION_ID = "function.dbtobsb_capture_fixture.fixture_double"
 SOURCE_ID = "source.dbtobsb_capture_fixture.fixture_source.fixture_table"
+MACRO_ID = "macro.dbtobsb_capture_fixture.fixture_macro"
+METRIC_ID = "metric.dbtobsb_capture_fixture.fixture_row_count"
+SEMANTIC_MODEL_ID = "semantic_model.dbtobsb_capture_fixture.fixture_semantic"
 CANARY_PREFIX = "CANARY_"
 
 
@@ -61,7 +78,7 @@ def _inspect_documents(
 
 
 def _primary_code(report: dict[str, Any]) -> str:
-    primary = report["primary_issue"]
+    primary = report["issues"][0]
     assert isinstance(primary, dict)
     code = primary["code"]
     assert isinstance(code, str)
@@ -144,6 +161,28 @@ def test_vendored_schema_digests_and_drafts_are_frozen() -> None:
     )
 
 
+def test_fresh_inspection_reads_only_installed_checksum_pinned_schema_resources(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+    real_files = schemas_module.files
+
+    def audited_files(anchor: Any) -> Any:
+        calls.append(str(anchor))
+        return real_files(anchor)
+
+    validator_for.cache_clear()
+    monkeypatch.setattr(schemas_module, "files", audited_files)
+    report = inspect_artifact_pair(
+        manifest=_bytes("valid_success", "manifest.json"),
+        run_results=_bytes("valid_success", "run_results.json"),
+    )
+    validator_for.cache_clear()
+
+    assert report.state is PairState.VALID
+    assert calls == ["dbtobsb_capture", "dbtobsb_capture"]
+
+
 def test_golden_artifacts_satisfy_the_exact_vendored_schemas() -> None:
     for fixture in ("valid_success", "valid_dbt_failure", "invalid_invocation_mismatch"):
         validator_for(MANIFEST_SCHEMA_NAME).validate(_json(fixture, "manifest.json"))
@@ -154,6 +193,12 @@ def test_fixture_provenance_never_claims_live_runtime_evidence() -> None:
     for fixture in ("valid_success", "valid_dbt_failure", "invalid_invocation_mismatch"):
         provenance = _json(fixture, "provenance.json")
         assert provenance["runtime_evidence"] is False
+        assert provenance["candidate_context"]["runtime_attestation"] is False
+        assert "does not attest" in provenance["candidate_context"]["note"]
+        assert (
+            provenance["source_manifest_sha256"]
+            == "14d1b3c6f54831fcc004bfad548578c0b955e03f41db786bba7f484391be419c"
+        )
         assert "validates without an overlay" in provenance["schema_compatibility_note"]
         assert (
             provenance["artifact_sha256"]["manifest"]
@@ -194,6 +239,17 @@ def test_size_limit_rejects_before_parsing(monkeypatch: pytest.MonkeyPatch) -> N
     assert [issue.code for issue in report.issues] == [
         "DBT_MANIFEST_SIZE_LIMIT_EXCEEDED",
         "DBT_RUN_RESULTS_SIZE_LIMIT_EXCEEDED",
+    ]
+
+
+def test_nesting_limit_returns_stable_invalid_report_without_recursion_error() -> None:
+    deeply_nested = (b"[" * 300) + b"0" + (b"]" * 300)
+
+    report = inspect_artifact_pair(manifest=deeply_nested, run_results=deeply_nested)
+
+    assert [issue.code for issue in report.issues] == [
+        "DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED",
+        "DBT_RUN_RESULTS_JSON_NESTING_LIMIT_EXCEEDED",
     ]
 
 
@@ -328,7 +384,7 @@ def test_every_supported_run_status_remains_native(status: str) -> None:
     state, report = _inspect_documents(manifest, run_results)
 
     assert state == "PAIR_VALID"
-    assert report["summary"]["status_counts"] == [{"status": status, "count": 1}]
+    assert report["summary"]["status_counts"] == {status: 1}
 
 
 @pytest.mark.parametrize(
@@ -344,7 +400,7 @@ def test_every_supported_test_status_remains_native(status: str) -> None:
     state, report = _inspect_documents(manifest, run_results)
 
     assert state == "PAIR_VALID"
-    assert report["summary"]["status_counts"] == [{"status": status, "count": 1}]
+    assert report["summary"]["status_counts"] == {status: 1}
 
 
 def test_freshness_only_runtime_error_status_is_not_accepted_for_build_result() -> None:
@@ -359,7 +415,16 @@ def test_freshness_only_runtime_error_status_is_not_accepted_for_build_result() 
 
 @pytest.mark.parametrize(
     ("unique_id", "status"),
-    [(UNIT_TEST_ID, "pass"), (EXPOSURE_ID, "success")],
+    [
+        (MODEL_ID, "success"),
+        (SEED_ID, "success"),
+        (SNAPSHOT_ID, "success"),
+        (DATA_TEST_ID, "pass"),
+        (UNIT_TEST_ID, "pass"),
+        (SAVED_QUERY_ID, "success"),
+        (EXPOSURE_ID, "success"),
+        (FUNCTION_ID, "success"),
+    ],
 )
 def test_supported_buildtask_collections_use_resource_aware_statuses(
     unique_id: str, status: str
@@ -372,7 +437,33 @@ def test_supported_buildtask_collections_use_resource_aware_statuses(
     state, report = _inspect_documents(manifest, run_results)
 
     assert state == "PAIR_VALID"
-    assert report["summary"]["status_counts"] == [{"status": status, "count": 1}]
+    assert report["summary"]["status_counts"] == {status: 1}
+
+
+@pytest.mark.parametrize(
+    "unique_id",
+    [SOURCE_ID, MACRO_ID, METRIC_ID, SEMANTIC_MODEL_ID],
+)
+def test_every_unsupported_manifest_collection_is_rejected(unique_id: str) -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    run_results["results"][0]["unique_id"] = unique_id
+
+    _, report = _inspect_documents(manifest, run_results)
+
+    assert _primary_code(report) == "DBT_RESULT_ID_UNSUPPORTED_RESOURCE"
+
+
+def test_supported_and_unsupported_collection_collision_is_ambiguous() -> None:
+    manifest = _json("valid_success", "manifest.json")
+    run_results = _json("valid_success", "run_results.json")
+    source = copy.deepcopy(manifest["sources"][SOURCE_ID])
+    source["unique_id"] = MODEL_ID
+    manifest["sources"][MODEL_ID] = source
+
+    _, report = _inspect_documents(manifest, run_results)
+
+    assert _primary_code(report) == "DBT_RESULT_ID_AMBIGUOUS"
 
 
 @pytest.mark.parametrize(
@@ -417,6 +508,78 @@ def test_programmer_misuse_exception_is_static_and_evidence_safe() -> None:
         inspect_artifact_pair(manifest=cast(bytes, "CANARY_SECRET"), run_results=b"{}")
 
     assert CANARY_PREFIX not in str(error.value)
+
+
+def test_closed_python_contract_rejects_invented_status_and_issue_text() -> None:
+    with pytest.raises(ValueError, match="native vocabulary"):
+        NativeStatusCount(status="invented", count=1)
+    template = _ISSUES["DBT_EMPTY_EXECUTION"]
+    with pytest.raises(ValueError, match="closed v1 issue"):
+        ArtifactPairIssue(
+            code="DBT_EMPTY_EXECUTION",
+            component=template.component,
+            field=template.field,
+            observed_category=template.observed_category,
+            impact="invented evidence-bearing text",
+            next_action=template.next_action,
+        )
+
+
+def test_every_closed_status_and_issue_variant_validates_against_report_schema() -> None:
+    validator = Draft202012Validator(json.loads(REPORT_SCHEMA.read_bytes()))
+    for status in NATIVE_STATUSES:
+        summary = ArtifactPairSummary(
+            manifest_schema="https://schemas.getdbt.com/dbt/manifest/v12.json",
+            run_results_schema="https://schemas.getdbt.com/dbt/run-results/v6.json",
+            dbt_version="1.11.12",
+            adapter_type="databricks",
+            command="build",
+            status_counts=(NativeStatusCount(status=status, count=1),),
+        )
+        validator.validate(ArtifactPairReport(PairState.VALID, summary, ()).to_dict())
+    for code, template in _ISSUES.items():
+        issue = ArtifactPairIssue(
+            code=code,
+            component=template.component,
+            field=template.field,
+            observed_category=template.observed_category,
+            impact=template.impact,
+            next_action=template.next_action,
+        )
+        validator.validate(ArtifactPairReport(PairState.INVALID, None, (issue,)).to_dict())
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "invented_status",
+        "invented_code",
+        "changed_text",
+        "extra_status",
+        "legacy_primary",
+        "legacy_result_count",
+    ],
+)
+def test_report_schema_rejects_loose_protocol_mutants(mutation: str) -> None:
+    validator = Draft202012Validator(json.loads(REPORT_SCHEMA.read_bytes()))
+    if mutation in {"invented_code", "changed_text"}:
+        report = _json("invalid_invocation_mismatch", "expected-report.json")
+        if mutation == "invented_code":
+            report["issues"][0]["code"] = "DBT_INVENTED"
+        else:
+            report["issues"][0]["impact"] = "invented"
+    else:
+        report = _json("valid_success", "expected-report.json")
+        if mutation == "invented_status":
+            report["summary"]["status_counts"] = {"invented": 1}
+        elif mutation == "extra_status":
+            report["summary"]["status_counts"]["invented"] = 2
+        elif mutation == "legacy_primary":
+            report["primary_issue"] = None
+        else:
+            report["summary"]["result_count"] = 1
+
+    assert not validator.is_valid(report)
 
 
 @settings(max_examples=100, deadline=500)

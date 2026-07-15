@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -14,8 +17,10 @@ from dbtobsb_capture.cli import (
     EXIT_INVALID,
     EXIT_USAGE,
     EXIT_VALID,
+    INPUT_READ_ERROR,
     main,
 )
+from dbtobsb_capture.inspector import MAX_PRIMARY_ARTIFACT_BYTES
 
 FIXTURES = Path(__file__).parent / "fixtures" / "artifact_pair"
 CANARY = "CANARY_DO_NOT_ECHO_PATH_OR_ARGUMENT"
@@ -68,8 +73,8 @@ def test_cli_invalid_returns_stable_exit_and_one_next_action(capsys: Any) -> Non
     assert exit_code == EXIT_INVALID
     assert captured.err == ""
     assert report["pair_state"] == "PAIR_INVALID"
-    assert report["primary_issue"]["code"] == "DBT_INVOCATION_ID_MISMATCH"
-    assert report["primary_issue"]["next_action"]
+    assert report["issues"][0]["code"] == "DBT_INVOCATION_ID_MISMATCH"
+    assert report["issues"][0]["next_action"]
     assert "CANARY_" not in captured.out
 
 
@@ -88,7 +93,7 @@ def test_cli_read_failure_never_echoes_path_or_exception(capsys: Any, tmp_path: 
 
     assert exit_code == EXIT_INPUT_READ
     assert captured.out == ""
-    assert captured.err == "DBTOBSB_INPUT_READ_ERROR\n"
+    assert captured.err == f"{INPUT_READ_ERROR}\n"
     assert CANARY not in captured.err
 
 
@@ -127,7 +132,111 @@ def test_cli_rejects_symlink_input(capsys: Any, tmp_path: Path) -> None:
     captured = capsys.readouterr()
 
     assert exit_code == EXIT_INPUT_READ
-    assert captured.err == "DBTOBSB_INPUT_READ_ERROR\n"
+    assert captured.err == f"{INPUT_READ_ERROR}\n"
+
+
+def test_cli_deep_nesting_is_inspected_invalid_not_internal(capsys: Any, tmp_path: Path) -> None:
+    nested = (b"[" * 300) + b"0" + (b"]" * 300)
+    manifest = tmp_path / "manifest.json"
+    run_results = tmp_path / "run_results.json"
+    manifest.write_bytes(nested)
+    run_results.write_bytes(nested)
+
+    exit_code = main(
+        [
+            "inspect-artifact-pair",
+            "--manifest",
+            str(manifest),
+            "--run-results",
+            str(run_results),
+            "--json",
+            "--no-color",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == EXIT_INVALID
+    assert json.loads(captured.out)["issues"][0]["code"].endswith("JSON_NESTING_LIMIT_EXCEEDED")
+    assert captured.err == ""
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="FIFO contract is POSIX-only")
+def test_installed_cli_rejects_fifo_without_blocking(tmp_path: Path) -> None:
+    executable = shutil.which("dbtobsb-capture")
+    assert executable is not None
+    fifo = tmp_path / "manifest.json"
+    os.mkfifo(fifo)
+
+    completed = subprocess.run(
+        [
+            executable,
+            "inspect-artifact-pair",
+            "--manifest",
+            str(fifo),
+            "--run-results",
+            str(FIXTURES / "valid_success" / "run_results.json"),
+            "--no-color",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=2,
+        check=False,
+    )
+
+    assert completed.returncode == EXIT_INPUT_READ
+    assert completed.stdout == ""
+    assert completed.stderr == f"{INPUT_READ_ERROR}\n"
+
+
+def test_installed_cli_rejects_oversized_sparse_regular_file(tmp_path: Path) -> None:
+    executable = shutil.which("dbtobsb-capture")
+    assert executable is not None
+    oversized = tmp_path / "manifest.json"
+    oversized.touch()
+    with oversized.open("r+b") as handle:
+        handle.truncate(MAX_PRIMARY_ARTIFACT_BYTES + 1)
+
+    completed = subprocess.run(
+        [
+            executable,
+            "inspect-artifact-pair",
+            "--manifest",
+            str(oversized),
+            "--run-results",
+            str(FIXTURES / "valid_success" / "run_results.json"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=2,
+        check=False,
+    )
+
+    assert completed.returncode == EXIT_INPUT_READ
+    assert completed.stderr == f"{INPUT_READ_ERROR}\n"
+
+
+@pytest.mark.skipif(not Path("/dev/null").exists(), reason="device contract is POSIX-only")
+def test_installed_cli_rejects_device_without_blocking() -> None:
+    executable = shutil.which("dbtobsb-capture")
+    assert executable is not None
+
+    completed = subprocess.run(
+        [
+            executable,
+            "inspect-artifact-pair",
+            "--manifest",
+            "/dev/null",
+            "--run-results",
+            str(FIXTURES / "valid_success" / "run_results.json"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=2,
+        check=False,
+    )
+
+    assert completed.returncode == EXIT_INPUT_READ
+    assert completed.stderr == f"{INPUT_READ_ERROR}\n"
 
 
 def test_cli_disables_abbreviated_flags_and_sanitizes_usage_error(capsys: Any) -> None:

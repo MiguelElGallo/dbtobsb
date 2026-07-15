@@ -18,6 +18,20 @@ EXIT_USAGE = 2
 EXIT_INPUT_READ = 3
 EXIT_INTERNAL = 4
 EXIT_INVALID = 10
+INPUT_READ_ERROR = "\n".join(
+    (
+        "DBTOBSB_INPUT_READ_ERROR",
+        "impact: One or both inputs could not be read as closed regular files within 128 MiB.",
+        (
+            "next_action: Provide existing, closed, non-symlink regular files no larger "
+            "than 128 MiB."
+        ),
+        (
+            "help: docs/developers/how-to/diagnose-an-invalid-artifact-pair.md"
+            "#recover-an-input-read-error"
+        ),
+    )
+)
 
 
 class _SafeArgumentParser(argparse.ArgumentParser):
@@ -51,7 +65,12 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _read_regular_file(path: Path) -> bytes:
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_NONBLOCK", 0)
+    )
     descriptor = os.open(path, flags)
     try:
         file_stat = os.fstat(descriptor)
@@ -112,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
         manifest = _read_regular_file(arguments.manifest)
         run_results = _read_regular_file(arguments.run_results)
     except (OSError, ValueError):
-        print("DBTOBSB_INPUT_READ_ERROR", file=sys.stderr)
+        print(INPUT_READ_ERROR, file=sys.stderr)
         return EXIT_INPUT_READ
 
     try:
