@@ -1,9 +1,12 @@
 # dbtobsb documentation
 
-The repository contains a reviewed product contract, an intentionally small P0 Databricks App smoke, and the offline-after-installation P1.1 artifact-pair inspector.
+The repository contains a reviewed product contract, a working SQL-first P2 engineering preview, an intentionally small stopped P0 Databricks App smoke, and the offline-after-installation artifact-pair inspector.
 
 ## Start here
 
+- [Operator documentation](operators/index.md)
+- [Capture the first dbt run](operators/tutorials/first-capture.md)
+- [Sanitized P2 live capture](evidence/p2-live-capture-2026-07-16.md)
 - [Product and delivery plan](plans/product-plan.md)
 - [Review process](plans/review-process.md)
 - [Documentation plan](plans/documentation-plan.md)
@@ -23,3 +26,7 @@ The [repository README](../README.md#run-the-p0-smoke) contains the local qualit
 ## Inspect a dbt artifact pair
 
 Start with [Inspect an artifact pair](developers/tutorials/inspect-an-artifact-pair.md). Before substituting real files, follow [Handle raw dbt artifacts safely](developers/how-to/handle-raw-dbt-artifacts-safely.md). After its locked runtime is installed, P1.1 validates one pinned pair offline; it does not retrieve an archive, run dbt, prove a Databricks attempt, or assign a capture state.
+
+## Operate the SQL-first preview
+
+The [operator landing page](operators/index.md) separates the tutorial, task guides, reference, and explanation. The preview uses an attended fixed bootstrap for product DDL and a DML-only collector for steady-state evidence. It does not require the stopped App.

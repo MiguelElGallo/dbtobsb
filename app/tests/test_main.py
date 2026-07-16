@@ -110,6 +110,18 @@ def test_bundle_keeps_smoke_app_stopped_and_unbound_by_default() -> None:
     assert "No data or compute bindings" in description
 
 
+def test_demo_passes_fixed_storage_parameters_to_triggered_collector() -> None:
+    repository_root = Path(__file__).resolve().parents[2]
+    bundle = safe_load((repository_root / "databricks.yml").read_text(encoding="utf-8"))
+    demo_tasks = bundle["resources"]["jobs"]["dbtobsb_demo"]["tasks"]
+    collector_edge = next(task for task in demo_tasks if task["task_key"] == "collect_dbt_evidence")
+    parameters = collector_edge["run_job_task"]["job_parameters"]
+
+    assert parameters["catalog"] == "${var.evidence_catalog}"
+    assert parameters["schema"] == "${var.evidence_schema}"
+    assert parameters["raw_volume_name"] == "${var.raw_volume_name}"
+
+
 def _write_executable(path: Path, source: str) -> None:
     path.write_text(source, encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IXUSR)
@@ -224,6 +236,8 @@ def test_smoke_wrapper_stops_after_success(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     calls = (tmp_path / "calls.log").read_text(encoding="utf-8")
+    assert "bundle deploy" in calls
+    assert "--select apps.dbtobsb_smoke" in calls
     assert "bundle run dbtobsb_smoke" in calls
     assert "apps logs dbtobsb-smoke" in calls
     assert "apps stop dbtobsb-smoke" in calls

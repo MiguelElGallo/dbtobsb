@@ -2,15 +2,29 @@
 
 Customer-local observability for dbt Core jobs running on Databricks.
 
-This private repository contains a reviewed product plan and an early implementation. The target product is a private Databricks App delivered through a Databricks Declarative Automation Bundle. Required data, compute, identity, audit, and retention stay inside the customer's Databricks environment; no external telemetry platform is required.
+This private repository contains a working SQL-first engineering preview and the reviewed plan for a future private Databricks App. Databricks Declarative Automation Bundles deliver the preview Jobs and stopped App shell. Required data, compute, identity, audit, and retention stay inside the customer's Databricks environment; no external telemetry platform is required.
 
 ## What works now
 
-P0 is a deliberately narrow FastAPI App smoke. It proves that the locked source can be packaged, deployed, started, called, logged, and stopped through Databricks. It does **not** run dbt, ingest artifacts, read product data, or prove product readiness.
+The P2 preview now runs the pinned dbt Core job, retrieves its native Databricks task archive, preserves the exact bytes in a managed Unity Catalog Volume, validates `manifest.json` plus `run_results.json`, and publishes allowlisted fields to three Delta tables and two read views. A live Azure Databricks proof captured a changed-seed weather build as `COMPLETE` and `PAIR_VALID`; identical replay kept one invocation and 9 node rows with the same digest and timestamps.
 
-The first paid-workspace run passed the health/log/stop checks. Its [sanitized evidence record](docs/evidence/p0-live-smoke-2026-07-15.md) preserves both the technical result and the original cost-approval process finding. Later compute-size and dedicated-workspace guardrails have passed local tests but were not used to justify another paid run.
+Object creation is intentionally split from collection. An authorized administrator may run the fixed, versioned `BOOTSTRAP_ALLOWED` entry point against an intentionally selected production catalog; it creates or verifies the product schema objects idempotently. The ordinary `RUNTIME_DML_ONLY` collector entry point performs only fixed writes to those existing objects. It cannot be switched into bootstrap mode with a runtime flag.
 
-P1.1 can validate one pinned artifact pair locally. It does not retrieve Databricks archives, classify capture states, parse structured logs, write observability tables, or run dbt. Its three synthetic, sanitized fixtures make pair validity, native dbt outcome, and future capture state visibly separate.
+Start with the [SQL-first preview tutorial](docs/operators/tutorials/first-capture.md) and the [sanitized live capture](docs/evidence/p2-live-capture-2026-07-16.md). This is a private personal/test engineering preview, not a production, regulated, or Marketplace release. The FastAPI App remains a stopped process-liveness shell and is not the observability surface yet.
+
+## Release status
+
+Version `v0.2.0-alpha.1` is the private personal/test, synthetic-data, combined-role engineering preview. It is not regulated production, Marketplace, or Databricks App product readiness.
+
+| Release component | Version |
+| --- | --- |
+| Git release/tag | `v0.2.0-alpha.1` |
+| Evidence object manifest | `dbtobsb.evidence.v0.2.0-alpha.1` |
+| `dbtobsb-capture` package | `0.2.0a3` |
+| `dbtobsb-collector` package | `0.2.0a14` |
+| P0 App shell | `0.1.0` |
+
+P1.1 remains available as an offline strict artifact-pair inspector. Its synthetic fixtures make pair validity, native dbt outcome, and capture state visibly separate.
 
 ## Inspect one artifact pair locally
 
@@ -145,4 +159,4 @@ Detailed migration, trust, deployment, controlled-action, and dbt contracts live
 
 ## Current baseline
 
-Planning baseline: **0.20**. Implemented product slice: **P1.1 candidate**. Every independently deliverable slice requires Databricks, dbt Core, and usability reviews. Documentation additionally requires Diataxis, FastAPI-style, security/compliance, and usability/accessibility passes. The exact working agreement is in [AGENTS.md](AGENTS.md).
+Planning baseline: **0.20**. Implemented product slice: **P2 private engineering preview `v0.2.0-alpha.1`**. Every independently deliverable slice requires Databricks, dbt Core, and usability reviews. Documentation additionally requires Diataxis, FastAPI-style, security/compliance, and usability/accessibility passes. The exact working agreement is in [AGENTS.md](AGENTS.md).
