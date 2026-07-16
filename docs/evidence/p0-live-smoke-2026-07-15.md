@@ -73,4 +73,4 @@ The stopped App object and uploaded Bundle files remain as reproducible evidence
 
 ## Reproduction
 
-Use the [P0 smoke instructions](../../README.md#run-the-p0-smoke). Supply a local profile, canonical host, and exact expected user at runtime; do not copy any real values into this repository or a review record.
+Use the [P0 smoke instructions](../../README.md#run-the-legacy-app-shell-development-smoke). Supply a local profile, canonical host, and exact expected user at runtime; do not copy any real values into this repository or a review record.

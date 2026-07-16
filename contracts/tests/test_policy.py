@@ -61,6 +61,8 @@ def _inputs(*, include_deps: bool = False) -> DbtRuntimePolicyInputs:
             http_path="/sql/1.0/warehouses/0123456789abcdef",
             catalog="analytics",
             schema="weather_prod",
+            artifact_catalog="observability",
+            artifact_schema="dbtobsb",
         ),
     )
 

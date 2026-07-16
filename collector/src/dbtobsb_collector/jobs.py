@@ -18,9 +18,9 @@ from dbtobsb_contracts import (
 
 from dbtobsb_collector.bootstrap import InstallationSeal, collector_environment_sha256
 from dbtobsb_collector.contracts import (
-    ArtifactReference,
     AttemptContext,
     ObservedTaskEvidence,
+    VolumeArtifactReference,
 )
 
 _UNRESOLVED_ATTEMPT_KEY = (
@@ -41,6 +41,19 @@ _COLLECTOR_JOB_PARAMETER_DEFAULTS = {
     "repair_count": "0",
     "execution_count": "0",
 }
+_COLLECTOR_CHILD_JOB_PARAMETERS = {
+    "workspace_id": "{{workspace.id}}",
+    "observed_job_id": "{{job.id}}",
+    "observed_job_run_id": "{{job.run_id}}",
+    "dbt_task_run_id": "{{tasks.dbt_build.run_id}}",
+    "observed_task_key": "dbt_build",
+    "repair_count": "{{job.repair_count}}",
+    "execution_count": "{{tasks.dbt_build.execution_count}}",
+}
+_PRODUCT_WHEEL = re.compile(
+    r"^dbtobsb_(?:contracts|capture|collector)-0\.3\.0b1"
+    r"(?:\+dbtobsb\.(?:candidate|final)\.[0-9a-f]{64})?-py3-none-any\.whl$"
+)
 _DEPLOYMENT_JOB_ERRORS = {
     "DBT_JOBS_DBT_SOURCE_UNSUPPORTED": "dbt task source",
     "DBT_JOBS_DBT_PROJECT_BINDING_MISMATCH": "deployed dbt project binding",
@@ -118,6 +131,15 @@ def _empty_override(value: Any) -> bool:
     return _empty(as_dict() if as_dict is not None else value)
 
 
+def _task_has_no_retries(task: Any) -> bool:
+    """Normalize Jobs API omissions for the platform defaults 0 and false."""
+    max_retries = getattr(task, "max_retries", None)
+    retry_on_timeout = getattr(task, "retry_on_timeout", None)
+    return (max_retries is None or (type(max_retries) is int and max_retries == 0)) and (
+        retry_on_timeout is None or retry_on_timeout is False
+    )
+
+
 def _collector_environment_matches(settings: Any, *, expected_sha256: str) -> bool:
     environments = list(getattr(settings, "environments", None) or ())
     if len(environments) != 1:
@@ -134,6 +156,71 @@ def _collector_environment_matches(settings: Any, *, expected_sha256: str) -> bo
         and getattr(spec, "client", None) == "5"
         and observed_sha256 == expected_sha256
     )
+
+
+def _observed_environment_matches(settings: Any, *, expected_packages: frozenset[str]) -> bool:
+    environments = list(getattr(settings, "environments", None) or ())
+    if len(environments) != 1:
+        return False
+    environment = environments[0]
+    spec = getattr(environment, "spec", None)
+    dependencies = tuple(getattr(spec, "dependencies", None) or ())
+    package_dependencies = frozenset(item for item in dependencies if not item.endswith(".whl"))
+    wheel_names = tuple(
+        item.rsplit("/", maxsplit=1)[-1] for item in dependencies if item.endswith(".whl")
+    )
+    return (
+        getattr(environment, "environment_key", None) == "dbt"
+        and getattr(spec, "client", None) == "5"
+        and package_dependencies == expected_packages
+        and len(package_dependencies) + len(wheel_names) == len(dependencies)
+        and (
+            not wheel_names
+            or (
+                len(wheel_names) == 3
+                and all(_PRODUCT_WHEEL.fullmatch(name) is not None for name in wheel_names)
+                and {name.split("-", maxsplit=1)[0] for name in wheel_names}
+                == {"dbtobsb_contracts", "dbtobsb_capture", "dbtobsb_collector"}
+            )
+        )
+    )
+
+
+def _runner_project_directory(task: Any, *, policy: DbtRuntimePolicySnapshot) -> str | None:
+    wheel = getattr(task, "python_wheel_task", None)
+    parameters = tuple(getattr(wheel, "parameters", None) or ())
+    if (
+        getattr(wheel, "package_name", None) != "dbtobsb-collector"
+        or getattr(wheel, "entry_point", None) != "run-dbt"
+        or len(parameters) != 16
+        or parameters[:12]
+        != (
+            "--workspace_id",
+            "{{workspace.id}}",
+            "--observed_job_id",
+            "{{job.id}}",
+            "--observed_job_run_id",
+            "{{job.run_id}}",
+            "--dbt_task_run_id",
+            "{{task.run_id}}",
+            "--repair_count",
+            "{{job.repair_count}}",
+            "--execution_count",
+            "{{task.execution_count}}",
+        )
+        or parameters[12] != "--project_directory"
+        or parameters[14] != "--policy_path"
+    ):
+        return None
+    project = parameters[13]
+    policy_path = parameters[15]
+    if (
+        not _installed_project_directory(project, declared=policy.project_directory)
+        or not isinstance(policy_path, str)
+        or policy_path != project.rsplit("/project", maxsplit=1)[0] + "/dbt-policy-v1.json"
+    ):
+        return None
+    return project
 
 
 def _installed_project_directory(value: Any, *, declared: str) -> bool:
@@ -245,6 +332,7 @@ class DatabricksJobsEvidenceReader:
         self._installation_seal = installation_seal
         self._client = client or WorkspaceClient()
         self._current_collector_run_id: int | None = None
+        self._direct_parent: Any | None = None
 
     @classmethod
     def for_installed_policy(
@@ -331,24 +419,20 @@ class DatabricksJobsEvidenceReader:
             != self._installation_seal.observed_service_principal_name
         ):
             raise JobsEvidenceError("DBT_JOBS_DBT_ENVIRONMENT_CONTRACT_MISMATCH")
-        environment = environments[0]
-        spec = getattr(environment, "spec", None)
-        dependencies = tuple(getattr(spec, "dependencies", None) or ())
         packages = load_support_manifest().dbt["packages"]
         expected_dependencies = frozenset(
             f"{name}=={version}" for name, version in packages.items()
         )
-        if (
-            getattr(environment, "environment_key", None) != self._policy.environment_key
-            or getattr(spec, "client", None) != "5"
-            or len(dependencies) != len(expected_dependencies)
-            or frozenset(dependencies) != expected_dependencies
+        if not _observed_environment_matches(
+            settings,
+            expected_packages=expected_dependencies,
         ):
             raise JobsEvidenceError("DBT_JOBS_DBT_ENVIRONMENT_CONTRACT_MISMATCH")
 
     def _attest_current_collector_run(self, context: AttemptContext) -> None:
         seal = self._installation_seal
         try:
+            authenticated = self._client.current_user.me()
             job = self._client.jobs.get(seal.collector_job_id)
             active_runs = tuple(
                 islice(
@@ -371,6 +455,8 @@ class DatabricksJobsEvidenceReader:
         }
         if (
             getattr(job, "job_id", None) != seal.collector_job_id
+            or getattr(job, "run_as_user_name", None) != seal.collector_service_principal_name
+            or getattr(authenticated, "user_name", None) != seal.collector_service_principal_name
             or getattr(getattr(settings, "run_as", None), "service_principal_name", None)
             != seal.collector_service_principal_name
             or getattr(settings, "max_concurrent_runs", None) != 1
@@ -405,7 +491,9 @@ class DatabricksJobsEvidenceReader:
         except Exception as error:
             raise JobsEvidenceError("DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH") from error
         run_tasks = list(getattr(current, "tasks", None) or ())
-        if len(run_tasks) != 1 or not self._collector_task_matches(run_tasks[0]):
+        if len(run_tasks) != 1 or not self._collector_task_matches(
+            run_tasks[0], run_projection=True
+        ):
             raise JobsEvidenceError("DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH")
         actual_run_parameters = {
             getattr(parameter, "name", None): getattr(parameter, "value", None)
@@ -420,10 +508,15 @@ class DatabricksJobsEvidenceReader:
             "repair_count": str(context.repair_count),
             "execution_count": str(context.execution_count),
         }
+        trigger_info = getattr(current, "trigger_info", None)
+        trigger_run_id = getattr(trigger_info, "run_id", None)
         if (
             getattr(current, "job_id", None) != seal.collector_job_id
             or getattr(current, "run_id", None) != current_run_id
-            or getattr(current, "run_as_user_name", None) != seal.collector_service_principal_name
+            or _enum_value(getattr(current, "run_type", None), fallback="UNKNOWN") != "JOB_RUN"
+            or _enum_value(getattr(current, "trigger", None), fallback="UNKNOWN") != "RUN_JOB_TASK"
+            or type(trigger_run_id) is not int
+            or trigger_run_id <= 0
             or actual_run_parameters != expected_run_parameters
             or len(getattr(current, "job_parameters", None) or ()) != len(expected_run_parameters)
             or not _empty_override(getattr(current, "overriding_parameters", None))
@@ -433,16 +526,78 @@ class DatabricksJobsEvidenceReader:
             != "STANDARD"
         ):
             raise JobsEvidenceError("DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH")
+        assert isinstance(trigger_run_id, int)
+        self._direct_parent = self._attest_direct_parent(
+            context,
+            collector_task_run_id=trigger_run_id,
+        )
         self._current_collector_run_id = current_run_id
 
-    def _collector_task_matches(self, task: Any) -> bool:
+    def _attest_direct_parent(
+        self,
+        context: AttemptContext,
+        *,
+        collector_task_run_id: int,
+    ) -> Any:
+        try:
+            parent = self._client.jobs.get_run(
+                context.observed_job_run_id,
+                include_resolved_values=True,
+            )
+        except Exception as error:
+            raise JobsEvidenceError("DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH") from error
+        tasks = list(getattr(parent, "tasks", None) or ())
+        dbt_tasks = [
+            task
+            for task in tasks
+            if getattr(task, "task_key", None) == context.observed_task_key
+            and getattr(task, "run_id", None) == context.dbt_task_run_id
+            and (
+                getattr(task, "dbt_task", None) is not None
+                or _runner_project_directory(task, policy=self._policy) is not None
+            )
+        ]
+        collector_tasks = [
+            task
+            for task in tasks
+            if getattr(task, "task_key", None) == "collect_dbt_evidence"
+            and getattr(task, "run_id", None) == collector_task_run_id
+            and getattr(task, "run_job_task", None) is not None
+        ]
+        if len(dbt_tasks) != 1 or len(collector_tasks) != 1 or len(tasks) != 2:
+            raise JobsEvidenceError("DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH")
+        collector_task = collector_tasks[0]
+        run_job_task = getattr(collector_task, "run_job_task", None)
+        dependencies = tuple(
+            getattr(dependency, "task_key", None)
+            for dependency in (getattr(collector_task, "depends_on", None) or ())
+        )
+        if (
+            getattr(parent, "run_id", None) != context.observed_job_run_id
+            or getattr(parent, "job_id", None) != context.observed_job_id
+            or _enum_value(getattr(parent, "run_type", None), fallback="UNKNOWN") != "JOB_RUN"
+            or getattr(parent, "next_page_token", None) is not None
+            or getattr(parent, "git_source", None) is not None
+            or list(getattr(parent, "job_parameters", None) or ())
+            or not _empty_override(getattr(parent, "overriding_parameters", None))
+            or getattr(run_job_task, "job_id", None) != self._installation_seal.collector_job_id
+            or dict(getattr(run_job_task, "job_parameters", None) or {})
+            != _COLLECTOR_CHILD_JOB_PARAMETERS
+            or dependencies != (self._policy.task_key,)
+            or _enum_value(getattr(collector_task, "run_if", None), fallback="UNKNOWN")
+            != "ALL_DONE"
+        ):
+            raise JobsEvidenceError("DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH")
+        return parent
+
+    def _collector_task_matches(self, task: Any, *, run_projection: bool = False) -> bool:
         wheel = getattr(task, "python_wheel_task", None)
+        timeout_seconds = getattr(task, "timeout_seconds", None)
         return not (
             getattr(task, "task_key", None) != "collect"
             or getattr(task, "environment_key", None) != "collector"
-            or getattr(task, "timeout_seconds", None) != 900
-            or getattr(task, "max_retries", None) != 0
-            or getattr(task, "retry_on_timeout", None) is not False
+            or (timeout_seconds not in {None, 900} if run_projection else timeout_seconds != 900)
+            or not _task_has_no_retries(task)
             or getattr(wheel, "package_name", None) != "dbtobsb-collector"
             or getattr(wheel, "entry_point", None) != "collect"
             or tuple(getattr(wheel, "parameters", None) or ()) != self._collector_task_parameters()
@@ -451,8 +606,43 @@ class DatabricksJobsEvidenceReader:
     def _validate_installed_runtime(self, *, parent: Any, task: Any) -> None:
         policy = self._policy
         dbt_task = getattr(task, "dbt_task", None)
-        if dbt_task is None:
+        runner_project = _runner_project_directory(task, policy=policy)
+        if dbt_task is None and runner_project is None:
             raise JobsEvidenceError("DBT_JOBS_TASK_CORRELATION_MISMATCH")
+
+        if runner_project is not None:
+            run_if = _enum_value(getattr(task, "run_if", None), fallback="ALL_SUCCESS")
+            task_policy_matches = (
+                getattr(task, "environment_key", None) == policy.environment_key
+                and getattr(task, "timeout_seconds", None) in {None, 900}
+                and _task_has_no_retries(task)
+                and run_if == "ALL_SUCCESS"
+                and _enum_value(
+                    getattr(parent, "effective_performance_target", None), fallback="UNKNOWN"
+                )
+                == "STANDARD"
+            )
+            forbidden_fields_absent = all(
+                _empty(value)
+                for value in (
+                    getattr(parent, "git_source", None),
+                    getattr(parent, "job_parameters", None),
+                    getattr(parent, "overriding_parameters", None),
+                    getattr(task, "git_source", None),
+                    getattr(task, "depends_on", None),
+                    getattr(task, "libraries", None),
+                    getattr(task, "existing_cluster_id", None),
+                    getattr(task, "job_cluster_key", None),
+                    getattr(task, "new_cluster", None),
+                )
+            )
+            if not task_policy_matches:
+                raise JobsEvidenceError("DBT_JOBS_DBT_TASK_POLICY_MISMATCH")
+            if not forbidden_fields_absent:
+                raise JobsEvidenceError("DBT_JOBS_DBT_OVERRIDE_UNSUPPORTED")
+            return
+
+        assert dbt_task is not None
 
         source = _enum_value(getattr(dbt_task, "source", None), fallback="UNKNOWN")
         run_if = _enum_value(getattr(task, "run_if", None), fallback="ALL_SUCCESS")
@@ -463,12 +653,7 @@ class DatabricksJobsEvidenceReader:
             declared=policy.project_directory,
         ):
             raise JobsEvidenceError("DBT_JOBS_DBT_PROJECT_BINDING_MISMATCH")
-        if not _installed_project_directory(
-            getattr(dbt_task, "profiles_directory", None),
-            declared=policy.profiles_directory,
-        ) or getattr(dbt_task, "profiles_directory", None) != getattr(
-            dbt_task, "project_directory", None
-        ):
+        if getattr(dbt_task, "profiles_directory", None) is not None:
             raise JobsEvidenceError("DBT_JOBS_DBT_PROJECT_BINDING_MISMATCH")
         if tuple(getattr(dbt_task, "commands", None) or ()) != policy.commands:
             raise JobsEvidenceError("DBT_JOBS_DBT_COMMAND_CONTRACT_MISMATCH")
@@ -479,9 +664,8 @@ class DatabricksJobsEvidenceReader:
             raise JobsEvidenceError("DBT_JOBS_DBT_TARGET_BINDING_INVALID")
         task_policy_matches = (
             getattr(task, "environment_key", None) == policy.environment_key
-            and getattr(task, "timeout_seconds", None) == 900
-            and getattr(task, "max_retries", None) == 0
-            and getattr(task, "retry_on_timeout", None) is False
+            and getattr(task, "timeout_seconds", None) in {None, 900}
+            and _task_has_no_retries(task)
             and run_if == "ALL_SUCCESS"
             and _enum_value(
                 getattr(parent, "effective_performance_target", None), fallback="UNKNOWN"
@@ -540,9 +724,14 @@ class DatabricksJobsEvidenceReader:
     def _read_observed(
         self, context: AttemptContext, *, require_direct_parent: bool
     ) -> ObservedTaskEvidence:
-        parent = self._client.jobs.get_run(
-            context.observed_job_run_id, include_resolved_values=True
-        )
+        if require_direct_parent:
+            parent = self._direct_parent
+            if parent is None:
+                raise JobsEvidenceError("DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH")
+        else:
+            parent = self._client.jobs.get_run(
+                context.observed_job_run_id, include_resolved_values=True
+            )
         if parent.run_id != context.observed_job_run_id or parent.job_id != context.observed_job_id:
             raise JobsEvidenceError("DBT_JOBS_PARENT_CORRELATION_MISMATCH")
 
@@ -570,7 +759,10 @@ class DatabricksJobsEvidenceReader:
             for task in tasks
             if task.task_key == context.observed_task_key
             and task.run_id == context.dbt_task_run_id
-            and task.dbt_task is not None
+            and (
+                getattr(task, "dbt_task", None) is not None
+                or _runner_project_directory(task, policy=self._policy) is not None
+            )
         ]
         if not matches and not require_direct_parent:
             historical = self._client.jobs.get_run(
@@ -582,7 +774,10 @@ class DatabricksJobsEvidenceReader:
                 and getattr(historical, "job_id", None) == context.observed_job_id
                 and getattr(historical, "job_run_id", None) == context.observed_job_run_id
                 and getattr(historical, "task_key", None) == context.observed_task_key
-                and getattr(historical, "dbt_task", None) is not None
+                and (
+                    getattr(historical, "dbt_task", None) is not None
+                    or _runner_project_directory(historical, policy=self._policy) is not None
+                )
             ):
                 matches = [historical]
         if len(matches) != 1:
@@ -612,20 +807,20 @@ class DatabricksJobsEvidenceReader:
                 or self._current_collector_run_id is None
             ):
                 raise JobsEvidenceError("DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH")
-            assert isinstance(collector_task_run_id, int)
-            collector_output = self._client.jobs.get_run_output(collector_task_run_id)
-            run_job_output = getattr(collector_output, "run_job_output", None)
-            if getattr(run_job_output, "run_id", None) != self._current_collector_run_id:
-                raise JobsEvidenceError("DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH")
         task = matches[0]
         self._validate_installed_runtime(parent=parent, task=task)
         dbt_task = getattr(task, "dbt_task", None)
-        if dbt_task is None:
-            raise JobsEvidenceError("DBT_JOBS_TASK_CORRELATION_MISMATCH")
-        project_directory = dbt_task.project_directory
+        runner_project = _runner_project_directory(task, policy=self._policy)
+        project_directory = (
+            getattr(dbt_task, "project_directory", None) if dbt_task is not None else runner_project
+        )
         if not isinstance(project_directory, str):
             raise JobsEvidenceError("DBT_JOBS_DBT_PROJECT_BINDING_MISMATCH")
-        if attempt_context_from_resolved_task(task, policy=self._policy) != context:
+        if (
+            dbt_task is not None
+            and getattr(task, "resolved_values", None) is not None
+            and (attempt_context_from_resolved_task(task, policy=self._policy) != context)
+        ):
             raise JobsEvidenceError("DBT_JOBS_RESOLVED_ATTEMPT_BINDING_MISMATCH")
         self._attest_deployed_source(project_directory)
 
@@ -660,16 +855,12 @@ class DatabricksJobsEvidenceReader:
             if any(actual is not None and actual != expected for actual, expected in comparisons):
                 raise JobsEvidenceError("DBT_JOBS_OUTPUT_CORRELATION_MISMATCH")
 
-        dbt_output = output.dbt_output
-        reference = None
-        if dbt_output is not None and dbt_output.artifacts_link:
-            reference = ArtifactReference(
-                url=dbt_output.artifacts_link,
-                headers=dict(dbt_output.artifacts_headers or {}),
-                allow_internal_databricks_http=_allow_internal_artifact_http(
-                    dbt_output.artifacts_link, workspace_host=self._client.config.host
-                ),
-            )
+        attempt_key = context.as_dbt_attempt_identity().key
+        reference = VolumeArtifactReference(
+            source_root=f"{self._policy.target.artifact_attempt_root}/{attempt_key}",
+            archive_root=f"target/dbtobsb/attempts/{attempt_key}",
+            include_deps=self._policy.installed_policy.include_deps,
+        )
 
         return ObservedTaskEvidence(
             task_start_time=_datetime_from_millis(task.start_time),

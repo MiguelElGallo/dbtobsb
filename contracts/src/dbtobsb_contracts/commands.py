@@ -9,6 +9,11 @@ from typing import Literal
 from dbtobsb_contracts.support import SupportManifest, load_support_manifest
 
 _WARN_ERROR_OPTIONS = '{"error":["NoNodesForSelectionCriteria","NothingToDo"]}'
+_LOCAL_ATTEMPT_ROOT = "$PWD/target/dbtobsb/attempts"
+_VOLUME_ATTEMPT_ROOT = re.compile(
+    r"^/Volumes/[A-Za-z_][A-Za-z0-9_]{0,127}/"
+    r"[A-Za-z_][A-Za-z0-9_]{0,127}/dbtobsb_stage/incoming$"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,12 +122,6 @@ def _attempt_key_template(manifest: SupportManifest) -> str:
     return str(manifest.dbt["attempt_key_template"])
 
 
-def _attempt_root_template(manifest: SupportManifest) -> str:
-    return str(manifest.dbt["attempt_root_template"]).format(
-        attempt_key=_attempt_key_template(manifest)
-    )
-
-
 def _shared_flags(*, log_path: str, manifest: SupportManifest) -> list[str]:
     max_bytes = manifest.governed_output["file_log_max_bytes"]
     return [
@@ -139,12 +138,18 @@ def _shared_flags(*, log_path: str, manifest: SupportManifest) -> list[str]:
     ]
 
 
-def generate_dbt_commands(*, policy: InstalledDbtPolicy) -> tuple[GeneratedDbtCommand, ...]:
+def generate_dbt_commands(
+    *,
+    policy: InstalledDbtPolicy,
+    attempt_root: str = _LOCAL_ATTEMPT_ROOT,
+) -> tuple[GeneratedDbtCommand, ...]:
     """Generate supported commands without accepting flags, paths, or command fragments."""
     if not isinstance(policy, InstalledDbtPolicy):
         raise TypeError("policy must be InstalledDbtPolicy")
+    if attempt_root != _LOCAL_ATTEMPT_ROOT and _VOLUME_ATTEMPT_ROOT.fullmatch(attempt_root) is None:
+        raise ValueError("DBTOBSB_DBT_ATTEMPT_ROOT_INVALID")
     manifest = load_support_manifest()
-    attempt_root = _attempt_root_template(manifest)
+    attempt_root = f"{attempt_root}/{_attempt_key_template(manifest)}"
     commands: list[GeneratedDbtCommand] = []
     if policy.include_deps:
         ordinal = str(manifest.dbt["deps_ordinal"])

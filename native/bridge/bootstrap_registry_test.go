@@ -40,7 +40,7 @@ func loadBootstrapRegistryVector(t *testing.T) bootstrapRegistryVector {
 	if strictUnmarshal(raw, &vector) != nil ||
 		vector.VectorSchema != "dbtobsb.native-bootstrap-registry-vectors.v1" ||
 		!validBootstrapIdentifier(vector.Catalog) || !validBootstrapIdentifier(vector.Schema) ||
-		len(vector.Binding) == 0 || !validMarkerToken(vector.MarkerToken) || len(vector.Operations) != 9 {
+		len(vector.Binding) == 0 || !validMarkerToken(vector.MarkerToken) || len(vector.Operations) != 10 {
 		t.Fatal("invalid bootstrap registry vector")
 	}
 	return vector

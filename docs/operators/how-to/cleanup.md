@@ -1,6 +1,6 @@
-# Stop compute and remove the preview
+# Stop compute and uninstall
 
-Use this guide after a test or when you no longer need the private engineering preview.
+Use this guide after a test or when you no longer need the private v0.3 installation.
 
 The Bundle creates unscheduled Jobs and a stopped App resource. Those objects do not schedule work by themselves. A SQL warehouse used by the dbt task, an active Job run, a cluster, or a running App can incur compute cost.
 
@@ -20,7 +20,7 @@ databricks jobs cancel-run '<run-id>' -p '<profile>'
 
 ## 2. Stop the preview App
 
-The P2 path does not need App compute. Check only the named preview App first:
+The App is stopped by default. Check only the named dbtobsb App first:
 
 ```bash
 databricks apps get dbtobsb-smoke -p '<profile>' -o json
@@ -58,7 +58,7 @@ Destroy the Bundle target after active runs are terminal:
 
 ```bash
 databricks bundle destroy -t smoke -p '<profile>' \
-  --var 'warehouse_id=<warehouse-id>,evidence_catalog=<catalog>,evidence_schema=<evidence-schema>,demo_schema=<demo-schema>,raw_volume_name=dbtobsb_raw'
+  --var 'warehouse_id=<warehouse-id>,evidence_catalog=<catalog>,evidence_schema=<evidence-schema>,observed_service_principal_name=<application-id>,collector_service_principal_name=<application-id>,job_manager_group_name=<group>'
 ```
 
 Review the displayed resources before confirming. This removes Bundle-managed resources. It does not delete the Unity Catalog evidence schema, tables, views, managed Volume, or the raw archives inside it.
@@ -75,7 +75,7 @@ Delete evidence only when all of these are true:
 - required exports are complete and verified; and
 - the operator understands that deleting the managed Volume deletes the archived bytes.
 
-The P2 preview deliberately does not automate this destructive decision. An authorized Unity Catalog owner may use a reviewed, fixed SQL statement such as:
+Delete-uninstall requires separate approval after retention, legal-hold, and export checks. An authorized Unity Catalog owner may use a reviewed, fixed SQL statement such as:
 
 ```sql
 DROP SCHEMA `<catalog>`.`<evidence-schema>` CASCADE;
@@ -89,8 +89,8 @@ Record only non-sensitive results:
 
 - no active dbtobsb Job runs;
 - test warehouse deleted or shared warehouse left unchanged;
-- no preview cluster;
+- no product classic cluster;
 - App `STOPPED` or Bundle App removed; and
 - evidence retained or deleted under an explicit decision.
 
-Do not retain workspace IDs, user identities, signed artifact links, raw Volume paths, or raw dbt content in the ordinary release record.
+Do not retain workspace IDs, user identities, raw Volume paths, or raw dbt content in the ordinary release record.

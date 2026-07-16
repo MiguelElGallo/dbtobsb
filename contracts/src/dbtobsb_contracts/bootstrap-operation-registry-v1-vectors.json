@@ -23,7 +23,7 @@
       },
       "registry_operation": "bootstrap_create_artifact_registry_table_v1",
       "registry_version": "dbtobsb.native-operation-registry.v1",
-      "semantic_sha256": "d8f45674c55d0829fcd40d3d0f6598bdbda6f55aff204961aafb657f92432163"
+      "semantic_sha256": "a11598c896797c3f2413cedea89fa4b12c5946230025a8f0cd488a131f03a1df"
     },
     {
       "parameters": {
@@ -33,7 +33,7 @@
       },
       "registry_operation": "bootstrap_create_invocations_table_v1",
       "registry_version": "dbtobsb.native-operation-registry.v1",
-      "semantic_sha256": "7d5e139c0ddc0d67d5898659bfc66fe300bdca91c1f30eb4ce054d7ed26c0aeb"
+      "semantic_sha256": "2ff1572a15717c757a995f7e6c79a37d13e622aa3fa05ecc9120d508fbc9f399"
     },
     {
       "parameters": {
@@ -43,7 +43,7 @@
       },
       "registry_operation": "bootstrap_create_node_results_table_v1",
       "registry_version": "dbtobsb.native-operation-registry.v1",
-      "semantic_sha256": "e450f20a1944facd5ed7a95970506376fc9c8b9ee9d68fcb924279f3d4970e2a"
+      "semantic_sha256": "c99fb59484ea39bde2cf62973d9a92325a6c1204fd28a9af5d4ce1e9ae5ef73e"
     },
     {
       "parameters": {
@@ -53,7 +53,17 @@
       },
       "registry_operation": "bootstrap_create_raw_volume_v1",
       "registry_version": "dbtobsb.native-operation-registry.v1",
-      "semantic_sha256": "ebe2871d9cd93ff8a2073a2ecdbbd0c7bdac6042dbeadfe24b7acd90adb6bcc7"
+      "semantic_sha256": "44c184b0eb288275c48396014230c8cd820ddc68d04adf8bcc7f0b3b80f725c5"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_stage_volume_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "c5e10bb6a671ed6b5100d7c0140033b4c492e3f72ed16ce78f3e18c518faa346"
     },
     {
       "parameters": {
@@ -63,7 +73,7 @@
       },
       "registry_operation": "bootstrap_create_run_health_view_v1",
       "registry_version": "dbtobsb.native-operation-registry.v1",
-      "semantic_sha256": "41e4af7509338accaa83a15a3f822a40ab9a6960b72fdac8e7790e51e5aef31b"
+      "semantic_sha256": "f095e6609839aca8f35f557b65fa9a587a4b2d3171bbcf431e386a08b1e4d0bc"
     },
     {
       "parameters": {
@@ -73,7 +83,7 @@
       },
       "registry_operation": "bootstrap_create_node_health_view_v1",
       "registry_version": "dbtobsb.native-operation-registry.v1",
-      "semantic_sha256": "7a3744fa56145baabfefa7cf52c11f25db5143ec7067ccbb22171a456ee9e157"
+      "semantic_sha256": "813b6e01b69fc2f911416d74201dbd890bd88cab2df232ad0da37ad594818e26"
     },
     {
       "parameters": {
@@ -83,7 +93,7 @@
       },
       "registry_operation": "bootstrap_create_collection_health_view_v1",
       "registry_version": "dbtobsb.native-operation-registry.v1",
-      "semantic_sha256": "45d5453b0bde8a611d62880c9681f2aaf199404505f5e8ec120063412bff82a2"
+      "semantic_sha256": "5916a049c22170cdea0739299347a6635ef69718eb2a480ebc9f9bbbd422f3d0"
     },
     {
       "parameters": {
@@ -93,11 +103,11 @@
       },
       "registry_operation": "bootstrap_create_object_manifest_table_v1",
       "registry_version": "dbtobsb.native-operation-registry.v1",
-      "semantic_sha256": "001efa13e1ac8364503ae1a9ec6174f3ba308dcc096f496f0251d50233a6a78e"
+      "semantic_sha256": "3000dcf431a1a96570c31fbc100b031067680ef9ef0c0b5a2ecdda42af88eb15"
     },
     {
       "parameters": {
-        "base_observability_contract_sha256": "a60d49900bc4ba6ebffc377a878d1a6f3accd9c4a144a7030dafa878a4818d04",
+        "base_observability_contract_sha256": "b1c28a474d2fa79f7e881f862a9f02c27a398261a90f723a07a3f5f54e6f02ae",
         "catalog": "observability",
         "collector_environment_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "collector_job_id": "102",
@@ -109,7 +119,7 @@
         "job_manager_group_name": "dbtobsb job managers",
         "manifest_version": "dbtobsb.evidence.v1.0.0-rc.11",
         "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
-        "object_contract_sha256": "1fadee2615aa2ca1bbf4e20d651547ef5c15aa845db2c501de71569b233439f3",
+        "object_contract_sha256": "603afcbf9a1b52d926a1aba6f46b74f76f1783dfd7edc66d1ccc9003ba3d7605",
         "observed_job_id": "101",
         "observed_service_principal_name": "observed principal's runtime",
         "reconciler_job_id": "103",
@@ -120,7 +130,7 @@
       },
       "registry_operation": "bootstrap_insert_object_manifest_v1",
       "registry_version": "dbtobsb.native-operation-registry.v1",
-      "semantic_sha256": "823cb7dcb28b08066d9050002aff6c440573abbf3af5cf2e7f96a1025343513c"
+      "semantic_sha256": "56d4c943f68ec7f92bd347af00897dd7d7bfb3293f62082992d1fb55c8c2ea9c"
     }
   ],
   "schema": "dbtobsb",

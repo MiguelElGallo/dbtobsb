@@ -24,6 +24,7 @@ from dbtobsb_collector import (
     RetrievalState,
     collect_task_run,
 )
+from dbtobsb_collector.contracts import ArtifactSource
 from dbtobsb_collector.custody import VolumeRawArchiveStore
 from dbtobsb_collector.download import ArtifactDownloadError
 
@@ -97,13 +98,14 @@ class _Jobs:
 class _Downloader:
     archive: bytes
 
-    def download(self, reference: ArtifactReference) -> bytes:
+    def download(self, reference: ArtifactSource) -> bytes:
+        assert isinstance(reference, ArtifactReference)
         assert reference.headers == {"x-required": "present"}
         return self.archive
 
 
 class _UnavailableDownloader:
-    def download(self, reference: ArtifactReference) -> bytes:
+    def download(self, reference: ArtifactSource) -> bytes:
         raise ArtifactDownloadError("DBT_ARCHIVE_LINK_EXPIRED_OR_DENIED")
 
 

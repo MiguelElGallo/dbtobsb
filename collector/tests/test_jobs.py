@@ -8,6 +8,7 @@ from typing import Any, cast
 
 import pytest
 from databricks.sdk import WorkspaceClient
+from databricks.sdk.service import iam, jobs
 from dbtobsb_contracts import (
     DbtRuntimePolicyInputs,
     DbtRuntimeTarget,
@@ -37,7 +38,7 @@ _COLLECTOR_DEPENDENCIES = (
     "/Workspace/product/artifacts/.internal/dbtobsb_contracts-0.3.0b1-py3-none-any.whl",
     "/Workspace/product/artifacts/.internal/dbtobsb_capture-0.3.0b1-py3-none-any.whl",
     "/Workspace/product/artifacts/.internal/dbtobsb_collector-0.3.0b1-py3-none-any.whl",
-    "databricks-sdk==0.120.0",
+    "databricks-sdk==0.117.0",
 )
 _SOURCE_FILES = {
     "dbt_project.yml": b"name: customer_weather\nprofile: customer_weather\n",
@@ -76,6 +77,8 @@ def _policy():
                 http_path="/sql/1.0/warehouses/fedcba9876543210",
                 catalog="analytics",
                 schema="weather_prod",
+                artifact_catalog="observability",
+                artifact_schema="dbtobsb",
             ),
         )
     )
@@ -131,11 +134,14 @@ class _Jobs:
         self.collector_output_calls = 0
         self.overriding_parameters: object | None = None
         self.active_context = _context()
+        self.current_trigger = "RUN_JOB_TASK"
+        self.trigger_run_id = 402
         self.historical_runs: dict[int, SimpleNamespace] = {}
 
-    def get(self, job_id: int) -> SimpleNamespace:
+    def get(self, job_id: int) -> Any:
         if job_id == 201:
             dependencies = [
+                *_COLLECTOR_DEPENDENCIES[:3],
                 "dbt-core==1.11.12",
                 "dbt-databricks==1.12.2",
                 "dbt-adapters==1.24.5",
@@ -162,7 +168,7 @@ class _Jobs:
             )
         assert job_id == 202
         parameters = [
-            SimpleNamespace(name=name, default=default)
+            {"name": name, "default": default}
             for name, default in {
                 "workspace_id": "0",
                 "observed_job_id": "0",
@@ -189,47 +195,44 @@ class _Jobs:
             "--execution_count",
             "{{job.parameters.execution_count}}",
         ]
-        task = SimpleNamespace(
-            task_key="collect",
-            environment_key="collector",
-            timeout_seconds=900,
-            max_retries=0,
-            retry_on_timeout=False,
-            python_wheel_task=SimpleNamespace(
-                package_name="dbtobsb-collector",
-                entry_point="collect",
-                parameters=wheel_parameters,
-            ),
-        )
-        return SimpleNamespace(
-            job_id=202,
-            settings=SimpleNamespace(
-                max_concurrent_runs=1,
-                timeout_seconds=900,
-                performance_target=_enum("STANDARD"),
-                run_as=SimpleNamespace(service_principal_name="collector-sp"),
-                environments=[
-                    SimpleNamespace(
-                        environment_key="collector",
-                        spec=SimpleNamespace(
-                            client="5",
-                            dependencies=list(_COLLECTOR_DEPENDENCIES),
-                        ),
-                    )
-                ],
-                parameters=parameters,
-                tasks=[task],
-            ),
+        return jobs.Job.from_dict(
+            {
+                "job_id": 202,
+                "run_as_user_name": "collector-sp",
+                "settings": {
+                    "max_concurrent_runs": 1,
+                    "timeout_seconds": 900,
+                    "performance_target": "STANDARD",
+                    "run_as": {"service_principal_name": "collector-sp"},
+                    "environments": [
+                        {
+                            "environment_key": "collector",
+                            "spec": {
+                                "client": "5",
+                                "dependencies": list(_COLLECTOR_DEPENDENCIES),
+                            },
+                        }
+                    ],
+                    "parameters": parameters,
+                    "tasks": [
+                        {
+                            "task_key": "collect",
+                            "environment_key": "collector",
+                            "timeout_seconds": 900,
+                            "python_wheel_task": {
+                                "package_name": "dbtobsb-collector",
+                                "entry_point": "collect",
+                                "parameters": wheel_parameters,
+                            },
+                        }
+                    ],
+                },
+            }
         )
 
-    def list_runs(self, *, job_id: int, active_only: bool, limit: int) -> list[SimpleNamespace]:
+    def list_runs(self, *, job_id: int, active_only: bool, limit: int) -> list[jobs.Run]:
         assert (job_id, active_only, limit) == (202, True, 2)
-        return [
-            SimpleNamespace(
-                job_id=202,
-                run_id=501,
-            )
-        ]
+        return [jobs.Run(job_id=202, run_id=501)]
 
     def _active_job_parameters(self) -> list[SimpleNamespace]:
         context = self.active_context
@@ -252,18 +255,29 @@ class _Jobs:
         *,
         page_token: str | None = None,
         include_resolved_values: bool,
-    ) -> SimpleNamespace:
+    ) -> Any:
         assert include_resolved_values is True
         if run_id == 501:
             collector_job = self.get(202)
-            return SimpleNamespace(
-                run_id=501,
-                job_id=202,
-                tasks=collector_job.settings.tasks,
-                job_parameters=self._active_job_parameters(),
-                overriding_parameters=self.overriding_parameters,
-                effective_performance_target=_enum("STANDARD"),
-                run_as_user_name="collector-sp",
+            assert collector_job.settings is not None
+            run_task = collector_job.settings.tasks[0].as_dict()
+            run_task.pop("timeout_seconds")
+            return jobs.Run.from_dict(
+                {
+                    "run_id": 501,
+                    "job_id": 202,
+                    "job_run_id": 501,
+                    "run_type": "JOB_RUN",
+                    "trigger": self.current_trigger,
+                    "trigger_info": {"run_id": self.trigger_run_id},
+                    "tasks": [run_task],
+                    "job_parameters": [
+                        {"name": item.name, "value": item.value}
+                        for item in self._active_job_parameters()
+                    ],
+                    "overriding_parameters": self.overriding_parameters,
+                    "effective_performance_target": "STANDARD",
+                }
             )
         if run_id in self.historical_runs:
             return self.historical_runs[run_id]
@@ -293,7 +307,18 @@ def _collector_parent_task() -> SimpleNamespace:
         task_key="collect_dbt_evidence",
         run_id=402,
         dbt_task=None,
-        run_job_task=SimpleNamespace(job_id=202),
+        run_job_task=SimpleNamespace(
+            job_id=202,
+            job_parameters={
+                "workspace_id": "{{workspace.id}}",
+                "observed_job_id": "{{job.id}}",
+                "observed_job_run_id": "{{job.run_id}}",
+                "dbt_task_run_id": "{{tasks.dbt_build.run_id}}",
+                "observed_task_key": "dbt_build",
+                "repair_count": "{{job.repair_count}}",
+                "execution_count": "{{tasks.dbt_build.execution_count}}",
+            },
+        ),
         depends_on=[SimpleNamespace(task_key="dbt_build")],
         run_if=_enum("ALL_DONE"),
     )
@@ -345,6 +370,7 @@ def _client(
         ]
     for page in pages:
         page.effective_performance_target = _enum("STANDARD")
+        page.run_type = _enum("JOB_RUN")
         page.git_source = None
         page.job_parameters = None
         page.overriding_parameters = None
@@ -352,6 +378,7 @@ def _client(
             setattr(page, key, value)
     return SimpleNamespace(
         jobs=_Jobs(pages, task),
+        current_user=SimpleNamespace(me=lambda: iam.User(user_name="collector-sp")),
         workspace=_Workspace(task.dbt_task.project_directory),
         config=SimpleNamespace(host="https://adb-999.8.azuredatabricks.net"),
         get_workspace_id=lambda: 101,
@@ -375,7 +402,7 @@ def _task(
         commands=_canonical_commands() if commands is None else commands,
         source=_enum("WORKSPACE"),
         project_directory=resolved_project_directory,
-        profiles_directory=resolved_project_directory,
+        profiles_directory=None,
         warehouse_id=None,
         catalog=None,
         schema=None,
@@ -388,8 +415,8 @@ def _task(
         dbt_task=dbt_task,
         environment_key="dbt",
         timeout_seconds=900,
-        max_retries=0,
-        retry_on_timeout=False,
+        max_retries=None,
+        retry_on_timeout=None,
         run_if=_enum("ALL_SUCCESS"),
         git_source=None,
         depends_on=None,
@@ -465,13 +492,16 @@ def test_untrusted_workspace_host_does_not_grant_capability() -> None:
     assert not _allow_internal_artifact_http(original, workspace_host="https://attacker.invalid")
 
 
-def test_reader_paginates_and_prefers_current_terminal_status() -> None:
+def test_direct_reader_rejects_unexpected_parent_pagination_before_output() -> None:
     client = _client(_task(), paginated=True)
 
-    evidence = _reader(client).read(_context())
+    with pytest.raises(
+        JobsEvidenceError,
+        match="DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH",
+    ):
+        _reader(client).read(_context())
 
-    assert evidence.lakeflow_result_state == "SUCCESS"
-    assert client.jobs.dbt_output_calls == 1
+    assert client.jobs.dbt_output_calls == 0
 
 
 def test_reconciled_reader_fetches_a_repaired_historical_task_run() -> None:
@@ -551,6 +581,92 @@ def test_reader_rejects_run_now_python_parameter_override_before_parent_read() -
     assert client.jobs.dbt_output_calls == 0
 
 
+def test_real_sdk_run_model_has_no_fabricated_run_as_identity_field() -> None:
+    client = _client(_task())
+    current = client.jobs.get_run(501, include_resolved_values=True)
+
+    assert isinstance(current, jobs.Run)
+    assert not hasattr(current, "run_as_user_name")
+    assert _reader(client).read(_context()).lakeflow_result_state == "SUCCESS"
+
+
+def test_reader_rejects_authenticated_identity_drift_before_parent_read() -> None:
+    client = _client(_task())
+    client.current_user = SimpleNamespace(me=lambda: iam.User(user_name="caller-sp"))
+
+    with pytest.raises(
+        JobsEvidenceError,
+        match="DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH",
+    ):
+        _reader(client).read(_context())
+
+    assert client.jobs.run_calls == 0
+    assert client.jobs.dbt_output_calls == 0
+
+
+def test_reader_rejects_collector_job_run_as_drift_before_parent_read() -> None:
+    client = _client(_task())
+    original_get = client.jobs.get
+
+    def drifted_get(job_id: int) -> Any:
+        result = original_get(job_id)
+        if job_id == 202:
+            result.run_as_user_name = "caller-sp"
+        return result
+
+    client.jobs.get = drifted_get
+
+    with pytest.raises(
+        JobsEvidenceError,
+        match="DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH",
+    ):
+        _reader(client).read(_context())
+
+    assert client.jobs.run_calls == 0
+    assert client.jobs.dbt_output_calls == 0
+
+
+def test_reader_rejects_modern_direct_run_now_before_parent_read() -> None:
+    client = _client(_task())
+    client.jobs.current_trigger = "ONE_TIME"
+
+    with pytest.raises(
+        JobsEvidenceError,
+        match="DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH",
+    ):
+        _reader(client).read(_context())
+
+    assert client.jobs.run_calls == 0
+    assert client.jobs.dbt_output_calls == 0
+
+
+def test_reader_rejects_collector_parent_task_link_drift_before_output() -> None:
+    client = _client(_task())
+    client.jobs.trigger_run_id = 999
+
+    with pytest.raises(
+        JobsEvidenceError,
+        match="DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH",
+    ):
+        _reader(client).read(_context())
+
+    assert client.jobs.dbt_output_calls == 0
+
+
+def test_reader_rejects_parent_run_job_parameter_drift_before_output() -> None:
+    client = _client(_task())
+    collector_task = client.jobs._pages[0].tasks[1]
+    collector_task.run_job_task.job_parameters["observed_task_key"] = "caller"
+
+    with pytest.raises(
+        JobsEvidenceError,
+        match="DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH",
+    ):
+        _reader(client).read(_context())
+
+    assert client.jobs.dbt_output_calls == 0
+
+
 def test_reader_rejects_observed_environment_dependency_drift() -> None:
     client = _client(_task())
     original_get = client.jobs.get
@@ -627,6 +743,11 @@ def test_reader_rejects_dbt_command_mismatch_before_requesting_output() -> None:
 def test_reader_accepts_the_exact_declared_workspace_project_path() -> None:
     client = _client(_task(project_directory=_policy().project_directory))
 
+    collector_task = client.jobs.get(202).settings.tasks[0]
+    assert collector_task.max_retries is None
+    assert collector_task.retry_on_timeout is None
+    assert client.jobs._task.dbt_task.profiles_directory is None
+
     evidence = _reader(client).read(_context())
 
     assert evidence.lakeflow_result_state == "SUCCESS"
@@ -687,19 +808,19 @@ def test_generic_reader_construction_without_an_inspected_snapshot_is_impossible
             "parent",
             "git_source",
             SimpleNamespace(git_url="https://invalid"),
-            "DBT_JOBS_DBT_OVERRIDE_UNSUPPORTED",
+            "DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH",
         ),
         (
             "parent",
             "job_parameters",
             [SimpleNamespace(name="caller", value="true")],
-            "DBT_JOBS_DBT_OVERRIDE_UNSUPPORTED",
+            "DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH",
         ),
         (
             "parent",
             "overriding_parameters",
             SimpleNamespace(jar_params=["caller"]),
-            "DBT_JOBS_DBT_OVERRIDE_UNSUPPORTED",
+            "DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH",
         ),
     ],
 )

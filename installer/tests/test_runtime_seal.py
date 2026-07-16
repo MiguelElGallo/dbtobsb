@@ -47,7 +47,7 @@ RESOLVED_DEPENDENCIES = (
     f"{ARTIFACT_ROOT}/dbtobsb_contracts-0.3.0b1-py3-none-any.whl",
     f"{ARTIFACT_ROOT}/dbtobsb_capture-0.3.0b1-py3-none-any.whl",
     f"{ARTIFACT_ROOT}/dbtobsb_collector-0.3.0b1-py3-none-any.whl",
-    "databricks-sdk==0.120.0",
+    "databricks-sdk==0.117.0",
 )
 
 
@@ -82,6 +82,8 @@ def _policy():
                 http_path="/sql/1.0/warehouses/fedcba9876543210",
                 catalog="analytics",
                 schema="weather_prod",
+                artifact_catalog="observability",
+                artifact_schema="dbtobsb",
             ),
         )
     )
@@ -113,7 +115,10 @@ def _declared_environment() -> list[dict[str, Any]]:
     ]
 
 
-def _summary(*, host: str = HOST) -> bytes:
+def _summary(*, host: str | None = HOST) -> bytes:
+    workspace = {"profile": PROFILE, "root_path": WORKSPACE_ROOT}
+    if host is not None:
+        workspace["host"] = host
     return json.dumps(
         {
             "bundle": {
@@ -122,7 +127,7 @@ def _summary(*, host: str = HOST) -> bytes:
                 "engine": "direct",
                 "target": TARGET,
             },
-            "workspace": {"host": host, "profile": PROFILE, "root_path": WORKSPACE_ROOT},
+            "workspace": workspace,
             "resources": {
                 "jobs": {
                     "dbtobsb_collector": {
@@ -286,7 +291,7 @@ class _Runner:
         *,
         insecure_auth: bool = False,
         drift: str | None = None,
-        summary_host: str = HOST,
+        summary_host: str | None = HOST,
     ):
         self.commands: list[tuple[tuple[str, ...], int]] = []
         self.insecure_auth = insecure_auth
@@ -423,6 +428,26 @@ def test_runtime_inputs_have_no_caller_supplied_job_id_or_path() -> None:
     assert not any(name.endswith("job_id") or name.endswith("path") for name in input_names)
 
 
+def test_workspace_runner_uses_sealed_project_and_policy_paths() -> None:
+    settings = runtime_seal._expected_job_settings(
+        key="dbtobsb_observed",
+        inputs=_inputs(),
+        state=_state(),
+        resolved_dependencies=RESOLVED_DEPENDENCIES,
+    )
+    runner = next(
+        task["python_wheel_task"]
+        for task in settings["tasks"]
+        if task.get("python_wheel_task", {}).get("entry_point") == "run-dbt"
+    )
+    parameters = runner["parameters"]
+    project = parameters[parameters.index("--project_directory") + 1]
+    policy = parameters[parameters.index("--policy_path") + 1]
+
+    assert project.startswith("/Workspace/")
+    assert policy == project.rsplit("/project", maxsplit=1)[0] + "/dbt-policy-v1.json"
+
+
 @pytest.mark.parametrize(
     ("change", "code"),
     [
@@ -465,6 +490,12 @@ def test_summary_workspace_host_must_equal_the_forced_secure_profile_host(
         ).build(_inputs())
 
     assert tuple(private_root.iterdir()) == ()
+
+
+def test_summary_without_host_uses_the_forced_secure_profile_host(private_root: Path) -> None:
+    result = _candidate_builder(runner=_Runner(summary_host=None)).build(_inputs())
+
+    assert result.workspace_id == WORKSPACE_ID
 
 
 def test_all_remote_readbacks_use_one_explicit_profile_cli_context(private_root: Path) -> None:

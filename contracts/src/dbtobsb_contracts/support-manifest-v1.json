@@ -63,6 +63,10 @@
       {
         "name": "dbtobsb_raw",
         "kind": "MANAGED_VOLUME"
+      },
+      {
+        "name": "dbtobsb_stage",
+        "kind": "MANAGED_VOLUME"
       }
     ],
     "direct_grants": [
@@ -120,6 +124,39 @@
       {
         "principal": "COLLECTOR_SERVICE_PRINCIPAL",
         "securable": "dbtobsb_raw",
+        "privileges": [
+          "READ VOLUME",
+          "WRITE VOLUME"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "COLLECTOR_SERVICE_PRINCIPAL",
+        "securable": "dbtobsb_stage",
+        "privileges": [
+          "READ VOLUME"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "OBSERVED_SERVICE_PRINCIPAL",
+        "securable": "PARENT_CATALOG",
+        "privileges": [
+          "USE CATALOG"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "OBSERVED_SERVICE_PRINCIPAL",
+        "securable": "EVIDENCE_SCHEMA",
+        "privileges": [
+          "USE SCHEMA"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "OBSERVED_SERVICE_PRINCIPAL",
+        "securable": "dbtobsb_stage",
         "privileges": [
           "READ VOLUME",
           "WRITE VOLUME"

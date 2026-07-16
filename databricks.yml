@@ -4,9 +4,12 @@ bundle:
   engine: direct
 
 include:
+  - .dbtobsb-observed.generated.yml
   - .dbtobsb-app-bindings.generated.yml
 
 sync:
+  include:
+    - dbtobsb_onboarding/**
   exclude:
     - app/tests/**
     - capture/tests/**
@@ -15,17 +18,14 @@ sync:
 
 variables:
   warehouse_id:
-    description: Existing SQL warehouse used by the fixed dbt demo task.
+    description: Existing SQL warehouse used by bootstrap and evidence queries.
     default: "0000000000000000"
   evidence_catalog:
-    description: Catalog that holds the dedicated evidence and demo schemas.
+    description: Catalog that holds the dedicated evidence schema.
     default: replace_me
   evidence_schema:
     description: Dedicated schema for dbtobsb evidence objects.
     default: dbtobsb
-  demo_schema:
-    description: Dedicated schema for synthetic weather models.
-    default: dbtobsb_demo
   observed_service_principal_name:
     description: Application ID of the dedicated observed dbt Job run-as service principal.
     default: replace_me
@@ -35,20 +35,35 @@ variables:
   job_manager_group_name:
     description: Customer-managed group trusted to manage the two runtime Jobs.
     default: replace_me
+  contracts_wheel_filename:
+    description: Exact staged contracts wheel filename selected for this deployment.
+    default: dbtobsb_contracts-0.3.0b1-py3-none-any.whl
+  capture_wheel_filename:
+    description: Exact staged capture wheel filename selected for this deployment.
+    default: dbtobsb_capture-0.3.0b1-py3-none-any.whl
+  collector_wheel_filename:
+    description: Exact staged collector wheel filename selected for this deployment.
+    default: dbtobsb_collector-0.3.0b1-py3-none-any.whl
 
 artifacts:
   contracts_wheel:
     type: whl
     path: ./contracts
-    build: uv build --wheel --out-dir dist --clear --no-create-gitignore
+    build: uv build --wheel --out-dir dist --no-create-gitignore
+    files:
+      - source: ./contracts/dist/${var.contracts_wheel_filename}
   capture_wheel:
     type: whl
     path: ./capture
-    build: uv build --wheel --out-dir dist --clear --no-create-gitignore
+    build: uv build --wheel --out-dir dist --no-create-gitignore
+    files:
+      - source: ./capture/dist/${var.capture_wheel_filename}
   collector_wheel:
     type: whl
     path: ./collector
-    build: uv build --wheel --out-dir dist --clear --no-create-gitignore
+    build: uv build --wheel --out-dir dist --no-create-gitignore
+    files:
+      - source: ./collector/dist/${var.collector_wheel_filename}
 
 resources:
   jobs:
@@ -111,10 +126,10 @@ resources:
           spec:
             client: "5"
             dependencies:
-              - ./contracts/dist/dbtobsb_contracts-0.3.0b1-py3-none-any.whl
-              - ./capture/dist/dbtobsb_capture-0.3.0b1-py3-none-any.whl
-              - ./collector/dist/dbtobsb_collector-0.3.0b1-py3-none-any.whl
-              - databricks-sdk==0.120.0
+              - ./contracts/dist/${var.contracts_wheel_filename}
+              - ./capture/dist/${var.capture_wheel_filename}
+              - ./collector/dist/${var.collector_wheel_filename}
+              - databricks-sdk==0.117.0
 
     dbtobsb_reconciler:
       name: dbtobsb-reconciler
@@ -154,86 +169,16 @@ resources:
           spec:
             client: "5"
             dependencies:
-              - ./contracts/dist/dbtobsb_contracts-0.3.0b1-py3-none-any.whl
-              - ./capture/dist/dbtobsb_capture-0.3.0b1-py3-none-any.whl
-              - ./collector/dist/dbtobsb_collector-0.3.0b1-py3-none-any.whl
-              - databricks-sdk==0.120.0
-
-    dbtobsb_demo:
-      name: dbtobsb-demo-observed
-      description: Unscheduled synthetic dbt build followed by fixed collector invocation.
-      max_concurrent_runs: 1
-      timeout_seconds: 1200
-      performance_target: STANDARD
-      run_as:
-        service_principal_name: ${var.observed_service_principal_name}
-      permissions:
-        - level: CAN_VIEW
-          service_principal_name: ${var.collector_service_principal_name}
-        - level: CAN_MANAGE
-          group_name: ${var.job_manager_group_name}
-      tasks:
-        - task_key: dbt_build
-          timeout_seconds: 900
-          max_retries: 0
-          retry_on_timeout: false
-          environment_key: dbt
-          dbt_task:
-            source: WORKSPACE
-            project_directory: ./demo_dbt
-            warehouse_id: ${var.warehouse_id}
-            catalog: ${var.evidence_catalog}
-            schema: ${var.demo_schema}
-            commands:
-              - >-
-                dbt build
-                --no-send-anonymous-usage-stats
-                --no-upload-to-artifacts-ingest-api
-                --write-json
-                --log-format-file json
-                --log-level-file info
-                --log-file-max-bytes 20971520
-                --log-path "$PWD/target/dbtobsb/attempts/w{{workspace.id}}-j{{job.id}}-r{{job.run_id}}-t{{task.run_id}}-p{{job.repair_count}}-e{{task.execution_count}}/001-build/logs"
-                --no-use-colors
-                --no-use-colors-file
-                --warn-error-options '{"error":["NoNodesForSelectionCriteria","NothingToDo"]}'
-                --target-path "$PWD/target/dbtobsb/attempts/w{{workspace.id}}-j{{job.id}}-r{{job.run_id}}-t{{task.run_id}}-p{{job.repair_count}}-e{{task.execution_count}}/001-build/artifacts"
-                --no-fail-fast
-                --indirect-selection eager
-                --selector observability_demo
-        - task_key: collect_dbt_evidence
-          depends_on:
-            - task_key: dbt_build
-          run_if: ALL_DONE
-          timeout_seconds: 900
-          max_retries: 0
-          retry_on_timeout: false
-          run_job_task:
-            job_id: ${resources.jobs.dbtobsb_collector.id}
-            job_parameters:
-              workspace_id: "{{workspace.id}}"
-              observed_job_id: "{{job.id}}"
-              observed_job_run_id: "{{job.run_id}}"
-              dbt_task_run_id: "{{tasks.dbt_build.run_id}}"
-              observed_task_key: dbt_build
-              repair_count: "{{job.repair_count}}"
-              execution_count: "{{tasks.dbt_build.execution_count}}"
-      environments:
-        - environment_key: dbt
-          spec:
-            client: "5"
-            dependencies:
-              - dbt-core==1.11.12
-              - dbt-databricks==1.12.2
-              - dbt-adapters==1.24.5
-              - dbt-common==1.37.5
-              - dbt-spark==1.10.3
-              - dbt-protos==1.0.541
+              - ./contracts/dist/${var.contracts_wheel_filename}
+              - ./capture/dist/${var.capture_wheel_filename}
+              - ./collector/dist/${var.collector_wheel_filename}
               - databricks-sdk==0.117.0
-              - databricks-sql-connector==4.3.0
 
 targets:
   smoke:
     default: true
     workspace:
-      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+      # The attended installer creates /Workspace/dbtobsb with CAN_MANAGE for
+      # the deployment group and CAN_READ for the two runtime principals.
+      # This keeps the payload runnable without exposing it through /Shared.
+      root_path: /Workspace/dbtobsb/.bundle/${bundle.name}/${bundle.target}

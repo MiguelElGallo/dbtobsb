@@ -88,7 +88,7 @@ def test_fixed_demo_runtime_contract_digest_is_frozen() -> None:
     snapshot = fixed_demo_configuration_snapshot()
 
     assert snapshot.expected_runtime_policy_sha256 == (
-        "6a7bb95bee4285103bff3e0a904280c1e2537b195a3fdaf578618ba941c37c65"
+        "9a03d3c7632cac7956f666677f30d51615238f9a5f2586d2b4f830039221779e"
     )
     assert len(snapshot.expected_runtime_policy_sha256) == 64
 

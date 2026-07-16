@@ -18,6 +18,7 @@ RUN_HEALTH_VIEW = "dbt_run_health"
 NODE_HEALTH_VIEW = "dbt_node_health"
 COLLECTION_HEALTH_VIEW = "dbt_collection_health"
 RAW_VOLUME_NAME = "dbtobsb_raw"
+STAGE_VOLUME_NAME = "dbtobsb_stage"
 OBJECT_MANIFEST_VERSION = "dbtobsb.evidence.v1.0.0-rc.11"
 
 _PRODUCT_PROPERTY = "dbtobsb.product"
@@ -51,6 +52,7 @@ class BootstrapResult:
     manifest_version: str
     verified_objects: tuple[str, ...]
     raw_volume: str
+    stage_volume: str
     object_owner: str
 
 
@@ -361,7 +363,9 @@ def _run_view_query(registry: str, invocations: str) -> str:
   i.status_counts_json
 FROM {registry} AS r
 LEFT JOIN {invocations} AS i
-  USING (workspace_id, dbt_task_run_id, normalized_digest)
+  ON r.workspace_id = i.workspace_id
+  AND r.dbt_task_run_id = i.dbt_task_run_id
+  AND r.normalized_digest = i.normalized_digest
 WHERE r.collector_state = 'PUBLISHED'"""
 
 
@@ -439,7 +443,7 @@ def _object_contract_sha256() -> str:
                 _collection_health_query("__registry__"),
             ],
         ],
-        "raw_volume": RAW_VOLUME_NAME,
+        "volumes": [RAW_VOLUME_NAME, STAGE_VOLUME_NAME],
         "version": OBJECT_MANIFEST_VERSION,
     }
     rendered = json.dumps(contract, separators=(",", ":"), sort_keys=True).encode()
@@ -478,10 +482,9 @@ def _properties_sql(role: str) -> str:
     )
 
 
-def _volume_comment() -> str:
+def _volume_comment(role: str = "raw_volume") -> str:
     return (
-        f"dbtobsb|manifest={OBJECT_MANIFEST_VERSION}|"
-        f"contract={OBJECT_CONTRACT_SHA256}|role=raw_volume"
+        f"dbtobsb|manifest={OBJECT_MANIFEST_VERSION}|contract={OBJECT_CONTRACT_SHA256}|role={role}"
     )
 
 
@@ -546,7 +549,7 @@ WHERE lower(schema_name) = lower({_sql_literal(schema)})"""
 
 def _inventory(
     spark: SparkBootstrapSession, *, catalog: str, schema: str
-) -> tuple[frozenset[str], dict[str, Any] | None]:
+) -> tuple[frozenset[str], dict[str, dict[str, Any]]]:
     relation_rows = _mapping_rows(
         spark.sql(
             f"""SELECT table_name, table_type
@@ -572,15 +575,16 @@ FROM {qualify(catalog, "information_schema", "volumes")}
 WHERE lower(volume_schema) = lower({_sql_literal(schema)})"""
         )
     )
-    if len(volume_rows) > 1:
-        raise RuntimeError("DBTOBSB_BOOTSTRAP_UNSUPPORTED_SCHEMA_STATE")
-    if volume_rows:
-        name = volume_rows[0].get("volume_name")
+    volumes: dict[str, dict[str, Any]] = {}
+    for row in volume_rows:
+        name = row.get("volume_name")
         if not isinstance(name, str):
             raise RuntimeError("DBTOBSB_BOOTSTRAP_NATIVE_METADATA_UNAVAILABLE")
-        if name.casefold() != RAW_VOLUME_NAME:
+        normalized = name.casefold()
+        if normalized not in {RAW_VOLUME_NAME, STAGE_VOLUME_NAME} or normalized in volumes:
             raise RuntimeError("DBTOBSB_BOOTSTRAP_UNSUPPORTED_SCHEMA_STATE")
-    return frozenset(relation_names), volume_rows[0] if volume_rows else None
+        volumes[normalized] = row
+    return frozenset(relation_names), volumes
 
 
 def _describe_relation(spark: SparkBootstrapSession, name: str) -> dict[str, Any]:
@@ -926,6 +930,7 @@ def _create_fresh_objects(
     node_view = qualify(catalog, schema, NODE_HEALTH_VIEW)
     collection_view = qualify(catalog, schema, COLLECTION_HEALTH_VIEW)
     volume = qualify(catalog, schema, RAW_VOLUME_NAME)
+    stage_volume = qualify(catalog, schema, STAGE_VOLUME_NAME)
 
     for spec in _TABLE_SPECS:
         name = qualify(catalog, schema, spec.name)
@@ -938,6 +943,9 @@ TBLPROPERTIES (
 )"""
         )
     spark.sql(f"CREATE VOLUME {volume} COMMENT {_sql_literal(_volume_comment())}")
+    spark.sql(
+        f"CREATE VOLUME {stage_volume} COMMENT {_sql_literal(_volume_comment('artifact_stage'))}"
+    )
     spark.sql(
         f"""CREATE VIEW {run_view}
 TBLPROPERTIES (
@@ -994,38 +1002,49 @@ def bootstrap_objects(
     schema_owner = _schema_owner(spark, catalog=catalog, schema=schema)
     if session_actor != schema_owner:
         raise RuntimeError("DBTOBSB_BOOTSTRAP_ACTOR_SCHEMA_OWNER_MISMATCH")
-    relation_names, volume_metadata = _inventory(spark, catalog=catalog, schema=schema)
-    any_present = bool(relation_names) or volume_metadata is not None
-    all_present = relation_names == _RELATION_NAMES and volume_metadata is not None
+    relation_names, volumes = _inventory(spark, catalog=catalog, schema=schema)
+    any_present = bool(relation_names) or bool(volumes)
+    all_present = relation_names == _RELATION_NAMES and set(volumes) == {
+        RAW_VOLUME_NAME,
+        STAGE_VOLUME_NAME,
+    }
     if any_present and not all_present:
         raise RuntimeError("DBTOBSB_BOOTSTRAP_PARTIAL_INSTALL")
     if not any_present:
         _create_fresh_objects(spark, catalog=catalog, schema=schema, binding=binding)
-        relation_names, volume_metadata = _inventory(spark, catalog=catalog, schema=schema)
-        if relation_names != _RELATION_NAMES or volume_metadata is None:
+        relation_names, volumes = _inventory(spark, catalog=catalog, schema=schema)
+        if relation_names != _RELATION_NAMES or set(volumes) != {
+            RAW_VOLUME_NAME,
+            STAGE_VOLUME_NAME,
+        }:
             raise RuntimeError("DBTOBSB_BOOTSTRAP_PARTIAL_INSTALL")
 
-    if volume_metadata is None:
-        raise RuntimeError("DBTOBSB_BOOTSTRAP_PARTIAL_INSTALL")
-    if (
-        str(volume_metadata.get("volume_name", "")).casefold() != RAW_VOLUME_NAME
-        or str(volume_metadata.get("volume_type", "")).upper() != "MANAGED"
-    ):
-        raise RuntimeError("DBTOBSB_BOOTSTRAP_OBJECT_KIND_MISMATCH")
-    if volume_metadata.get("comment") != _volume_comment():
-        raise RuntimeError("DBTOBSB_BOOTSTRAP_OBJECT_MARKER_MISMATCH")
-    volume_owner = volume_metadata.get("volume_owner")
-    if not isinstance(volume_owner, str) or not volume_owner:
-        raise RuntimeError("DBTOBSB_BOOTSTRAP_NATIVE_METADATA_UNAVAILABLE")
+    volume_owners: set[str] = set()
+    for name, role in ((RAW_VOLUME_NAME, "raw_volume"), (STAGE_VOLUME_NAME, "artifact_stage")):
+        volume_metadata = volumes.get(name)
+        if volume_metadata is None:
+            raise RuntimeError("DBTOBSB_BOOTSTRAP_PARTIAL_INSTALL")
+        if (
+            str(volume_metadata.get("volume_name", "")).casefold() != name
+            or str(volume_metadata.get("volume_type", "")).upper() != "MANAGED"
+        ):
+            raise RuntimeError("DBTOBSB_BOOTSTRAP_OBJECT_KIND_MISMATCH")
+        if volume_metadata.get("comment") != _volume_comment(role):
+            raise RuntimeError("DBTOBSB_BOOTSTRAP_OBJECT_MARKER_MISMATCH")
+        volume_owner = volume_metadata.get("volume_owner")
+        if not isinstance(volume_owner, str) or not volume_owner:
+            raise RuntimeError("DBTOBSB_BOOTSTRAP_NATIVE_METADATA_UNAVAILABLE")
+        volume_owners.add(volume_owner)
 
     relation_owner, verified_objects = _attest_objects(
         spark, catalog=catalog, schema=schema, binding=binding
     )
-    if relation_owner != volume_owner or relation_owner != schema_owner:
+    if volume_owners != {relation_owner} or relation_owner != schema_owner:
         raise RuntimeError("DBTOBSB_BOOTSTRAP_OBJECT_OWNER_MISMATCH")
     return BootstrapResult(
         manifest_version=OBJECT_MANIFEST_VERSION,
         verified_objects=verified_objects,
         raw_volume=qualify(catalog, schema, RAW_VOLUME_NAME),
+        stage_volume=qualify(catalog, schema, STAGE_VOLUME_NAME),
         object_owner=relation_owner,
     )

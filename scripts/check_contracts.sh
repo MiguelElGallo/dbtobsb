@@ -10,6 +10,15 @@ temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/dbtobsb-contracts-check.XXXXXX")"
 trap 'rm -rf "$temporary_root"' EXIT
 
 uv sync --project contracts --locked --python "$contracts_python"
+if [[ ! -f .dbtobsb-observed.generated.yml ]]; then
+  printf '%s' '{"canonical_workspace_hostname":"adb-1234567890123456.10.azuredatabricks.net","warehouse_id":"0123456789abcdef","warehouse_http_path":"/sql/1.0/warehouses/0123456789abcdef","catalog":"analytics","schema":"weather_prod","artifact_catalog":"observability","artifact_schema":"dbtobsb"}' \
+    | uv run --project installer dbtobsb-onboard-dbt-project \
+        --source-project demo_dbt \
+        --bundle-root . >/dev/null
+fi
+if [[ ! -f .dbtobsb-app-bindings.generated.yml ]]; then
+  uv run --project installer dbtobsb-render-app-stage >/dev/null
+fi
 uv run --project contracts pytest contracts/tests
 uv run --project contracts python contracts/scripts/check_bundle_commands.py
 uv run --project contracts ruff check contracts

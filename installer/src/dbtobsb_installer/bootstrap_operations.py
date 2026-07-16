@@ -36,7 +36,7 @@ def render_bootstrap_mutations(
     schema: str,
     binding: InstallationBinding,
 ) -> tuple[ClosedMutationOperation, ...]:
-    """Render the exact nine fresh-install operations accepted by the native registry."""
+    """Render the exact ten fresh-install operations accepted by the native registry."""
 
     base_parameters = _base_parameters(catalog, schema)
     contract._validate_installation_binding(binding)
@@ -63,6 +63,17 @@ TBLPROPERTIES (
             text=(
                 f"CREATE VOLUME {volume} COMMENT "
                 f"{contract._sql_literal(contract._volume_comment())}"
+            ),
+        )
+    )
+    stage_volume = qualify(catalog, schema, contract.STAGE_VOLUME_NAME)
+    operations.append(
+        _registered_mutation(
+            native_operation="bootstrap_create_stage_volume_v1",
+            native_parameters=base_parameters,
+            text=(
+                f"CREATE VOLUME {stage_volume} COMMENT "
+                f"{contract._sql_literal(contract._volume_comment('artifact_stage'))}"
             ),
         )
     )
@@ -114,7 +125,7 @@ TBLPROPERTIES (
             text=f"INSERT INTO {manifest} ({columns})\nVALUES ({values})",
         )
     )
-    if len(operations) != 9:
+    if len(operations) != 10:
         raise RuntimeError("DBTOBSB_INSTALLER_BOOTSTRAP_REGISTRY_INCOMPLETE")
     return tuple(operations)
 

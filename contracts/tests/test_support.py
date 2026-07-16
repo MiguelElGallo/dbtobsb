@@ -18,8 +18,8 @@ def test_packaged_support_manifest_is_exact_and_candidate_only() -> None:
     assert manifest.platform["cloud"] == "AZURE_DATABRICKS"
     assert manifest.installation["launcher"] == "dbtobsb bootstrap"
     assert manifest.installation["runtime_trust_ledger"] == "NOT_IN_V0_3_SUPPORTED_PATH"
-    assert len(manifest.customer_state["objects"]) == 8
-    assert len(manifest.customer_state["direct_grants"]) == 13
+    assert len(manifest.customer_state["objects"]) == 9
+    assert len(manifest.customer_state["direct_grants"]) == 17
     assert manifest.dbt["packages"]["dbt-core"] == "1.11.12"
     assert manifest.dbt["packages"]["dbt-databricks"] == "1.12.2"
     assert manifest.onboarding["policy_contract_version"] == "dbtobsb.dbt-policy.v1"

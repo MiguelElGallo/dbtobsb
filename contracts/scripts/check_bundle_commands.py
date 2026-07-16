@@ -1,9 +1,10 @@
-"""Prove the reviewed Bundle and demo sources match the packaged support contract."""
+"""Prove the Bundle and generated dbt onboarding match the packaged support contract."""
 
 from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -12,72 +13,82 @@ from typing import NoReturn, cast
 import yaml
 
 from dbtobsb_contracts import (
-    DbtConfigurationState,
+    DbtRuntimePolicySnapshot,
     OperatorDiagnostic,
-    assess_dbt_configuration,
-    demo_installed_policy,
-    fixed_demo_configuration_snapshot,
-    generate_dbt_commands,
     load_support_manifest,
+    parse_dbt_runtime_policy,
 )
 
 _REPO_ROOT = Path(__file__).parents[2]
 _BUNDLE_PATH = _REPO_ROOT / "databricks.yml"
-_DEMO_JOB_KEY = "dbtobsb_demo"
+_OBSERVED_JOB_KEY = "dbtobsb_observed"
 _DBT_TASK_KEY = "dbt_build"
 _COLLECT_TASK_KEY = "collect_dbt_evidence"
-_PROJECT_DIRECTORY = "./demo_dbt"
-_SELECTOR = "observability_demo"
+_ONBOARDING_PROJECT = re.compile(r"^\./dbtobsb_onboarding/(?P<source>[0-9a-f]{64})/project$")
+_INSTALLED_ONBOARDING_PROJECT = re.compile(
+    r"^\$\{workspace\.file_path\}/dbtobsb_onboarding/(?P<source>[0-9a-f]{64})/project$"
+)
 _ROOT_FIELDS = frozenset(
     {"bundle", "include", "sync", "variables", "artifacts", "resources", "targets"}
 )
 _BUNDLE_FIELDS = frozenset({"name", "databricks_cli_version", "engine"})
-_INCLUDE_FILES = (".dbtobsb-app-bindings.generated.yml",)
+_INCLUDE_FILES = (
+    ".dbtobsb-observed.generated.yml",
+    ".dbtobsb-app-bindings.generated.yml",
+)
 _SYNC_EXCLUDES = (
     "app/tests/**",
     "capture/tests/**",
     "collector/tests/**",
     "contracts/tests/**",
 )
+_SYNC_INCLUDES = ("dbtobsb_onboarding/**",)
 _VARIABLE_FIELDS = frozenset({"description", "default"})
 _VARIABLE_KEYS = frozenset(
     {
         "warehouse_id",
         "evidence_catalog",
         "evidence_schema",
-        "demo_schema",
         "observed_service_principal_name",
         "collector_service_principal_name",
         "job_manager_group_name",
+        "contracts_wheel_filename",
+        "capture_wheel_filename",
+        "collector_wheel_filename",
     }
 )
 _VARIABLE_DEFAULTS = {
     "warehouse_id": "0000000000000000",
     "evidence_catalog": "replace_me",
     "evidence_schema": "dbtobsb",
-    "demo_schema": "dbtobsb_demo",
     "observed_service_principal_name": "replace_me",
     "collector_service_principal_name": "replace_me",
     "job_manager_group_name": "replace_me",
+    "contracts_wheel_filename": "dbtobsb_contracts-0.3.0b1-py3-none-any.whl",
+    "capture_wheel_filename": "dbtobsb_capture-0.3.0b1-py3-none-any.whl",
+    "collector_wheel_filename": "dbtobsb_collector-0.3.0b1-py3-none-any.whl",
 }
 _EXPECTED_ARTIFACTS = {
     "contracts_wheel": {
         "type": "whl",
         "path": "./contracts",
-        "build": "uv build --wheel --out-dir dist --clear --no-create-gitignore",
+        "build": "uv build --wheel --out-dir dist --no-create-gitignore",
+        "files": [{"source": "./contracts/dist/${var.contracts_wheel_filename}"}],
     },
     "capture_wheel": {
         "type": "whl",
         "path": "./capture",
-        "build": "uv build --wheel --out-dir dist --clear --no-create-gitignore",
+        "build": "uv build --wheel --out-dir dist --no-create-gitignore",
+        "files": [{"source": "./capture/dist/${var.capture_wheel_filename}"}],
     },
     "collector_wheel": {
         "type": "whl",
         "path": "./collector",
-        "build": "uv build --wheel --out-dir dist --clear --no-create-gitignore",
+        "build": "uv build --wheel --out-dir dist --no-create-gitignore",
+        "files": [{"source": "./collector/dist/${var.collector_wheel_filename}"}],
     },
 }
-_DEMO_JOB_FIELDS = frozenset(
+_OBSERVED_JOB_FIELDS = frozenset(
     {
         "name",
         "description",
@@ -90,9 +101,7 @@ _DEMO_JOB_FIELDS = frozenset(
         "environments",
     }
 )
-_DBT_TASK_FIELDS = frozenset(
-    {"source", "project_directory", "warehouse_id", "catalog", "schema", "commands"}
-)
+_DBT_RUNNER_FIELDS = frozenset({"package_name", "entry_point", "parameters"})
 _DBT_TASK_WRAPPER_FIELDS = frozenset(
     {
         "task_key",
@@ -100,7 +109,7 @@ _DBT_TASK_WRAPPER_FIELDS = frozenset(
         "max_retries",
         "retry_on_timeout",
         "environment_key",
-        "dbt_task",
+        "python_wheel_task",
     }
 )
 _COLLECT_TASK_WRAPPER_FIELDS = frozenset(
@@ -123,6 +132,21 @@ _COLLECT_JOB_PARAMETERS = {
     "repair_count": "{{job.repair_count}}",
     "execution_count": "{{tasks.dbt_build.execution_count}}",
 }
+_DBT_RUNNER_PARAMETER_PREFIX = (
+    "--workspace_id",
+    "{{workspace.id}}",
+    "--observed_job_id",
+    "{{job.id}}",
+    "--observed_job_run_id",
+    "{{job.run_id}}",
+    "--dbt_task_run_id",
+    "{{task.run_id}}",
+    "--repair_count",
+    "{{job.repair_count}}",
+    "--execution_count",
+    "{{task.execution_count}}",
+    "--project_directory",
+)
 _COLLECTOR_JOB_PARAMETER_DEFAULTS = {
     "workspace_id": "0",
     "observed_job_id": "0",
@@ -186,72 +210,16 @@ _RECONCILER_PERMISSIONS = (
 _DBT_ENVIRONMENT_WRAPPER_FIELDS = frozenset({"environment_key", "spec"})
 _DBT_ENVIRONMENT_FIELDS = frozenset({"client", "dependencies"})
 _COLLECTOR_ENVIRONMENT_DEPENDENCIES = (
-    "./contracts/dist/dbtobsb_contracts-0.3.0b1-py3-none-any.whl",
-    "./capture/dist/dbtobsb_capture-0.3.0b1-py3-none-any.whl",
-    "./collector/dist/dbtobsb_collector-0.3.0b1-py3-none-any.whl",
-    "databricks-sdk==0.120.0",
+    "./contracts/dist/${var.contracts_wheel_filename}",
+    "./capture/dist/${var.capture_wheel_filename}",
+    "./collector/dist/${var.collector_wheel_filename}",
+    "databricks-sdk==0.117.0",
 )
-_DEPENDENCY_ORDER = (
-    "dbt-core",
-    "dbt-databricks",
-    "dbt-adapters",
-    "dbt-common",
-    "dbt-spark",
-    "dbt-protos",
-    "databricks-sdk",
-    "databricks-sql-connector",
-)
-_EXPECTED_PROJECT = {
-    "name": "dbtobsb_demo",
-    "version": "0.1.0",
-    "config-version": 2,
-    "require-dbt-version": "=1.11.12",
-    "profile": "dbtobsb_demo",
-    "model-paths": ["models"],
-    "seed-paths": ["seeds"],
-    "test-paths": ["tests"],
-    "clean-targets": ["target", "logs"],
-    "models": {"dbtobsb_demo": {"+materialized": "view"}},
-    "seeds": {"dbtobsb_demo": {"+quote_columns": False}},
-}
-_EXPECTED_PROFILE = {
-    "dbtobsb_demo": {
-        "target": "demo",
-        "outputs": {
-            "demo": {
-                "type": "databricks",
-                "catalog": "{{ env_var('DBTOBSB_DEMO_CATALOG', 'replace_me') }}",
-                "schema": "{{ env_var('DBTOBSB_DEMO_SCHEMA', 'dbtobsb_demo') }}",
-                "host": (
-                    "{{ env_var('DATABRICKS_HOST', 'https://placeholder.azuredatabricks.net') }}"
-                ),
-                "http_path": (
-                    "{{ env_var('DATABRICKS_HTTP_PATH', '/sql/1.0/warehouses/placeholder') }}"
-                ),
-                "token": (
-                    "{{ env_var('DATABRICKS_TOKEN', 'local-parse-placeholder-not-a-credential') }}"
-                ),
-                "threads": 1,
-            }
-        },
-    }
-}
-_EXPECTED_SELECTORS = {
-    "selectors": [
-        {
-            "name": "observability_demo",
-            "description": (
-                "Fixed synthetic weather graph used by the private engineering preview."
-            ),
-            "definition": {"method": "path", "value": "*"},
-        }
-    ]
-}
 _GENERATED_SOURCE_ROOTS = frozenset({"logs", "target"})
 
 
 class BundleContractError(ValueError):
-    """Stable failure raised when the Bundle or checked-in demo drifts."""
+    """Stable failure raised when the Bundle or generated onboarding drifts."""
 
 
 def _bundle_component(code: str) -> str:
@@ -266,10 +234,11 @@ def _bundle_component(code: str) -> str:
             "PROJECT",
             "PROFILE",
             "SELECTOR",
-            "SNAPSHOT",
+            "POLICY",
+            "ONBOARDED",
         )
     ):
-        return "dbt demo source"
+        return "onboarded dbt source"
     if any(
         token in code
         for token in ("COMMAND", "DEPENDENCY", "ENVIRONMENT", "SERVERLESS", "PACKAGES")
@@ -288,10 +257,10 @@ def bundle_failure_diagnostic(error: BundleContractError) -> OperatorDiagnostic:
         code=code,
         outcome="denied",
         component=component,
-        summary=f"Denied: the {component} differs from the reviewed release.",
+        summary=f"Denied: the {component} differs from the generated release contract.",
         consequence="No Databricks Job was run by this local check.",
         responsible_actor="deployment/seal verifier",
-        action="Restore the reviewed release files and rerun the fixed-demo source check.",
+        action="Regenerate onboarding and rerun the Bundle contract check.",
     )
 
 
@@ -300,11 +269,11 @@ def bundle_success_diagnostic() -> OperatorDiagnostic:
     return OperatorDiagnostic(
         code="DBTOBSB_BUNDLE_DBT_CONTRACT_OK",
         outcome="accepted",
-        component="local fixed-demo source and Bundle contract",
-        summary="Accepted for the local fixed-demo engineering preview.",
+        component="local generated onboarding and Bundle contract",
+        summary="Accepted for the local private release candidate.",
         consequence="Installed deployment integrity is not sealed or verified by this check.",
         responsible_actor="deployment/seal verifier",
-        action="Continue only with the reviewed installer deployment-and-seal workflow.",
+        action="Continue with the documented deployment-and-seal workflow.",
     )
 
 
@@ -367,7 +336,9 @@ def _validate_bundle_envelope(root: Mapping[str, object]) -> None:
 
     sync = _mapping(root.get("sync"), code="DBTOBSB_BUNDLE_SYNC_INVALID")
     if (
-        frozenset(sync) != {"exclude"}
+        frozenset(sync) != {"exclude", "include"}
+        or _string_sequence(sync.get("include"), code="DBTOBSB_BUNDLE_SYNC_INVALID")
+        != _SYNC_INCLUDES
         or _string_sequence(sync.get("exclude"), code="DBTOBSB_BUNDLE_SYNC_INVALID")
         != _SYNC_EXCLUDES
     ):
@@ -395,55 +366,55 @@ def _validate_bundle_envelope(root: Mapping[str, object]) -> None:
     if frozenset(smoke) != {"default", "workspace"} or smoke.get("default") is not True:
         _fail("DBTOBSB_BUNDLE_TARGET_INVALID")
     workspace = _mapping(smoke.get("workspace"), code="DBTOBSB_BUNDLE_TARGET_INVALID")
-    if workspace != {
-        "root_path": "/Workspace/Users/${workspace.current_user.userName}/.bundle/"
-        "${bundle.name}/${bundle.target}"
-    }:
+    if workspace != {"root_path": "/Workspace/dbtobsb/.bundle/${bundle.name}/${bundle.target}"}:
         _fail("DBTOBSB_BUNDLE_TARGET_INVALID")
 
 
-def _validate_demo_sources(*, bundle_path: Path, project_directory: str) -> None:
+def _load_and_validate_onboarded_policy(
+    *, bundle_path: Path, project_directory: str
+) -> DbtRuntimePolicySnapshot:
     bundle_root = bundle_path.parent.resolve()
-    project_root = (bundle_root / project_directory).resolve()
-    if not project_root.is_relative_to(bundle_root) or project_root.name != "demo_dbt":
+    match = _INSTALLED_ONBOARDING_PROJECT.fullmatch(project_directory)
+    if match is None:
         _fail("DBTOBSB_BUNDLE_PROJECT_DIRECTORY_DRIFT")
+    declared_project_directory = f"./dbtobsb_onboarding/{match.group('source')}/project"
+    project_root = (bundle_root / declared_project_directory).resolve()
+    expected_root = bundle_root / "dbtobsb_onboarding" / match.group("source") / "project"
+    if (
+        not project_root.is_relative_to(bundle_root)
+        or project_root != expected_root.resolve()
+        or project_root.is_symlink()
+        or not project_root.is_dir()
+    ):
+        _fail("DBTOBSB_BUNDLE_PROJECT_DIRECTORY_DRIFT")
+    policy_path = project_root.parent / "dbt-policy-v1.json"
+    try:
+        policy = parse_dbt_runtime_policy(policy_path.read_bytes())
+    except (OSError, ValueError):
+        _fail("DBTOBSB_BUNDLE_DBT_POLICY_INVALID")
+    if (
+        policy.project_directory != declared_project_directory
+        or policy.profiles_directory != declared_project_directory
+        or policy.source_contract_sha256 != match.group("source")
+    ):
+        _fail("DBTOBSB_BUNDLE_DBT_POLICY_INVALID")
 
-    snapshot = fixed_demo_configuration_snapshot()
-    expected_files = frozenset(snapshot.source_sha256)
+    expected_files = frozenset(policy.source_sha256)
     actual_files: set[str] = set()
     try:
         candidates = tuple(project_root.rglob("*"))
     except OSError as exc:
-        raise BundleContractError("DBTOBSB_DEMO_SOURCE_FILE_SET_DRIFT") from exc
+        raise BundleContractError("DBTOBSB_ONBOARDED_SOURCE_FILE_SET_DRIFT") from exc
     for candidate in candidates:
         relative = candidate.relative_to(project_root)
         if relative.parts and relative.parts[0] in _GENERATED_SOURCE_ROOTS:
             continue
         if candidate.is_symlink():
-            _fail("DBTOBSB_DEMO_SOURCE_FILE_SET_DRIFT")
+            _fail("DBTOBSB_ONBOARDED_SOURCE_FILE_SET_DRIFT")
         if candidate.is_file():
             actual_files.add(relative.as_posix())
     if actual_files != expected_files:
-        _fail("DBTOBSB_DEMO_SOURCE_FILE_SET_DRIFT")
-
-    project = _load_yaml(
-        project_root / "dbt_project.yml",
-        invalid_code="DBTOBSB_DEMO_PROJECT_CONFIGURATION_INVALID",
-    )
-    if project != _EXPECTED_PROJECT:
-        _fail("DBTOBSB_DEMO_PROJECT_CONFIGURATION_INVALID")
-    profile = _load_yaml(
-        project_root / "profiles.yml",
-        invalid_code="DBTOBSB_DEMO_PROFILE_CONFIGURATION_INVALID",
-    )
-    if profile != _EXPECTED_PROFILE:
-        _fail("DBTOBSB_DEMO_PROFILE_CONFIGURATION_INVALID")
-    selectors = _load_yaml(
-        project_root / "selectors.yml",
-        invalid_code="DBTOBSB_DEMO_SELECTORS_CONFIGURATION_INVALID",
-    )
-    if selectors != _EXPECTED_SELECTORS:
-        _fail("DBTOBSB_DEMO_SELECTORS_CONFIGURATION_INVALID")
+        _fail("DBTOBSB_ONBOARDED_SOURCE_FILE_SET_DRIFT")
 
     actual_hashes: dict[str, str] = {}
     try:
@@ -452,14 +423,10 @@ def _validate_demo_sources(*, bundle_path: Path, project_directory: str) -> None
                 (project_root / relative).read_bytes()
             ).hexdigest()
     except OSError as exc:
-        raise BundleContractError("DBTOBSB_DEMO_SOURCE_HASH_DRIFT") from exc
-    if actual_hashes != dict(snapshot.source_sha256):
-        _fail("DBTOBSB_DEMO_SOURCE_HASH_DRIFT")
-    source_contract = "".join(
-        f"{relative}\0{actual_hashes[relative]}\n" for relative in sorted(actual_hashes)
-    ).encode()
-    if hashlib.sha256(source_contract).hexdigest() != snapshot.source_contract_sha256:
-        _fail("DBTOBSB_DEMO_SOURCE_CONTRACT_DRIFT")
+        raise BundleContractError("DBTOBSB_ONBOARDED_SOURCE_HASH_DRIFT") from exc
+    if actual_hashes != dict(policy.source_sha256):
+        _fail("DBTOBSB_ONBOARDED_SOURCE_HASH_DRIFT")
+    return policy
 
 
 def _validate_collector_wrapper(tasks: Sequence[object]) -> None:
@@ -510,7 +477,7 @@ def _validate_collector_environment(job: Mapping[str, object], *, code: str) -> 
 
 
 def _validate_runtime_jobs(jobs: Mapping[str, object]) -> None:
-    if frozenset(jobs) != {"dbtobsb_collector", "dbtobsb_reconciler", _DEMO_JOB_KEY}:
+    if frozenset(jobs) != {"dbtobsb_collector", "dbtobsb_reconciler", _OBSERVED_JOB_KEY}:
         _fail("DBTOBSB_BUNDLE_JOBS_INVALID")
 
     collector = _mapping(jobs.get("dbtobsb_collector"), code="DBTOBSB_BUNDLE_COLLECTOR_JOB_INVALID")
@@ -678,7 +645,7 @@ def _validate_runtime_jobs(jobs: Mapping[str, object]) -> None:
 
 
 def validate_bundle(path: Path) -> None:
-    """Validate the exact fixed demo task, environment, target, and source bytes."""
+    """Validate the base Bundle and the one installer-generated observed dbt Job."""
     root = _load_yaml(path, invalid_code="DBTOBSB_BUNDLE_YAML_INVALID")
     manifest = load_support_manifest()
     _validate_bundle_envelope(root)
@@ -694,15 +661,36 @@ def validate_bundle(path: Path) -> None:
     resources = _mapping(root.get("resources"), code="DBTOBSB_BUNDLE_RESOURCES_INVALID")
     if frozenset(resources) != {"jobs"}:
         _fail("DBTOBSB_BUNDLE_RESOURCES_INVALID")
-    jobs = _mapping(resources.get("jobs"), code="DBTOBSB_BUNDLE_JOBS_INVALID")
+    base_jobs = _mapping(resources.get("jobs"), code="DBTOBSB_BUNDLE_JOBS_INVALID")
+    if frozenset(base_jobs) != {"dbtobsb_collector", "dbtobsb_reconciler"}:
+        _fail("DBTOBSB_BUNDLE_JOBS_INVALID")
+    observed_overlay = _load_yaml(
+        path.parent / ".dbtobsb-observed.generated.yml",
+        invalid_code="DBTOBSB_BUNDLE_OBSERVED_OVERLAY_INVALID",
+    )
+    if frozenset(observed_overlay) != {"resources"}:
+        _fail("DBTOBSB_BUNDLE_OBSERVED_OVERLAY_INVALID")
+    overlay_resources = _mapping(
+        observed_overlay.get("resources"),
+        code="DBTOBSB_BUNDLE_OBSERVED_OVERLAY_INVALID",
+    )
+    if frozenset(overlay_resources) != {"jobs"}:
+        _fail("DBTOBSB_BUNDLE_OBSERVED_OVERLAY_INVALID")
+    overlay_jobs = _mapping(
+        overlay_resources.get("jobs"),
+        code="DBTOBSB_BUNDLE_OBSERVED_OVERLAY_INVALID",
+    )
+    if frozenset(overlay_jobs) != {_OBSERVED_JOB_KEY}:
+        _fail("DBTOBSB_BUNDLE_OBSERVED_OVERLAY_INVALID")
+    jobs = {**base_jobs, **overlay_jobs}
     _validate_runtime_jobs(jobs)
-    job = _mapping(jobs.get(_DEMO_JOB_KEY), code="DBTOBSB_BUNDLE_DBT_JOB_INVALID")
-    if frozenset(job) != _DEMO_JOB_FIELDS or (
+    job = _mapping(jobs.get(_OBSERVED_JOB_KEY), code="DBTOBSB_BUNDLE_DBT_JOB_INVALID")
+    if frozenset(job) != _OBSERVED_JOB_FIELDS or (
         job.get("name"),
         job.get("max_concurrent_runs"),
         job.get("timeout_seconds"),
         job.get("performance_target"),
-    ) != ("dbtobsb-demo-observed", 1, 1200, "STANDARD"):
+    ) != ("dbtobsb-observed", 1, 1200, "STANDARD"):
         _fail("DBTOBSB_BUNDLE_DBT_JOB_INVALID")
     if (
         _mapping(job.get("run_as"), code="DBTOBSB_BUNDLE_DBT_JOB_INVALID") != _OBSERVED_RUN_AS
@@ -734,29 +722,31 @@ def validate_bundle(path: Path) -> None:
     ) != (900, 0, False, "dbt"):
         _fail("DBTOBSB_BUNDLE_DBT_TASK_CONFIGURATION_UNSUPPORTED")
 
-    dbt_task = _mapping(task.get("dbt_task"), code="DBTOBSB_BUNDLE_DBT_TASK_INVALID")
-    if frozenset(dbt_task) != _DBT_TASK_FIELDS:
-        _fail("DBTOBSB_BUNDLE_DBT_TASK_CONFIGURATION_UNSUPPORTED")
-    if dbt_task.get("source") != "WORKSPACE":
-        _fail("DBTOBSB_BUNDLE_DBT_SOURCE_DRIFT")
-    project_directory = dbt_task.get("project_directory")
-    if project_directory != _PROJECT_DIRECTORY:
-        _fail("DBTOBSB_BUNDLE_PROJECT_DIRECTORY_DRIFT")
+    runner = _mapping(task.get("python_wheel_task"), code="DBTOBSB_BUNDLE_DBT_TASK_INVALID")
     if (
-        dbt_task.get("warehouse_id") != "${var.warehouse_id}"
-        or dbt_task.get("catalog") != "${var.evidence_catalog}"
-        or dbt_task.get("schema") != "${var.demo_schema}"
+        frozenset(runner) != _DBT_RUNNER_FIELDS
+        or runner.get("package_name") != "dbtobsb-collector"
+        or runner.get("entry_point") != "run-dbt"
     ):
-        _fail("DBTOBSB_BUNDLE_DBT_TARGET_DRIFT")
-
-    policy = demo_installed_policy()
-    expected_commands = tuple(
-        command.shell_command for command in generate_dbt_commands(policy=policy)
+        _fail("DBTOBSB_BUNDLE_DBT_TASK_CONFIGURATION_UNSUPPORTED")
+    runner_parameters = _string_sequence(
+        runner.get("parameters"), code="DBTOBSB_BUNDLE_DBT_TASK_CONFIGURATION_UNSUPPORTED"
     )
     if (
-        _string_sequence(dbt_task.get("commands"), code="DBTOBSB_BUNDLE_DBT_COMMAND_DRIFT")
-        != expected_commands
+        len(runner_parameters) != 16
+        or runner_parameters[:13] != _DBT_RUNNER_PARAMETER_PREFIX
+        or runner_parameters[14] != "--policy_path"
     ):
+        _fail("DBTOBSB_BUNDLE_DBT_TASK_CONFIGURATION_UNSUPPORTED")
+    project_directory = runner_parameters[13]
+    policy_path = runner_parameters[15]
+    if policy_path != project_directory.rsplit("/project", maxsplit=1)[0] + "/dbt-policy-v1.json":
+        _fail("DBTOBSB_BUNDLE_PROJECT_DIRECTORY_DRIFT")
+    policy = _load_and_validate_onboarded_policy(
+        bundle_path=path,
+        project_directory=project_directory,
+    )
+    if not policy.commands:
         _fail("DBTOBSB_BUNDLE_DBT_COMMAND_DRIFT")
 
     _validate_collector_wrapper(tasks)
@@ -779,21 +769,15 @@ def validate_bundle(path: Path) -> None:
         _fail("DBTOBSB_BUNDLE_SERVERLESS_CLIENT_DRIFT")
 
     packages = _mapping(manifest.dbt["packages"], code="DBTOBSB_SUPPORT_PACKAGES_INVALID")
-    expected_dependencies = tuple(f"{name}=={packages[name]}" for name in _DEPENDENCY_ORDER)
+    expected_dependencies = (
+        *_COLLECTOR_ENVIRONMENT_DEPENDENCIES[:3],
+        *tuple(f"{name}=={version}" for name, version in sorted(packages.items())),
+    )
     if (
         _string_sequence(spec.get("dependencies"), code="DBTOBSB_BUNDLE_DBT_DEPENDENCY_DRIFT")
         != expected_dependencies
     ):
         _fail("DBTOBSB_BUNDLE_DBT_DEPENDENCY_DRIFT")
-
-    if not isinstance(project_directory, str):
-        _fail("DBTOBSB_BUNDLE_PROJECT_DIRECTORY_DRIFT")
-    _validate_demo_sources(bundle_path=path, project_directory=project_directory)
-    if (
-        assess_dbt_configuration(snapshot=fixed_demo_configuration_snapshot()).state
-        is not DbtConfigurationState.READY
-    ):
-        _fail("DBTOBSB_BUNDLE_FIXED_DEMO_SNAPSHOT_INVALID")
 
 
 def main() -> None:

@@ -158,7 +158,7 @@ _PACKAGE_VERSIONS = {
     "dbt-protos": "1.0.541",
     "dbt-spark": "1.10.3",
 }
-_EXPECTED_CANONICAL_SHA256 = "ed061a89e5012cf076e17af60d86a4728799639168e818107df2287a0979c640"
+_EXPECTED_CANONICAL_SHA256 = "2cd0c431d9df992f85cc4bd596518d38fd3f4840571e165e152e442f8d5606b0"
 
 
 def _mapping(value: Any, *, name: str, keys: set[str]) -> dict[str, Any]:
@@ -379,10 +379,11 @@ def parse_support_manifest(raw: bytes) -> SupportManifest:
         "dbt_node_health",
         "dbt_collection_health",
         "dbtobsb_raw",
+        "dbtobsb_stage",
     ]:
         raise ValueError("DBTOBSB_SUPPORT_MANIFEST_CUSTOMER_STATE_INVALID")
     grants = customer_state["direct_grants"]
-    if not isinstance(grants, list) or len(grants) != 13:
+    if not isinstance(grants, list) or len(grants) != 17:
         raise ValueError("DBTOBSB_SUPPORT_MANIFEST_GRANTS_INVALID")
     if any(
         not isinstance(item, dict)

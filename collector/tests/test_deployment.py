@@ -61,6 +61,8 @@ def _policy(*, selector: str = "weather_release"):
                 http_path="/sql/1.0/warehouses/0123456789abcdef",
                 catalog="analytics",
                 schema="weather_prod",
+                artifact_catalog="observability",
+                artifact_schema="dbtobsb",
             ),
         )
     )

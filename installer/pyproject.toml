@@ -5,7 +5,7 @@ description = "Attended local installer utilities for dbtobsb"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "cryptography==49.0.0",
-    "databricks-sdk==0.120.0",
+    "databricks-sdk==0.117.0",
     "dbt-adapters==1.24.5",
     "dbt-common==1.37.5",
     "dbt-core==1.11.12",
