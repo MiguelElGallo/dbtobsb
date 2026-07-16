@@ -125,16 +125,16 @@
             "const": "run_results"
           },
           "field": {
-            "const": "args.which"
+            "const": "args.command_and_selector"
           },
           "impact": {
-            "const": "The result artifact is not evidence from the supported primary dbt build command."
+            "const": "The result artifact is not evidence from the exact supported named-selector build."
           },
           "next_action": {
             "const": "Run the approved named-selector dbt build and collect that run_results.json."
           },
           "observed_category": {
-            "const": "not_build"
+            "const": "not_approved_named_selector_build"
           }
         },
         "required": [
@@ -893,16 +893,16 @@
             "const": "run_results"
           },
           "field": {
-            "const": "elapsed_time_or_results.execution_time"
+            "const": "metadata.generated_at_or_elapsed_time_or_results.execution_time"
           },
           "impact": {
-            "const": "The artifact contains a timing value that cannot represent elapsed execution time."
+            "const": "The artifact contains a timestamp or duration that cannot be stored as execution time."
           },
           "next_action": {
             "const": "Collect a fresh unmodified run_results.json from the pinned dbt build."
           },
           "observed_category": {
-            "const": "negative_or_non_finite"
+            "const": "invalid_timestamp_or_duration"
           }
         },
         "required": [

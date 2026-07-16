@@ -1,0 +1,6 @@
+selectors:
+  - name: observability_demo
+    description: Fixed synthetic weather graph used by the private engineering preview.
+    definition:
+      method: path
+      value: "*"

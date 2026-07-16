@@ -6,8 +6,11 @@ import json
 import math
 from collections import Counter
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 from uuid import UUID
+
+from jsonschema.exceptions import ValidationError
 
 from dbtobsb_capture.contracts import (
     ArtifactPairIssue,
@@ -31,6 +34,7 @@ from dbtobsb_capture.schemas import (
 SUPPORTED_DBT_VERSION = "1.11.12"
 SUPPORTED_ADAPTER_TYPE = "databricks"
 SUPPORTED_COMMAND = "build"
+SUPPORTED_SELECTOR = "observability_demo"
 SUPPORTED_MANIFEST_SCHEMA = "https://schemas.getdbt.com/dbt/manifest/v12.json"
 SUPPORTED_RUN_RESULTS_SCHEMA = "https://schemas.getdbt.com/dbt/run-results/v6.json"
 MAX_PRIMARY_ARTIFACT_BYTES = 128 * 1024 * 1024
@@ -53,6 +57,16 @@ _UNSUPPORTED_RESULT_COLLECTIONS = (
 _RUN_STATUSES = frozenset(RUN_STATUSES)
 _TEST_STATUSES = frozenset(TEST_STATUSES)
 _ISSUE_RANK = {code: rank for rank, code in enumerate(ISSUE_PRECEDENCE)}
+_DATABRICKS_FUNCTION_MACRO_ID = "macro.dbt.materialization_function_default"
+_DATABRICKS_FUNCTION_LANGUAGES = ["sql", "python", "javascript"]
+_SUPPORTED_LANGUAGES_SCHEMA_PATH = (
+    "properties",
+    "macros",
+    "additionalProperties",
+    "properties",
+    "supported_languages",
+    "anyOf",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -174,9 +188,9 @@ _ISSUES: dict[str, _IssueTemplate] = {
     ),
     "DBT_COMMAND_UNSUPPORTED": _IssueTemplate(
         "run_results",
-        "args.which",
-        "not_build",
-        "The result artifact is not evidence from the supported primary dbt build command.",
+        "args.command_and_selector",
+        "not_approved_named_selector_build",
+        "The result artifact is not evidence from the exact supported named-selector build.",
         "Run the approved named-selector dbt build and collect that run_results.json.",
     ),
     "DBT_EMPTY_EXECUTION": _IssueTemplate(
@@ -237,9 +251,9 @@ _ISSUES: dict[str, _IssueTemplate] = {
     ),
     "DBT_TIMING_INVALID": _IssueTemplate(
         "run_results",
-        "elapsed_time_or_results.execution_time",
-        "negative_or_non_finite",
-        "The artifact contains a timing value that cannot represent elapsed execution time.",
+        "metadata.generated_at_or_elapsed_time_or_results.execution_time",
+        "invalid_timestamp_or_duration",
+        "The artifact contains a timestamp or duration that cannot be stored as execution time.",
         "Collect a fresh unmodified run_results.json from the pinned dbt build.",
     ),
     "DBT_FAILURE_COUNT_INVALID": _IssueTemplate(
@@ -328,6 +342,23 @@ def _parse_json(raw: bytes, *, component: str) -> tuple[dict[str, Any] | None, s
     return value, None
 
 
+def _is_qualified_databricks_manifest_exception(error: ValidationError) -> bool:
+    """Accept the one reviewed dbt-databricks 1.12.2 manifest-v12 schema mismatch."""
+    return (
+        error.validator == "anyOf"
+        and tuple(error.absolute_path)
+        == ("macros", _DATABRICKS_FUNCTION_MACRO_ID, "supported_languages")
+        and tuple(error.absolute_schema_path) == _SUPPORTED_LANGUAGES_SCHEMA_PATH
+        and error.instance == _DATABRICKS_FUNCTION_LANGUAGES
+    )
+
+
+def _manifest_schema_is_accepted(document: dict[str, Any]) -> bool:
+    """Apply the same strict manifest schema contract for pair and partial capture."""
+    errors = validator_for(MANIFEST_SCHEMA_NAME).iter_errors(document)
+    return all(_is_qualified_databricks_manifest_exception(error) for error in errors)
+
+
 def _uuid(value: Any) -> UUID | None:
     if not isinstance(value, str):
         return None
@@ -389,6 +420,16 @@ def _is_nonnegative_finite_number(value: Any) -> bool:
     )
 
 
+def _is_offset_timestamp(value: Any) -> bool:
+    if not isinstance(value, str) or "T" not in value:
+        return False
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return parsed.tzinfo is not None and parsed.utcoffset() is not None
+
+
 def _invalid(codes: list[str]) -> ArtifactPairReport:
     unique_codes = tuple(sorted(dict.fromkeys(codes), key=_ISSUE_RANK.__getitem__)[:MAX_ISSUES])
     return ArtifactPairReport(
@@ -436,8 +477,7 @@ def inspect_artifact_pair(*, manifest: bytes, run_results: bytes) -> ArtifactPai
 
     schema_codes: list[str] = []
     try:
-        manifest_errors = iter(validator_for(MANIFEST_SCHEMA_NAME).iter_errors(manifest_document))
-        if next(manifest_errors, None) is not None:
+        if not _manifest_schema_is_accepted(manifest_document):
             schema_codes.append("DBT_MANIFEST_SCHEMA_INVALID")
     except RecursionError:
         schema_codes.append("DBT_MANIFEST_JSON_NESTING_LIMIT_EXCEEDED")
@@ -477,12 +517,23 @@ def inspect_artifact_pair(*, manifest: bytes, run_results: bytes) -> ArtifactPai
 
     if manifest_metadata.get("adapter_type") != SUPPORTED_ADAPTER_TYPE:
         codes.append("DBT_ADAPTER_TYPE_UNSUPPORTED")
-    if run_args.get("which") != SUPPORTED_COMMAND:
+    if (
+        run_args.get("which") != SUPPORTED_COMMAND
+        or run_args.get("selector") != SUPPORTED_SELECTOR
+        or run_args.get("select") != []
+        or run_args.get("exclude") != []
+        or run_args.get("indirect_selection") != "eager"
+        or run_args.get("full_refresh") is not None
+    ):
         codes.append("DBT_COMMAND_UNSUPPORTED")
     if not results:
         codes.append("DBT_EMPTY_EXECUTION")
 
-    if not _is_nonnegative_finite_number(run_document.get("elapsed_time")):
+    if (
+        not _is_offset_timestamp(manifest_metadata.get("generated_at"))
+        or not _is_offset_timestamp(run_metadata.get("generated_at"))
+        or not _is_nonnegative_finite_number(run_document.get("elapsed_time"))
+    ):
         codes.append("DBT_TIMING_INVALID")
 
     result_ids = [result.get("unique_id") for result in results if isinstance(result, dict)]

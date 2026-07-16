@@ -1,6 +1,6 @@
 # Python API
 
-P1.1 exposes one deterministic function and immutable report types from `dbtobsb_capture`. For installation and a guided first result, use [Inspect an artifact pair](../tutorials/inspect-an-artifact-pair.md#4-use-the-python-api).
+`dbtobsb_capture` exposes one stable P1.1 inspection API plus collector-facing P2 alpha APIs. For installation and a guided first result, use [Inspect an artifact pair](../tutorials/inspect-an-artifact-pair.md#4-use-the-python-api).
 
 <a id="run-a-first-inspection"></a>
 
@@ -67,6 +67,20 @@ PAIR_VALID
 <!-- END: inspect-valid-fixture-output -->
 
 The example reads files before calling the API. The API itself never opens a caller path.
+
+## P2 alpha collector APIs
+
+These exports support the SQL-first collector. They are public Python names in `0.2.0a3`, but their compatibility is alpha and may change before the production product contract.
+
+| Export | Purpose |
+| --- | --- |
+| `inspect_dbt_output_archive(*, archive: bytes) -> ArchiveCapture` | Inspect one bounded native Databricks tar.gz archive without extracting it. |
+| `unavailable_archive_capture(*, issue_code: str) -> ArchiveCapture` | Construct a safe unavailable result from one static issue code. |
+| `inspect_and_project_artifact_pair(*, manifest: bytes, run_results: bytes) -> ArtifactPairInspection` | Run the strict pair validator and return the allowlisted restricted projection only for `PAIR_VALID`. |
+| `ArchiveCapture`, `CaptureState` | Archive-level hashes, sizes, state, pair report, and optional projection. Raw bytes are not retained. |
+| `ArtifactPairInspection`, `ArtifactPairProjection`, `InvocationProjection`, `NodeResultProjection` | Restricted collector projections. They can contain dbt resource identifiers and are not ordinary UI/report types. |
+
+The stable P1.1 report contract below remains `dbtobsb.artifact-pair-report.v1`. The alpha projection types are not added to that JSON report.
 
 ## Public types
 

@@ -1,7 +1,7 @@
 {
   "artifact_sha256": {
     "manifest": "14d1b3c6f54831fcc004bfad548578c0b955e03f41db786bba7f484391be419c",
-    "run_results": "5c73625525e88efbc6a302f2c2cab9f9ef1c0e8083c7a383290a5dc329a70691"
+    "run_results": "c422a0ec626546db22fbb000f098ee211dabeb8d0a4b6449aa0a0b42439f3a2e"
   },
   "canary_categories": [
     "compiled_sql",

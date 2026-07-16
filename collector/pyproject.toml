@@ -1,0 +1,50 @@
+[project]
+name = "dbtobsb-collector"
+version = "0.2.0a14"
+description = "Customer-local Databricks collector for dbt Core task evidence"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "databricks-sdk==0.120.0",
+    "dbtobsb-capture==0.2.0a3",
+]
+
+[build-system]
+requires = ["hatchling==1.28.0"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+bootstrap = "dbtobsb_collector.entrypoints:bootstrap"
+collect = "dbtobsb_collector.entrypoints:collect"
+dbtobsb-collector = "dbtobsb_collector.entrypoints:main"
+
+[dependency-groups]
+dev = [
+    "pytest==9.0.3",
+    "ruff==0.15.21",
+    "ty==0.0.58",
+]
+
+[tool.uv.sources]
+dbtobsb-capture = { path = "../capture" }
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers -q"
+testpaths = ["tests"]
+pythonpath = ["../capture/src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ty.environment]
+python-version = "3.12"
+extra-paths = ["../capture/src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dbtobsb_collector"]
