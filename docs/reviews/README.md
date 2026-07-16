@@ -2,6 +2,23 @@
 
 This directory preserves immutable findings and re-review verdicts for each independently deliverable part. The latest reports below are authoritative for their named slice; earlier numbered reports remain as the audit trail and are not rewritten to hide failed passes.
 
+## P2 native Databricks collector
+
+| Review lens | Latest report | Verdict |
+| --- | --- | --- |
+| Databricks platform/security | [databricks.md](p2-native-collector/databricks.md) | `PASS` |
+| dbt Core/artifact contract | [dbt-core.md](p2-native-collector/dbt-core.md) | `PASS` |
+| Product usability/onboarding | [usability.md](p2-native-collector/usability.md) | `PASS` |
+| Diataxis information architecture | [documentation-ia.md](p2-native-collector/documentation-ia.md) | `PASS` |
+| FastAPI-style writing | [documentation-style.md](p2-native-collector/documentation-style.md) | `PASS` |
+| Security/compliance documentation | [documentation-security.md](p2-native-collector/documentation-security.md) | `PASS` |
+| Documentation usability/accessibility | [documentation-usability.md](p2-native-collector/documentation-usability.md) | `PASS` |
+
+The [P2 review index](p2-native-collector/README.md) identifies the frozen
+64-file authoring set. The [final resolution](p2-native-collector/resolution.md)
+binds these reports to the intended release tag and requires that tag to point
+to the merged commit containing the records.
+
 ## P1.1 local artifact-pair inspector
 
 | Review lens | Latest report | Verdict |

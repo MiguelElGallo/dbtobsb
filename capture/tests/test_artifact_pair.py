@@ -52,6 +52,7 @@ EXPOSURE_ID = "exposure.dbtobsb_capture_fixture.fixture_dashboard"
 FUNCTION_ID = "function.dbtobsb_capture_fixture.fixture_double"
 SOURCE_ID = "source.dbtobsb_capture_fixture.fixture_source.fixture_table"
 MACRO_ID = "macro.dbtobsb_capture_fixture.fixture_macro"
+DBT_FUNCTION_MACRO_ID = "macro.dbt.materialization_function_default"
 METRIC_ID = "metric.dbtobsb_capture_fixture.fixture_row_count"
 SEMANTIC_MODEL_ID = "semantic_model.dbtobsb_capture_fixture.fixture_semantic"
 CANARY_PREFIX = "CANARY_"
@@ -108,6 +109,46 @@ def test_golden_valid_reports_match_reviewed_snapshots(fixture: str) -> None:
     assert report.state is PairState.VALID
     assert report.to_dict() == _json(fixture, "expected-report.json")
     Draft202012Validator(json.loads(REPORT_SCHEMA.read_bytes())).validate(report.to_dict())
+
+
+def _manifest_with_databricks_function_languages(languages: list[str]) -> dict[str, Any]:
+    manifest = _json("valid_success", "manifest.json")
+    macro = manifest["macros"].pop(MACRO_ID)
+    macro["unique_id"] = DBT_FUNCTION_MACRO_ID
+    macro["package_name"] = "dbt"
+    macro["name"] = "materialization_function_default"
+    macro["supported_languages"] = languages
+    manifest["macros"][DBT_FUNCTION_MACRO_ID] = macro
+    return manifest
+
+
+def test_qualified_databricks_javascript_macro_schema_mismatch_is_accepted() -> None:
+    state, report = _inspect_documents(
+        _manifest_with_databricks_function_languages(["sql", "python", "javascript"]),
+        _json("valid_success", "run_results.json"),
+    )
+
+    assert state == "PAIR_VALID"
+    assert report["issues"] == []
+
+
+@pytest.mark.parametrize(
+    ("macro_id", "languages"),
+    [
+        (MACRO_ID, ["sql", "python", "javascript"]),
+        (DBT_FUNCTION_MACRO_ID, ["sql", "python", "javascript", "rust"]),
+    ],
+)
+def test_javascript_schema_exception_is_exact(macro_id: str, languages: list[str]) -> None:
+    manifest = _manifest_with_databricks_function_languages(languages)
+    if macro_id == MACRO_ID:
+        macro = manifest["macros"].pop(DBT_FUNCTION_MACRO_ID)
+        macro["unique_id"] = MACRO_ID
+        manifest["macros"][MACRO_ID] = macro
+    state, report = _inspect_documents(manifest, _json("valid_success", "run_results.json"))
+
+    assert state == "PAIR_INVALID"
+    assert _primary_code(report) == "DBT_MANIFEST_SCHEMA_INVALID"
 
 
 def test_dbt_failure_is_valid_evidence_but_not_relabelled_success() -> None:
@@ -318,6 +359,14 @@ def test_schema_failures_stop_before_semantic_interpretation() -> None:
         (
             lambda manifest, run: run["args"].update(which="run"),
             "DBT_COMMAND_UNSUPPORTED",
+        ),
+        (
+            lambda manifest, run: run["args"].update(selector="another_selector"),
+            "DBT_COMMAND_UNSUPPORTED",
+        ),
+        (
+            lambda manifest, run: run["metadata"].update(generated_at="not-a-timestamp"),
+            "DBT_TIMING_INVALID",
         ),
         (
             lambda manifest, run: run.update(results=[]),

@@ -214,7 +214,15 @@ def _run_results(*, status: str, invocation_id: str) -> dict[str, Any]:
             }
         ],
         "elapsed_time": 0.25,
-        "args": {"which": "build", "vars": {"private": CANARIES["vars"]}},
+        "args": {
+            "which": "build",
+            "selector": "observability_demo",
+            "select": [],
+            "exclude": [],
+            "indirect_selection": "eager",
+            "full_refresh": None,
+            "vars": {"private": CANARIES["vars"]},
+        },
     }
 
 

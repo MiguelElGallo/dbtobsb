@@ -150,7 +150,8 @@ databricks bundle validate -t "$BUNDLE_TARGET" -p "$PROFILE" -o json >/dev/null
 # The deployed declaration is stopped by default, but cleanup starts before deployment
 # so a remote drift or partial response cannot silently leave compute active.
 may_need_stop=1
-databricks bundle deploy -t "$BUNDLE_TARGET" -p "$PROFILE" --auto-approve
+databricks bundle deploy -t "$BUNDLE_TARGET" -p "$PROFILE" \
+  --select "apps.$APP_RESOURCE_KEY" --auto-approve
 deployed_json="$(app_json)"
 deployed_state="$(jq -er '.compute_status.state' <<<"$deployed_json")"
 deployed_compute_size="$(jq -er '.compute_size' <<<"$deployed_json")"
