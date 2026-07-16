@@ -1,0 +1,25 @@
+name: dbtobsb_demo
+version: 0.1.0
+config-version: 2
+
+require-dbt-version: "=1.11.12"
+profile: dbtobsb_demo
+
+model-paths:
+  - models
+seed-paths:
+  - seeds
+test-paths:
+  - tests
+
+clean-targets:
+  - target
+  - logs
+
+models:
+  dbtobsb_demo:
+    +materialized: view
+
+seeds:
+  dbtobsb_demo:
+    +quote_columns: false

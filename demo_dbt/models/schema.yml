@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: stg_weather
+    description: Typed synthetic weather observations for the release proof.
+    columns:
+      - name: city
+        data_tests:
+          - not_null
+      - name: observed_date
+        data_tests:
+          - not_null
+  - name: daily_weather_summary
+    description: Daily synthetic weather aggregates across observed cities.
+    columns:
+      - name: observed_date
+        data_tests:
+          - unique
+          - not_null
+  - name: weather_alerts
+    description: Synthetic weather state labels for a second model topic.
+    columns:
+      - name: weather_state
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [heavy_rain, warm, normal]

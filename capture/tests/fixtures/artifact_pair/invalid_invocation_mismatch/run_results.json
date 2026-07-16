@@ -1,5 +1,10 @@
 {
   "args": {
+    "exclude": [],
+    "full_refresh": null,
+    "indirect_selection": "eager",
+    "select": [],
+    "selector": "observability_demo",
     "vars": {
       "private": "CANARY_VARS_PRIVATE_VALUE"
     },
