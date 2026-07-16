@@ -1,8 +1,23 @@
-# Operate the SQL-first preview
+# Operate dbtobsb
 
-This documentation is for the maintainer-operated private engineering preview. It uses Azure Databricks, Unity Catalog, serverless Jobs, one existing SQL warehouse for dbt, and dbt Core. No external telemetry platform receives evidence.
+dbtobsb uses Azure Databricks, Unity Catalog, serverless Jobs, SQL warehouses, and dbt Core. No
+external telemetry platform receives evidence.
 
-The preview is for personal/test workspaces and synthetic data. It is not a production, regulated, Marketplace, or separation-of-duties claim.
+## v1 release-candidate recovery
+
+These procedures describe the stopped-by-default v1 candidate with distinct observed and collector
+service principals, attended installation, bounded collection reconciliation, and a read-only App.
+They are not a released or production-qualified claim until the installer, reviews, and live Azure
+qualification are complete. Databricks Marketplace is out of scope.
+
+- [Reconcile missing dbt evidence](how-to/reconcile-collection.md)
+- [Reconcile an installation](how-to/reconcile-installation.md)
+
+## v0.2 personal/test preview
+
+The remaining tutorial and reference pages describe the older maintainer-operated SQL-first
+engineering preview with synthetic data. It is not a production, regulated, Marketplace, or
+separation-of-duties claim.
 
 ## Learn by doing
 

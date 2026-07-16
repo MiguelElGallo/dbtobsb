@@ -22,3 +22,6 @@ logs/
 .env.*
 !.env.example
 .user.yml
+collector/src/dbtobsb_collector/_generated/deployment-binding-v1.json
+.dbtobsb/
+.dbtobsb-app-bindings.generated.yml

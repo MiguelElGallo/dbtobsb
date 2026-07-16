@@ -1,0 +1,915 @@
+{
+  "contract_version": "dbtobsb.runtime-trust.semantic-golden-v1",
+  "domain_count": 12,
+  "domains": [
+    {
+      "name": "deployment-set",
+      "domain": "dbtobsb.runtime-trust.deployment-set.v1",
+      "data": {
+        "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "app_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "deployments": [
+          {
+            "deployment_id": "0123456789abcdef0123456789abcdef",
+            "status": "SUCCEEDED",
+            "mode": "SNAPSHOT",
+            "source_digest": "7777777777777777777777777777777777777777777777777777777777777777",
+            "artifact_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+            "configuration_digest": "9999999999999999999999999999999999999999999999999999999999999999"
+          }
+        ]
+      },
+      "canonical": "{\"data\":{\"account_digest\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"app_digest\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"deployments\":[{\"artifact_digest\":\"8888888888888888888888888888888888888888888888888888888888888888\",\"configuration_digest\":\"9999999999999999999999999999999999999999999999999999999999999999\",\"deployment_id\":\"0123456789abcdef0123456789abcdef\",\"mode\":\"SNAPSHOT\",\"source_digest\":\"7777777777777777777777777777777777777777777777777777777777777777\",\"status\":\"SUCCEEDED\"}],\"workspace_digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"domain\":\"dbtobsb.runtime-trust.deployment-set.v1\"}",
+      "sha256": "3356b41c2dbb6e1c9eae424d13158e976feb1c064afdfbd7325f99fa03efba64"
+    },
+    {
+      "name": "component-observation",
+      "domain": "dbtobsb.runtime-trust.component-observation.v1",
+      "data": {
+        "component_key": "BASE_OBSERVABILITY",
+        "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "runtime_resource_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "runtime_principal_digest": "3333333333333333333333333333333333333333333333333333333333333333",
+        "binding_digest": "4444444444444444444444444444444444444444444444444444444444444444",
+        "dml_allowlist_digest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "authority_digest": "6666666666666666666666666666666666666666666666666666666666666666"
+      },
+      "canonical": "{\"data\":{\"authority_digest\":\"6666666666666666666666666666666666666666666666666666666666666666\",\"binding_digest\":\"4444444444444444444444444444444444444444444444444444444444444444\",\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"dml_allowlist_digest\":\"5555555555555555555555555555555555555555555555555555555555555555\",\"runtime_principal_digest\":\"3333333333333333333333333333333333333333333333333333333333333333\",\"runtime_resource_digest\":\"2222222222222222222222222222222222222222222222222222222222222222\"},\"domain\":\"dbtobsb.runtime-trust.component-observation.v1\"}",
+      "sha256": "2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29"
+    },
+    {
+      "name": "roster-observation",
+      "domain": "dbtobsb.runtime-trust.roster-observation.v1",
+      "data": {
+        "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "service_principal_set_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+        "expected_roster_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "observed_roster_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "roster_reviewer_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "expected_component_count": "1",
+        "expected_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "observed_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+            "observation_digest": "2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29"
+          }
+        ]
+      },
+      "canonical": "{\"data\":{\"account_digest\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"expected_component_count\":\"1\",\"expected_components\":[{\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\"}],\"expected_roster_digest\":\"9999999999999999999999999999999999999999999999999999999999999999\",\"observed_components\":[{\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"observation_digest\":\"2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29\"}],\"observed_roster_digest\":\"9999999999999999999999999999999999999999999999999999999999999999\",\"roster_reviewer_fingerprint\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"service_principal_set_digest\":\"8888888888888888888888888888888888888888888888888888888888888888\",\"workspace_digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"domain\":\"dbtobsb.runtime-trust.roster-observation.v1\"}",
+      "sha256": "8d020d37dac399a37c445b3a76619bdab8a5e049e5ba07e555bebb0c7c3560d5"
+    },
+    {
+      "name": "stable-graph",
+      "domain": "dbtobsb.runtime-trust.stable-graph.v1",
+      "data": {
+        "installation_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "manifest_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "app_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "deployment_id": "0123456789abcdef0123456789abcdef",
+        "deployment_mode": "SNAPSHOT",
+        "deployment_set_after_digest": "3356b41c2dbb6e1c9eae424d13158e976feb1c064afdfbd7325f99fa03efba64",
+        "direct_plan_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "direct_lineage_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "direct_state_serial": "9223372036854775807",
+        "resource_selection_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "source_digest": "7777777777777777777777777777777777777777777777777777777777777777",
+        "build_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "artifact_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+        "configuration_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "app_resource_digest": "3333333333333333333333333333333333333333333333333333333333333333",
+        "acl_digest": "4444444444444444444444444444444444444444444444444444444444444444",
+        "job_run_as_digest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "uc_grant_digest": "6666666666666666666666666666666666666666666666666666666666666666",
+        "group_root_digest": "7777777777777777777777777777777777777777777777777777777777777777",
+        "service_principal_set_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+        "expected_roster_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "observed_roster_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "expected_component_count": "1",
+        "expected_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "observed_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+            "observation_digest": "2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29"
+          }
+        ]
+      },
+      "canonical": "{\"data\":{\"account_digest\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"acl_digest\":\"4444444444444444444444444444444444444444444444444444444444444444\",\"app_digest\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"app_resource_digest\":\"3333333333333333333333333333333333333333333333333333333333333333\",\"artifact_digest\":\"8888888888888888888888888888888888888888888888888888888888888888\",\"build_digest\":\"2222222222222222222222222222222222222222222222222222222222222222\",\"configuration_digest\":\"9999999999999999999999999999999999999999999999999999999999999999\",\"deployment_id\":\"0123456789abcdef0123456789abcdef\",\"deployment_mode\":\"SNAPSHOT\",\"deployment_set_after_digest\":\"3356b41c2dbb6e1c9eae424d13158e976feb1c064afdfbd7325f99fa03efba64\",\"direct_lineage_digest\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"direct_plan_digest\":\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"direct_state_serial\":\"9223372036854775807\",\"expected_component_count\":\"1\",\"expected_components\":[{\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\"}],\"expected_roster_digest\":\"9999999999999999999999999999999999999999999999999999999999999999\",\"group_root_digest\":\"7777777777777777777777777777777777777777777777777777777777777777\",\"installation_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"job_run_as_digest\":\"5555555555555555555555555555555555555555555555555555555555555555\",\"manifest_digest\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"observed_components\":[{\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"observation_digest\":\"2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29\"}],\"observed_roster_digest\":\"9999999999999999999999999999999999999999999999999999999999999999\",\"resource_selection_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"service_principal_set_digest\":\"8888888888888888888888888888888888888888888888888888888888888888\",\"source_digest\":\"7777777777777777777777777777777777777777777777777777777777777777\",\"uc_grant_digest\":\"6666666666666666666666666666666666666666666666666666666666666666\",\"workspace_digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"domain\":\"dbtobsb.runtime-trust.stable-graph.v1\"}",
+      "sha256": "98f2721802d195869895462146a6dad0c7f012887cb5c3e884867567096ab273"
+    },
+    {
+      "name": "machine-observation",
+      "domain": "dbtobsb.runtime-trust.machine-observation.v1",
+      "data": {
+        "phase": "POST_START",
+        "installation_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "manifest_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "deployment_id": "0123456789abcdef0123456789abcdef",
+        "deployment_mode": "SNAPSHOT",
+        "deployment_set_after_digest": "3356b41c2dbb6e1c9eae424d13158e976feb1c064afdfbd7325f99fa03efba64",
+        "stable_graph_digest": "98f2721802d195869895462146a6dad0c7f012887cb5c3e884867567096ab273",
+        "lifecycle_state": "ACTIVE",
+        "active_deployment_id": "0123456789abcdef0123456789abcdef",
+        "pending_deployment_count": "0",
+        "machine_observer_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "canonical": "{\"data\":{\"account_digest\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"active_deployment_id\":\"0123456789abcdef0123456789abcdef\",\"deployment_id\":\"0123456789abcdef0123456789abcdef\",\"deployment_mode\":\"SNAPSHOT\",\"deployment_set_after_digest\":\"3356b41c2dbb6e1c9eae424d13158e976feb1c064afdfbd7325f99fa03efba64\",\"installation_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"lifecycle_state\":\"ACTIVE\",\"machine_observer_fingerprint\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"manifest_digest\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"pending_deployment_count\":\"0\",\"phase\":\"POST_START\",\"stable_graph_digest\":\"98f2721802d195869895462146a6dad0c7f012887cb5c3e884867567096ab273\",\"workspace_digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"domain\":\"dbtobsb.runtime-trust.machine-observation.v1\"}",
+      "sha256": "a74965c9075d62b77de4b979701f07c487a2fc06882ed47855aa529c732856f8"
+    },
+    {
+      "name": "event-id",
+      "domain": "dbtobsb.runtime-trust.event-id.v1",
+      "data": {
+        "contract_version": "dbtobsb.runtime-trust.v1",
+        "installation_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "generation": "1",
+        "operation": "SNAPSHOT_ACCEPTED",
+        "predecessor_event_id": "200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0"
+      },
+      "canonical": "{\"data\":{\"contract_version\":\"dbtobsb.runtime-trust.v1\",\"generation\":\"1\",\"installation_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"SNAPSHOT_ACCEPTED\",\"predecessor_event_id\":\"200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0\"},\"domain\":\"dbtobsb.runtime-trust.event-id.v1\"}",
+      "sha256": "73825cb48859120dc8429a094e242d0c347e3f0aae0c1e7e4cd2239d5772564a"
+    },
+    {
+      "name": "candidate",
+      "domain": "dbtobsb.runtime-trust.candidate-digest.v1",
+      "data": {
+        "event_id": "200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0",
+        "predecessor_event_id": "47ac1e70b2f7dbd953514b349cdd3608f3358c9d47f57df76d3c15f3ea3970b9",
+        "installation_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "manifest_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "deployment_id": "0123456789abcdef0123456789abcdef",
+        "deployment_mode": "SNAPSHOT",
+        "deployment_set_before_digest": "1fe8c2342793b3dfa27431d2667296a0f4f1129d6ef4c452f77646624de26704",
+        "deployment_set_after_digest": "3356b41c2dbb6e1c9eae424d13158e976feb1c064afdfbd7325f99fa03efba64",
+        "new_deployment_count": "1",
+        "stable_graph_digest": "98f2721802d195869895462146a6dad0c7f012887cb5c3e884867567096ab273",
+        "pre_start_machine_observation_digest": "0f228e74952c7256ed5afdfa07c360ac60222440427d9201f56f3597a5ebbed9",
+        "roster_observation_digest": "8d020d37dac399a37c445b3a76619bdab8a5e049e5ba07e555bebb0c7c3560d5",
+        "roster_anchor_event_id": "200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0",
+        "roster_anchor_digest": "8d020d37dac399a37c445b3a76619bdab8a5e049e5ba07e555bebb0c7c3560d5",
+        "machine_observer_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "roster_reviewer_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "expected_component_count": "1",
+        "expected_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "observed_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+            "observation_digest": "2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29"
+          }
+        ]
+      },
+      "canonical": "{\"data\":{\"account_digest\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"deployment_id\":\"0123456789abcdef0123456789abcdef\",\"deployment_mode\":\"SNAPSHOT\",\"deployment_set_after_digest\":\"3356b41c2dbb6e1c9eae424d13158e976feb1c064afdfbd7325f99fa03efba64\",\"deployment_set_before_digest\":\"1fe8c2342793b3dfa27431d2667296a0f4f1129d6ef4c452f77646624de26704\",\"event_id\":\"200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0\",\"expected_component_count\":\"1\",\"expected_components\":[{\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\"}],\"installation_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"machine_observer_fingerprint\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"manifest_digest\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"new_deployment_count\":\"1\",\"observed_components\":[{\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"observation_digest\":\"2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29\"}],\"pre_start_machine_observation_digest\":\"0f228e74952c7256ed5afdfa07c360ac60222440427d9201f56f3597a5ebbed9\",\"predecessor_event_id\":\"47ac1e70b2f7dbd953514b349cdd3608f3358c9d47f57df76d3c15f3ea3970b9\",\"roster_anchor_digest\":\"8d020d37dac399a37c445b3a76619bdab8a5e049e5ba07e555bebb0c7c3560d5\",\"roster_anchor_event_id\":\"200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0\",\"roster_observation_digest\":\"8d020d37dac399a37c445b3a76619bdab8a5e049e5ba07e555bebb0c7c3560d5\",\"roster_reviewer_fingerprint\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"stable_graph_digest\":\"98f2721802d195869895462146a6dad0c7f012887cb5c3e884867567096ab273\",\"workspace_digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"domain\":\"dbtobsb.runtime-trust.candidate-digest.v1\"}",
+      "sha256": "3fba0a1efea06b04e969a28c7c90135d422c820021c97c04b44656e2e3cc0116"
+    },
+    {
+      "name": "acceptance",
+      "domain": "dbtobsb.runtime-trust.acceptance-digest.v1",
+      "data": {
+        "event_id": "73825cb48859120dc8429a094e242d0c347e3f0aae0c1e7e4cd2239d5772564a",
+        "candidate_event_id": "200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0",
+        "candidate_digest": "3fba0a1efea06b04e969a28c7c90135d422c820021c97c04b44656e2e3cc0116",
+        "installation_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "manifest_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "deployment_id": "0123456789abcdef0123456789abcdef",
+        "deployment_mode": "SNAPSHOT",
+        "deployment_set_before_digest": "1fe8c2342793b3dfa27431d2667296a0f4f1129d6ef4c452f77646624de26704",
+        "deployment_set_after_digest": "3356b41c2dbb6e1c9eae424d13158e976feb1c064afdfbd7325f99fa03efba64",
+        "new_deployment_count": "1",
+        "stable_graph_digest": "98f2721802d195869895462146a6dad0c7f012887cb5c3e884867567096ab273",
+        "pre_start_machine_observation_digest": "0f228e74952c7256ed5afdfa07c360ac60222440427d9201f56f3597a5ebbed9",
+        "post_start_machine_observation_digest": "a74965c9075d62b77de4b979701f07c487a2fc06882ed47855aa529c732856f8",
+        "candidate_statement_evaluated_at": "2026-07-16T10:00:00.123456Z",
+        "roster_statement_evaluated_at": "2026-07-16T10:00:00.123456Z",
+        "roster_anchor_event_id": "200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0",
+        "roster_anchor_digest": "8d020d37dac399a37c445b3a76619bdab8a5e049e5ba07e555bebb0c7c3560d5",
+        "machine_observer_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "roster_reviewer_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "expected_component_count": "1",
+        "expected_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "observed_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+            "observation_digest": "2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29"
+          }
+        ]
+      },
+      "canonical": "{\"data\":{\"account_digest\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"candidate_digest\":\"3fba0a1efea06b04e969a28c7c90135d422c820021c97c04b44656e2e3cc0116\",\"candidate_event_id\":\"200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0\",\"candidate_statement_evaluated_at\":\"2026-07-16T10:00:00.123456Z\",\"deployment_id\":\"0123456789abcdef0123456789abcdef\",\"deployment_mode\":\"SNAPSHOT\",\"deployment_set_after_digest\":\"3356b41c2dbb6e1c9eae424d13158e976feb1c064afdfbd7325f99fa03efba64\",\"deployment_set_before_digest\":\"1fe8c2342793b3dfa27431d2667296a0f4f1129d6ef4c452f77646624de26704\",\"event_id\":\"73825cb48859120dc8429a094e242d0c347e3f0aae0c1e7e4cd2239d5772564a\",\"expected_component_count\":\"1\",\"expected_components\":[{\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\"}],\"installation_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"machine_observer_fingerprint\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"manifest_digest\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"new_deployment_count\":\"1\",\"observed_components\":[{\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"observation_digest\":\"2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29\"}],\"post_start_machine_observation_digest\":\"a74965c9075d62b77de4b979701f07c487a2fc06882ed47855aa529c732856f8\",\"pre_start_machine_observation_digest\":\"0f228e74952c7256ed5afdfa07c360ac60222440427d9201f56f3597a5ebbed9\",\"roster_anchor_digest\":\"8d020d37dac399a37c445b3a76619bdab8a5e049e5ba07e555bebb0c7c3560d5\",\"roster_anchor_event_id\":\"200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0\",\"roster_reviewer_fingerprint\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"roster_statement_evaluated_at\":\"2026-07-16T10:00:00.123456Z\",\"stable_graph_digest\":\"98f2721802d195869895462146a6dad0c7f012887cb5c3e884867567096ab273\",\"workspace_digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"domain\":\"dbtobsb.runtime-trust.acceptance-digest.v1\"}",
+      "sha256": "3279c0e6fd3b9914374f51eb9cee6c49aee117132db267220cfa89e93802696f"
+    },
+    {
+      "name": "payload",
+      "domain": "dbtobsb.runtime-trust.payload-digest.v1",
+      "data": {
+        "event_id": "73825cb48859120dc8429a094e242d0c347e3f0aae0c1e7e4cd2239d5772564a",
+        "installation_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "generation": "1",
+        "operation": "SNAPSHOT_ACCEPTED",
+        "state": "SNAPSHOT_ACCEPTED",
+        "reason": "POST_START_MATCHED",
+        "contract_version": "dbtobsb.runtime-trust.v1",
+        "manifest_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "predecessor_event_id": "200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0",
+        "prior_generation": null,
+        "prior_snapshot_id": null,
+        "candidate_event_id": "200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0",
+        "target_event_id": null,
+        "target_snapshot_id": null,
+        "expected_component_count": "1",
+        "expected_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "observed_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+            "observation_digest": "2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29"
+          }
+        ],
+        "app_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "deployment_id": "0123456789abcdef0123456789abcdef",
+        "deployment_mode": "SNAPSHOT",
+        "deployment_set_before_digest": "1fe8c2342793b3dfa27431d2667296a0f4f1129d6ef4c452f77646624de26704",
+        "deployment_set_after_digest": "3356b41c2dbb6e1c9eae424d13158e976feb1c064afdfbd7325f99fa03efba64",
+        "new_deployment_count": "1",
+        "direct_plan_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "direct_lineage_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "direct_state_serial": "9223372036854775807",
+        "resource_selection_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "source_digest": "7777777777777777777777777777777777777777777777777777777777777777",
+        "build_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "artifact_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+        "configuration_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "app_resource_digest": "3333333333333333333333333333333333333333333333333333333333333333",
+        "acl_digest": "4444444444444444444444444444444444444444444444444444444444444444",
+        "job_run_as_digest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "uc_grant_digest": "6666666666666666666666666666666666666666666666666666666666666666",
+        "group_root_digest": "7777777777777777777777777777777777777777777777777777777777777777",
+        "service_principal_set_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+        "expected_roster_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "observed_roster_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "stable_graph_digest": "98f2721802d195869895462146a6dad0c7f012887cb5c3e884867567096ab273",
+        "pre_start_machine_observation_digest": "0f228e74952c7256ed5afdfa07c360ac60222440427d9201f56f3597a5ebbed9",
+        "pre_start_lifecycle_state": "STOPPED",
+        "pre_start_active_deployment_id": "0123456789abcdef0123456789abcdef",
+        "pre_start_pending_deployment_count": "0",
+        "post_start_machine_observation_digest": "a74965c9075d62b77de4b979701f07c487a2fc06882ed47855aa529c732856f8",
+        "post_start_lifecycle_state": "ACTIVE",
+        "post_start_active_deployment_id": "0123456789abcdef0123456789abcdef",
+        "post_start_pending_deployment_count": "0",
+        "machine_observer_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "roster_observation_digest": "8d020d37dac399a37c445b3a76619bdab8a5e049e5ba07e555bebb0c7c3560d5",
+        "roster_reviewer_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "roster_anchor_event_id": "200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0",
+        "roster_anchor_digest": "8d020d37dac399a37c445b3a76619bdab8a5e049e5ba07e555bebb0c7c3560d5",
+        "candidate_digest": "3fba0a1efea06b04e969a28c7c90135d422c820021c97c04b44656e2e3cc0116",
+        "acceptance_digest": "3279c0e6fd3b9914374f51eb9cee6c49aee117132db267220cfa89e93802696f"
+      },
+      "canonical": "{\"data\":{\"acceptance_digest\":\"3279c0e6fd3b9914374f51eb9cee6c49aee117132db267220cfa89e93802696f\",\"account_digest\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"acl_digest\":\"4444444444444444444444444444444444444444444444444444444444444444\",\"app_digest\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"app_resource_digest\":\"3333333333333333333333333333333333333333333333333333333333333333\",\"artifact_digest\":\"8888888888888888888888888888888888888888888888888888888888888888\",\"build_digest\":\"2222222222222222222222222222222222222222222222222222222222222222\",\"candidate_digest\":\"3fba0a1efea06b04e969a28c7c90135d422c820021c97c04b44656e2e3cc0116\",\"candidate_event_id\":\"200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0\",\"configuration_digest\":\"9999999999999999999999999999999999999999999999999999999999999999\",\"contract_version\":\"dbtobsb.runtime-trust.v1\",\"deployment_id\":\"0123456789abcdef0123456789abcdef\",\"deployment_mode\":\"SNAPSHOT\",\"deployment_set_after_digest\":\"3356b41c2dbb6e1c9eae424d13158e976feb1c064afdfbd7325f99fa03efba64\",\"deployment_set_before_digest\":\"1fe8c2342793b3dfa27431d2667296a0f4f1129d6ef4c452f77646624de26704\",\"direct_lineage_digest\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"direct_plan_digest\":\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"direct_state_serial\":\"9223372036854775807\",\"event_id\":\"73825cb48859120dc8429a094e242d0c347e3f0aae0c1e7e4cd2239d5772564a\",\"expected_component_count\":\"1\",\"expected_components\":[{\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\"}],\"expected_roster_digest\":\"9999999999999999999999999999999999999999999999999999999999999999\",\"generation\":\"1\",\"group_root_digest\":\"7777777777777777777777777777777777777777777777777777777777777777\",\"installation_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"job_run_as_digest\":\"5555555555555555555555555555555555555555555555555555555555555555\",\"machine_observer_fingerprint\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"manifest_digest\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"new_deployment_count\":\"1\",\"observed_components\":[{\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"observation_digest\":\"2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29\"}],\"observed_roster_digest\":\"9999999999999999999999999999999999999999999999999999999999999999\",\"operation\":\"SNAPSHOT_ACCEPTED\",\"post_start_active_deployment_id\":\"0123456789abcdef0123456789abcdef\",\"post_start_lifecycle_state\":\"ACTIVE\",\"post_start_machine_observation_digest\":\"a74965c9075d62b77de4b979701f07c487a2fc06882ed47855aa529c732856f8\",\"post_start_pending_deployment_count\":\"0\",\"pre_start_active_deployment_id\":\"0123456789abcdef0123456789abcdef\",\"pre_start_lifecycle_state\":\"STOPPED\",\"pre_start_machine_observation_digest\":\"0f228e74952c7256ed5afdfa07c360ac60222440427d9201f56f3597a5ebbed9\",\"pre_start_pending_deployment_count\":\"0\",\"predecessor_event_id\":\"200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0\",\"prior_generation\":null,\"prior_snapshot_id\":null,\"reason\":\"POST_START_MATCHED\",\"resource_selection_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"roster_anchor_digest\":\"8d020d37dac399a37c445b3a76619bdab8a5e049e5ba07e555bebb0c7c3560d5\",\"roster_anchor_event_id\":\"200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0\",\"roster_observation_digest\":\"8d020d37dac399a37c445b3a76619bdab8a5e049e5ba07e555bebb0c7c3560d5\",\"roster_reviewer_fingerprint\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"service_principal_set_digest\":\"8888888888888888888888888888888888888888888888888888888888888888\",\"source_digest\":\"7777777777777777777777777777777777777777777777777777777777777777\",\"stable_graph_digest\":\"98f2721802d195869895462146a6dad0c7f012887cb5c3e884867567096ab273\",\"state\":\"SNAPSHOT_ACCEPTED\",\"target_event_id\":null,\"target_snapshot_id\":null,\"uc_grant_digest\":\"6666666666666666666666666666666666666666666666666666666666666666\",\"workspace_digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"domain\":\"dbtobsb.runtime-trust.payload-digest.v1\"}",
+      "sha256": "a95cd64b7387192b3932a856fd9a80f13f6e72d4c54b248dc2ad909ac42759dc"
+    },
+    {
+      "name": "snapshot-id",
+      "domain": "dbtobsb.runtime-trust.snapshot-id.v1",
+      "data": {
+        "event_id": "73825cb48859120dc8429a094e242d0c347e3f0aae0c1e7e4cd2239d5772564a",
+        "candidate_event_id": "200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0",
+        "candidate_digest": "3fba0a1efea06b04e969a28c7c90135d422c820021c97c04b44656e2e3cc0116",
+        "acceptance_digest": "3279c0e6fd3b9914374f51eb9cee6c49aee117132db267220cfa89e93802696f",
+        "payload_digest": "a95cd64b7387192b3932a856fd9a80f13f6e72d4c54b248dc2ad909ac42759dc",
+        "installation_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "generation": "1",
+        "deployment_id": "0123456789abcdef0123456789abcdef",
+        "deployment_mode": "SNAPSHOT",
+        "deployment_set_before_digest": "1fe8c2342793b3dfa27431d2667296a0f4f1129d6ef4c452f77646624de26704",
+        "deployment_set_after_digest": "3356b41c2dbb6e1c9eae424d13158e976feb1c064afdfbd7325f99fa03efba64",
+        "new_deployment_count": "1",
+        "stable_graph_digest": "98f2721802d195869895462146a6dad0c7f012887cb5c3e884867567096ab273",
+        "pre_start_machine_observation_digest": "0f228e74952c7256ed5afdfa07c360ac60222440427d9201f56f3597a5ebbed9",
+        "post_start_machine_observation_digest": "a74965c9075d62b77de4b979701f07c487a2fc06882ed47855aa529c732856f8",
+        "candidate_statement_evaluated_at": "2026-07-16T10:00:00.123456Z",
+        "roster_statement_evaluated_at": "2026-07-16T10:00:00.123456Z",
+        "acceptance_statement_evaluated_at": "2026-07-16T10:05:00.654321Z",
+        "roster_anchor_event_id": "200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0",
+        "roster_anchor_digest": "8d020d37dac399a37c445b3a76619bdab8a5e049e5ba07e555bebb0c7c3560d5",
+        "valid_until": "2026-07-17T10:00:00.123456Z",
+        "expected_component_count": "1",
+        "expected_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "observed_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+            "observation_digest": "2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29"
+          }
+        ]
+      },
+      "canonical": "{\"data\":{\"acceptance_digest\":\"3279c0e6fd3b9914374f51eb9cee6c49aee117132db267220cfa89e93802696f\",\"acceptance_statement_evaluated_at\":\"2026-07-16T10:05:00.654321Z\",\"candidate_digest\":\"3fba0a1efea06b04e969a28c7c90135d422c820021c97c04b44656e2e3cc0116\",\"candidate_event_id\":\"200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0\",\"candidate_statement_evaluated_at\":\"2026-07-16T10:00:00.123456Z\",\"deployment_id\":\"0123456789abcdef0123456789abcdef\",\"deployment_mode\":\"SNAPSHOT\",\"deployment_set_after_digest\":\"3356b41c2dbb6e1c9eae424d13158e976feb1c064afdfbd7325f99fa03efba64\",\"deployment_set_before_digest\":\"1fe8c2342793b3dfa27431d2667296a0f4f1129d6ef4c452f77646624de26704\",\"event_id\":\"73825cb48859120dc8429a094e242d0c347e3f0aae0c1e7e4cd2239d5772564a\",\"expected_component_count\":\"1\",\"expected_components\":[{\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\"}],\"generation\":\"1\",\"installation_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"new_deployment_count\":\"1\",\"observed_components\":[{\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"observation_digest\":\"2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29\"}],\"payload_digest\":\"a95cd64b7387192b3932a856fd9a80f13f6e72d4c54b248dc2ad909ac42759dc\",\"post_start_machine_observation_digest\":\"a74965c9075d62b77de4b979701f07c487a2fc06882ed47855aa529c732856f8\",\"pre_start_machine_observation_digest\":\"0f228e74952c7256ed5afdfa07c360ac60222440427d9201f56f3597a5ebbed9\",\"roster_anchor_digest\":\"8d020d37dac399a37c445b3a76619bdab8a5e049e5ba07e555bebb0c7c3560d5\",\"roster_anchor_event_id\":\"200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0\",\"roster_statement_evaluated_at\":\"2026-07-16T10:00:00.123456Z\",\"stable_graph_digest\":\"98f2721802d195869895462146a6dad0c7f012887cb5c3e884867567096ab273\",\"valid_until\":\"2026-07-17T10:00:00.123456Z\"},\"domain\":\"dbtobsb.runtime-trust.snapshot-id.v1\"}",
+      "sha256": "17895d20d2c5175153a875fc410bb4e0c95a43532e18a0071164489bfd3acba0"
+    },
+    {
+      "name": "server-record",
+      "domain": "dbtobsb.runtime-trust.server-record.v1",
+      "data": {
+        "event_id": "73825cb48859120dc8429a094e242d0c347e3f0aae0c1e7e4cd2239d5772564a",
+        "payload_digest": "a95cd64b7387192b3932a856fd9a80f13f6e72d4c54b248dc2ad909ac42759dc",
+        "snapshot_id": "17895d20d2c5175153a875fc410bb4e0c95a43532e18a0071164489bfd3acba0",
+        "statement_evaluated_at": "2026-07-16T10:05:00.654321Z",
+        "valid_until": "2026-07-17T10:00:00.123456Z"
+      },
+      "canonical": "{\"data\":{\"event_id\":\"73825cb48859120dc8429a094e242d0c347e3f0aae0c1e7e4cd2239d5772564a\",\"payload_digest\":\"a95cd64b7387192b3932a856fd9a80f13f6e72d4c54b248dc2ad909ac42759dc\",\"snapshot_id\":\"17895d20d2c5175153a875fc410bb4e0c95a43532e18a0071164489bfd3acba0\",\"statement_evaluated_at\":\"2026-07-16T10:05:00.654321Z\",\"valid_until\":\"2026-07-17T10:00:00.123456Z\"},\"domain\":\"dbtobsb.runtime-trust.server-record.v1\"}",
+      "sha256": "47b0df9bd8451ccdd2bf230cce999267f321dbc6c08929cc194ef8ccffcc4e18"
+    },
+    {
+      "name": "ledger-row-id",
+      "domain": "dbtobsb.runtime-trust.ledger-row-id.v1",
+      "data": {
+        "event_id": "73825cb48859120dc8429a094e242d0c347e3f0aae0c1e7e4cd2239d5772564a",
+        "server_record_digest": "47b0df9bd8451ccdd2bf230cce999267f321dbc6c08929cc194ef8ccffcc4e18"
+      },
+      "canonical": "{\"data\":{\"event_id\":\"73825cb48859120dc8429a094e242d0c347e3f0aae0c1e7e4cd2239d5772564a\",\"server_record_digest\":\"47b0df9bd8451ccdd2bf230cce999267f321dbc6c08929cc194ef8ccffcc4e18\"},\"domain\":\"dbtobsb.runtime-trust.ledger-row-id.v1\"}",
+      "sha256": "e7f2dd18bf9e9ec1b9282290e00322994c921d970cb737e1a78e95679b96454c"
+    }
+  ],
+  "decimal_valid": [
+    "0",
+    "1",
+    "2147483647",
+    "9007199254740991",
+    "9007199254740992",
+    "9007199254740993",
+    "9223372036854775807"
+  ],
+  "decimal_invalid": [
+    {
+      "name": "negative",
+      "value": "-1"
+    },
+    {
+      "name": "leading-zero",
+      "value": "01"
+    },
+    {
+      "name": "plus-sign",
+      "value": "+1"
+    },
+    {
+      "name": "fractional",
+      "value": "1.0"
+    },
+    {
+      "name": "exponent",
+      "value": "1e0"
+    },
+    {
+      "name": "empty",
+      "value": ""
+    },
+    {
+      "name": "leading-whitespace",
+      "value": " 1"
+    },
+    {
+      "name": "trailing-whitespace",
+      "value": "1 "
+    },
+    {
+      "name": "unicode-digit",
+      "value": "١"
+    },
+    {
+      "name": "json-number",
+      "value": 1
+    },
+    {
+      "name": "null-required",
+      "value": null
+    },
+    {
+      "name": "overflow",
+      "value": "9223372036854775808"
+    }
+  ],
+  "canonical_invalid": [
+    {
+      "name": "json-number",
+      "value": {
+        "n": 1
+      }
+    },
+    {
+      "name": "json-boolean",
+      "value": {
+        "n": true
+      }
+    },
+    {
+      "name": "unicode-string",
+      "value": {
+        "n": "å"
+      }
+    }
+  ],
+  "timestamp_valid": [
+    "2026-07-16T10:05:00.654321Z",
+    "2000-02-29T23:59:59.000000Z"
+  ],
+  "timestamp_invalid": [
+    {
+      "name": "missing-microseconds",
+      "value": "2026-07-16T10:05:00Z"
+    },
+    {
+      "name": "offset-not-z",
+      "value": "2026-07-16T10:05:00.654321+00:00"
+    },
+    {
+      "name": "invalid-calendar-day",
+      "value": "2026-02-30T10:05:00.654321Z"
+    }
+  ],
+  "semantic_invalid": [
+    {
+      "name": "missing-top-level-field",
+      "category": "missing_field",
+      "domain": "dbtobsb.runtime-trust.deployment-set.v1",
+      "data": {
+        "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "deployments": [
+          {
+            "deployment_id": "0123456789abcdef0123456789abcdef",
+            "status": "SUCCEEDED",
+            "mode": "SNAPSHOT",
+            "source_digest": "7777777777777777777777777777777777777777777777777777777777777777",
+            "artifact_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+            "configuration_digest": "9999999999999999999999999999999999999999999999999999999999999999"
+          }
+        ]
+      }
+    },
+    {
+      "name": "extra-top-level-field",
+      "category": "extra_field",
+      "domain": "dbtobsb.runtime-trust.event-id.v1",
+      "data": {
+        "contract_version": "dbtobsb.runtime-trust.v1",
+        "installation_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "generation": "1",
+        "operation": "SNAPSHOT_ACCEPTED",
+        "predecessor_event_id": "200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0",
+        "unbound_field": "must-reject"
+      }
+    },
+    {
+      "name": "wrong-nested-field",
+      "category": "wrong_nested_field",
+      "domain": "dbtobsb.runtime-trust.roster-observation.v1",
+      "data": {
+        "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "service_principal_set_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+        "expected_roster_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "observed_roster_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "roster_reviewer_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "expected_component_count": "1",
+        "expected_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "observed_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+            "observation": "2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29"
+          }
+        ]
+      }
+    },
+    {
+      "name": "wrong-enum",
+      "category": "wrong_enum",
+      "domain": "dbtobsb.runtime-trust.machine-observation.v1",
+      "data": {
+        "phase": "BETWEEN_STARTS",
+        "installation_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "manifest_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "deployment_id": "0123456789abcdef0123456789abcdef",
+        "deployment_mode": "SNAPSHOT",
+        "deployment_set_after_digest": "3356b41c2dbb6e1c9eae424d13158e976feb1c064afdfbd7325f99fa03efba64",
+        "stable_graph_digest": "98f2721802d195869895462146a6dad0c7f012887cb5c3e884867567096ab273",
+        "lifecycle_state": "ACTIVE",
+        "active_deployment_id": "0123456789abcdef0123456789abcdef",
+        "pending_deployment_count": "0",
+        "machine_observer_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    {
+      "name": "component-array-order",
+      "category": "array_order",
+      "domain": "dbtobsb.runtime-trust.roster-observation.v1",
+      "data": {
+        "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "service_principal_set_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+        "expected_roster_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "observed_roster_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "roster_reviewer_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "expected_component_count": "2",
+        "expected_components": [
+          {
+            "component_key": "SYSTEM_ENRICHMENT",
+            "contract_digest": "2222222222222222222222222222222222222222222222222222222222222222"
+          },
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "observed_components": [
+          {
+            "component_key": "SYSTEM_ENRICHMENT",
+            "contract_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+            "observation_digest": "3333333333333333333333333333333333333333333333333333333333333333"
+          },
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+            "observation_digest": "2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29"
+          }
+        ]
+      }
+    },
+    {
+      "name": "duplicate-component-key",
+      "category": "duplicate",
+      "domain": "dbtobsb.runtime-trust.roster-observation.v1",
+      "data": {
+        "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "service_principal_set_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+        "expected_roster_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "observed_roster_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+        "roster_reviewer_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "expected_component_count": "2",
+        "expected_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111"
+          },
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "observed_components": [
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+            "observation_digest": "2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29"
+          },
+          {
+            "component_key": "BASE_OBSERVABILITY",
+            "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+            "observation_digest": "2f49e88e5d49a2e1d439852b8c898ef5b8f68368d4afbd8352613519f484cf29"
+          }
+        ]
+      }
+    },
+    {
+      "name": "deployment-array-order",
+      "category": "array_order",
+      "domain": "dbtobsb.runtime-trust.deployment-set.v1",
+      "data": {
+        "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "app_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "deployments": [
+          {
+            "deployment_id": "0123456789abcdef0123456789abcdef",
+            "status": "SUCCEEDED",
+            "mode": "SNAPSHOT",
+            "source_digest": "7777777777777777777777777777777777777777777777777777777777777777",
+            "artifact_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+            "configuration_digest": "9999999999999999999999999999999999999999999999999999999999999999"
+          },
+          {
+            "deployment_id": "00000000000000000000000000000000",
+            "status": "SUCCEEDED",
+            "mode": "SNAPSHOT",
+            "source_digest": "7777777777777777777777777777777777777777777777777777777777777777",
+            "artifact_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+            "configuration_digest": "9999999999999999999999999999999999999999999999999999999999999999"
+          }
+        ]
+      }
+    },
+    {
+      "name": "duplicate-deployment-id",
+      "category": "duplicate",
+      "domain": "dbtobsb.runtime-trust.deployment-set.v1",
+      "data": {
+        "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "app_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "deployments": [
+          {
+            "deployment_id": "0123456789abcdef0123456789abcdef",
+            "status": "SUCCEEDED",
+            "mode": "SNAPSHOT",
+            "source_digest": "7777777777777777777777777777777777777777777777777777777777777777",
+            "artifact_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+            "configuration_digest": "9999999999999999999999999999999999999999999999999999999999999999"
+          },
+          {
+            "deployment_id": "0123456789abcdef0123456789abcdef",
+            "status": "SUCCEEDED",
+            "mode": "SNAPSHOT",
+            "source_digest": "7777777777777777777777777777777777777777777777777777777777777777",
+            "artifact_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+            "configuration_digest": "9999999999999999999999999999999999999999999999999999999999999999"
+          }
+        ]
+      }
+    }
+  ],
+  "event_conflicts": [
+    {
+      "name": "same-event-different-payload",
+      "domain": "dbtobsb.runtime-trust.payload-digest.v1",
+      "original": {
+        "event_id": "47ac1e70b2f7dbd953514b349cdd3608f3358c9d47f57df76d3c15f3ea3970b9",
+        "data": {
+          "event_id": "47ac1e70b2f7dbd953514b349cdd3608f3358c9d47f57df76d3c15f3ea3970b9",
+          "installation_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "generation": "1",
+          "operation": "MANIFEST_REGISTERED",
+          "state": "MANIFEST_REGISTERED",
+          "reason": "INSTALL",
+          "contract_version": "dbtobsb.runtime-trust.v1",
+          "manifest_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "predecessor_event_id": null,
+          "prior_generation": null,
+          "prior_snapshot_id": null,
+          "candidate_event_id": null,
+          "target_event_id": null,
+          "target_snapshot_id": null,
+          "expected_component_count": "1",
+          "expected_components": [
+            {
+              "component_key": "BASE_OBSERVABILITY",
+              "contract_digest": "1111111111111111111111111111111111111111111111111111111111111111"
+            }
+          ],
+          "observed_components": null,
+          "app_digest": null,
+          "deployment_id": null,
+          "deployment_mode": null,
+          "deployment_set_before_digest": null,
+          "deployment_set_after_digest": null,
+          "new_deployment_count": null,
+          "direct_plan_digest": null,
+          "direct_lineage_digest": null,
+          "direct_state_serial": null,
+          "resource_selection_digest": null,
+          "source_digest": null,
+          "build_digest": null,
+          "artifact_digest": null,
+          "configuration_digest": null,
+          "app_resource_digest": null,
+          "acl_digest": null,
+          "job_run_as_digest": null,
+          "uc_grant_digest": null,
+          "group_root_digest": null,
+          "service_principal_set_digest": null,
+          "expected_roster_digest": null,
+          "observed_roster_digest": null,
+          "stable_graph_digest": null,
+          "pre_start_machine_observation_digest": null,
+          "pre_start_lifecycle_state": null,
+          "pre_start_active_deployment_id": null,
+          "pre_start_pending_deployment_count": null,
+          "post_start_machine_observation_digest": null,
+          "post_start_lifecycle_state": null,
+          "post_start_active_deployment_id": null,
+          "post_start_pending_deployment_count": null,
+          "machine_observer_fingerprint": null,
+          "roster_observation_digest": null,
+          "roster_reviewer_fingerprint": null,
+          "roster_anchor_event_id": null,
+          "roster_anchor_digest": null,
+          "candidate_digest": null,
+          "acceptance_digest": null
+        },
+        "canonical": "{\"data\":{\"acceptance_digest\":null,\"account_digest\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"acl_digest\":null,\"app_digest\":null,\"app_resource_digest\":null,\"artifact_digest\":null,\"build_digest\":null,\"candidate_digest\":null,\"candidate_event_id\":null,\"configuration_digest\":null,\"contract_version\":\"dbtobsb.runtime-trust.v1\",\"deployment_id\":null,\"deployment_mode\":null,\"deployment_set_after_digest\":null,\"deployment_set_before_digest\":null,\"direct_lineage_digest\":null,\"direct_plan_digest\":null,\"direct_state_serial\":null,\"event_id\":\"47ac1e70b2f7dbd953514b349cdd3608f3358c9d47f57df76d3c15f3ea3970b9\",\"expected_component_count\":\"1\",\"expected_components\":[{\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"1111111111111111111111111111111111111111111111111111111111111111\"}],\"expected_roster_digest\":null,\"generation\":\"1\",\"group_root_digest\":null,\"installation_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"job_run_as_digest\":null,\"machine_observer_fingerprint\":null,\"manifest_digest\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"new_deployment_count\":null,\"observed_components\":null,\"observed_roster_digest\":null,\"operation\":\"MANIFEST_REGISTERED\",\"post_start_active_deployment_id\":null,\"post_start_lifecycle_state\":null,\"post_start_machine_observation_digest\":null,\"post_start_pending_deployment_count\":null,\"pre_start_active_deployment_id\":null,\"pre_start_lifecycle_state\":null,\"pre_start_machine_observation_digest\":null,\"pre_start_pending_deployment_count\":null,\"predecessor_event_id\":null,\"prior_generation\":null,\"prior_snapshot_id\":null,\"reason\":\"INSTALL\",\"resource_selection_digest\":null,\"roster_anchor_digest\":null,\"roster_anchor_event_id\":null,\"roster_observation_digest\":null,\"roster_reviewer_fingerprint\":null,\"service_principal_set_digest\":null,\"source_digest\":null,\"stable_graph_digest\":null,\"state\":\"MANIFEST_REGISTERED\",\"target_event_id\":null,\"target_snapshot_id\":null,\"uc_grant_digest\":null,\"workspace_digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"domain\":\"dbtobsb.runtime-trust.payload-digest.v1\"}",
+        "sha256": "e75990c9ce1073947d9ef4d40750aafbbef03beb01f499b68309101c5bbdf651"
+      },
+      "changed": {
+        "event_id": "47ac1e70b2f7dbd953514b349cdd3608f3358c9d47f57df76d3c15f3ea3970b9",
+        "data": {
+          "event_id": "47ac1e70b2f7dbd953514b349cdd3608f3358c9d47f57df76d3c15f3ea3970b9",
+          "installation_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "workspace_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "account_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "generation": "1",
+          "operation": "MANIFEST_REGISTERED",
+          "state": "MANIFEST_REGISTERED",
+          "reason": "INSTALL",
+          "contract_version": "dbtobsb.runtime-trust.v1",
+          "manifest_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "predecessor_event_id": null,
+          "prior_generation": null,
+          "prior_snapshot_id": null,
+          "candidate_event_id": null,
+          "target_event_id": null,
+          "target_snapshot_id": null,
+          "expected_component_count": "1",
+          "expected_components": [
+            {
+              "component_key": "BASE_OBSERVABILITY",
+              "contract_digest": "2222222222222222222222222222222222222222222222222222222222222222"
+            }
+          ],
+          "observed_components": null,
+          "app_digest": null,
+          "deployment_id": null,
+          "deployment_mode": null,
+          "deployment_set_before_digest": null,
+          "deployment_set_after_digest": null,
+          "new_deployment_count": null,
+          "direct_plan_digest": null,
+          "direct_lineage_digest": null,
+          "direct_state_serial": null,
+          "resource_selection_digest": null,
+          "source_digest": null,
+          "build_digest": null,
+          "artifact_digest": null,
+          "configuration_digest": null,
+          "app_resource_digest": null,
+          "acl_digest": null,
+          "job_run_as_digest": null,
+          "uc_grant_digest": null,
+          "group_root_digest": null,
+          "service_principal_set_digest": null,
+          "expected_roster_digest": null,
+          "observed_roster_digest": null,
+          "stable_graph_digest": null,
+          "pre_start_machine_observation_digest": null,
+          "pre_start_lifecycle_state": null,
+          "pre_start_active_deployment_id": null,
+          "pre_start_pending_deployment_count": null,
+          "post_start_machine_observation_digest": null,
+          "post_start_lifecycle_state": null,
+          "post_start_active_deployment_id": null,
+          "post_start_pending_deployment_count": null,
+          "machine_observer_fingerprint": null,
+          "roster_observation_digest": null,
+          "roster_reviewer_fingerprint": null,
+          "roster_anchor_event_id": null,
+          "roster_anchor_digest": null,
+          "candidate_digest": null,
+          "acceptance_digest": null
+        },
+        "canonical": "{\"data\":{\"acceptance_digest\":null,\"account_digest\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"acl_digest\":null,\"app_digest\":null,\"app_resource_digest\":null,\"artifact_digest\":null,\"build_digest\":null,\"candidate_digest\":null,\"candidate_event_id\":null,\"configuration_digest\":null,\"contract_version\":\"dbtobsb.runtime-trust.v1\",\"deployment_id\":null,\"deployment_mode\":null,\"deployment_set_after_digest\":null,\"deployment_set_before_digest\":null,\"direct_lineage_digest\":null,\"direct_plan_digest\":null,\"direct_state_serial\":null,\"event_id\":\"47ac1e70b2f7dbd953514b349cdd3608f3358c9d47f57df76d3c15f3ea3970b9\",\"expected_component_count\":\"1\",\"expected_components\":[{\"component_key\":\"BASE_OBSERVABILITY\",\"contract_digest\":\"2222222222222222222222222222222222222222222222222222222222222222\"}],\"expected_roster_digest\":null,\"generation\":\"1\",\"group_root_digest\":null,\"installation_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"job_run_as_digest\":null,\"machine_observer_fingerprint\":null,\"manifest_digest\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"new_deployment_count\":null,\"observed_components\":null,\"observed_roster_digest\":null,\"operation\":\"MANIFEST_REGISTERED\",\"post_start_active_deployment_id\":null,\"post_start_lifecycle_state\":null,\"post_start_machine_observation_digest\":null,\"post_start_pending_deployment_count\":null,\"pre_start_active_deployment_id\":null,\"pre_start_lifecycle_state\":null,\"pre_start_machine_observation_digest\":null,\"pre_start_pending_deployment_count\":null,\"predecessor_event_id\":null,\"prior_generation\":null,\"prior_snapshot_id\":null,\"reason\":\"INSTALL\",\"resource_selection_digest\":null,\"roster_anchor_digest\":null,\"roster_anchor_event_id\":null,\"roster_observation_digest\":null,\"roster_reviewer_fingerprint\":null,\"service_principal_set_digest\":null,\"source_digest\":null,\"stable_graph_digest\":null,\"state\":\"MANIFEST_REGISTERED\",\"target_event_id\":null,\"target_snapshot_id\":null,\"uc_grant_digest\":null,\"workspace_digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"domain\":\"dbtobsb.runtime-trust.payload-digest.v1\"}",
+        "sha256": "b4f2cfaca0c27d40f054140e742de85cd7c8b1be66c11d72c89ff8d72c61281c"
+      }
+    }
+  ],
+  "version_separation": [
+    {
+      "name": "event-contract-version-separation",
+      "domain": "dbtobsb.runtime-trust.event-id.v1",
+      "v1": {
+        "data": {
+          "contract_version": "dbtobsb.runtime-trust.v1",
+          "installation_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "generation": "1",
+          "operation": "SNAPSHOT_ACCEPTED",
+          "predecessor_event_id": "200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0"
+        },
+        "canonical": "{\"data\":{\"contract_version\":\"dbtobsb.runtime-trust.v1\",\"generation\":\"1\",\"installation_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"SNAPSHOT_ACCEPTED\",\"predecessor_event_id\":\"200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0\"},\"domain\":\"dbtobsb.runtime-trust.event-id.v1\"}",
+        "sha256": "73825cb48859120dc8429a094e242d0c347e3f0aae0c1e7e4cd2239d5772564a"
+      },
+      "v2": {
+        "data": {
+          "contract_version": "dbtobsb.runtime-trust.v2",
+          "installation_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "generation": "1",
+          "operation": "SNAPSHOT_ACCEPTED",
+          "predecessor_event_id": "200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0"
+        },
+        "canonical": "{\"data\":{\"contract_version\":\"dbtobsb.runtime-trust.v2\",\"generation\":\"1\",\"installation_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"SNAPSHOT_ACCEPTED\",\"predecessor_event_id\":\"200664aff064d47e96a52e4663533571fccbf93ce25312438909ffee7bfe36f0\"},\"domain\":\"dbtobsb.runtime-trust.event-id.v1\"}",
+        "sha256": "6de80e1f693eb4a6f55cbc43a7330c2d2cdf336b504a596a193167ed5b84ccac"
+      }
+    }
+  ],
+  "sql": [
+    {
+      "name": "create-ledger",
+      "kind": "CREATE_LEDGER",
+      "semantic_sha256": "23b97c4748c9b835f9ea749270fd25f2b9de6ccbb0a12f5a17e28d461af602c4",
+      "utf8_size": 2388
+    },
+    {
+      "name": "create-status-view",
+      "kind": "CREATE_STATUS_VIEW",
+      "semantic_sha256": "7ea4d15d6540d42054ab06f6c724a2436e44d25a29e116de9a46650ebdf95931",
+      "utf8_size": 260719
+    },
+    {
+      "name": "append-registration",
+      "kind": "APPEND_EVENT",
+      "semantic_sha256": "1b69b6e41e9ea43068aa29fee28bc7f79874bbd5c6446aa753bbc479617c6b1f",
+      "utf8_size": 23717
+    },
+    {
+      "name": "readback-registration",
+      "kind": "READBACK_EVENT",
+      "semantic_sha256": "237a366fddbf91d36526587172f5a1d2dfa642856658e6833f47fa7ad643e4a7",
+      "utf8_size": 706
+    },
+    {
+      "name": "append-candidate",
+      "kind": "APPEND_EVENT",
+      "semantic_sha256": "fd41c9d56ac0e5627342dbb94bd1af6247485605ec435cd0dec6dd834627870b",
+      "utf8_size": 63417
+    },
+    {
+      "name": "readback-candidate",
+      "kind": "READBACK_EVENT",
+      "semantic_sha256": "3d1337b54d945ff977d2d10fed4434f249aea1777b88726285b6bbec09be6fba",
+      "utf8_size": 706
+    },
+    {
+      "name": "append-acceptance",
+      "kind": "APPEND_EVENT",
+      "semantic_sha256": "b76264d62168a0634419e7c70f9eb1da1dcd6f38bd640740a4681f15c9e7e81a",
+      "utf8_size": 110347
+    },
+    {
+      "name": "readback-acceptance",
+      "kind": "READBACK_EVENT",
+      "semantic_sha256": "ea048ca8e908dba3e7761254352774e3fa05d87ef4cdb23f03205db88cb24192",
+      "utf8_size": 706
+    },
+    {
+      "name": "append-invalidation",
+      "kind": "APPEND_EVENT",
+      "semantic_sha256": "3d1658c019dab87531f76295210b8bf6e6d5456a83fe31790f8c9edf6ae5178f",
+      "utf8_size": 22713
+    },
+    {
+      "name": "readback-invalidation",
+      "kind": "READBACK_EVENT",
+      "semantic_sha256": "1fe7f19c015c8f55954e28fbc71964bbc31d095d2cb3d2009b567db284f94c95",
+      "utf8_size": 706
+    }
+  ]
+}

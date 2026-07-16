@@ -1,0 +1,128 @@
+{
+  "binding": {
+    "collector_environment_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "collector_job_id": 102,
+    "collector_service_principal_name": "collector runtime",
+    "expected_runtime_policy_sha256": "6a7bb95bee4285103bff3e0a904280c1e2537b195a3fdaf578618ba941c37c65",
+    "job_manager_group_name": "dbtobsb job managers",
+    "observed_job_id": 101,
+    "observed_service_principal_name": "observed principal's runtime",
+    "reconciler_job_id": 103,
+    "source_contract_sha256": "832cb9145fa60d05c702d99a244b2dcd83a26a3ac2e5b476ec2fcc45a90c8205",
+    "warehouse_id": "0123456789abcdef",
+    "workspace_id": 7405613481361850
+  },
+  "catalog": "observability",
+  "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+  "operations": [
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_artifact_registry_table_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "d8f45674c55d0829fcd40d3d0f6598bdbda6f55aff204961aafb657f92432163"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_invocations_table_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "7d5e139c0ddc0d67d5898659bfc66fe300bdca91c1f30eb4ce054d7ed26c0aeb"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_node_results_table_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "e450f20a1944facd5ed7a95970506376fc9c8b9ee9d68fcb924279f3d4970e2a"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_raw_volume_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "ebe2871d9cd93ff8a2073a2ecdbbd0c7bdac6042dbeadfe24b7acd90adb6bcc7"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_run_health_view_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "41e4af7509338accaa83a15a3f822a40ab9a6960b72fdac8e7790e51e5aef31b"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_node_health_view_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "7a3744fa56145baabfefa7cf52c11f25db5143ec7067ccbb22171a456ee9e157"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_collection_health_view_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "45d5453b0bde8a611d62880c9681f2aaf199404505f5e8ec120063412bff82a2"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_object_manifest_table_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "001efa13e1ac8364503ae1a9ec6174f3ba308dcc096f496f0251d50233a6a78e"
+    },
+    {
+      "parameters": {
+        "base_observability_contract_sha256": "a60d49900bc4ba6ebffc377a878d1a6f3accd9c4a144a7030dafa878a4818d04",
+        "catalog": "observability",
+        "collector_environment_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "collector_job_id": "102",
+        "collector_service_principal_name": "collector runtime",
+        "evidence_catalog": "observability",
+        "evidence_schema": "dbtobsb",
+        "expected_runtime_policy_sha256": "6a7bb95bee4285103bff3e0a904280c1e2537b195a3fdaf578618ba941c37c65",
+        "installation_id": "deb86bdd38a07e61cb60596f5bb0856b2073137cb11d04d860b2c0f3f28301f9",
+        "job_manager_group_name": "dbtobsb job managers",
+        "manifest_version": "dbtobsb.evidence.v1.0.0-rc.11",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "object_contract_sha256": "1fadee2615aa2ca1bbf4e20d651547ef5c15aa845db2c501de71569b233439f3",
+        "observed_job_id": "101",
+        "observed_service_principal_name": "observed principal's runtime",
+        "reconciler_job_id": "103",
+        "schema": "dbtobsb",
+        "source_contract_sha256": "832cb9145fa60d05c702d99a244b2dcd83a26a3ac2e5b476ec2fcc45a90c8205",
+        "warehouse_id": "0123456789abcdef",
+        "workspace_id": "7405613481361850"
+      },
+      "registry_operation": "bootstrap_insert_object_manifest_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "823cb7dcb28b08066d9050002aff6c440573abbf3af5cf2e7f96a1025343513c"
+    }
+  ],
+  "schema": "dbtobsb",
+  "vector_schema": "dbtobsb.native-bootstrap-registry-vectors.v1"
+}
