@@ -15,6 +15,7 @@ const (
 	bootstrapCreateInvocationsTableV1      = "bootstrap_create_invocations_table_v1"
 	bootstrapCreateNodeResultsTableV1      = "bootstrap_create_node_results_table_v1"
 	bootstrapCreateRawVolumeV1             = "bootstrap_create_raw_volume_v1"
+	bootstrapCreateStageVolumeV1           = "bootstrap_create_stage_volume_v1"
 	bootstrapCreateRunHealthViewV1         = "bootstrap_create_run_health_view_v1"
 	bootstrapCreateNodeHealthViewV1        = "bootstrap_create_node_health_view_v1"
 	bootstrapCreateCollectionHealthViewV1  = "bootstrap_create_collection_health_view_v1"
@@ -22,8 +23,8 @@ const (
 	bootstrapInsertObjectManifestV1        = "bootstrap_insert_object_manifest_v1"
 
 	objectManifestVersion           = "dbtobsb.evidence.v1.0.0-rc.11"
-	objectContractSHA256            = "1fadee2615aa2ca1bbf4e20d651547ef5c15aa845db2c501de71569b233439f3"
-	baseObservabilityContractSHA256 = "a60d49900bc4ba6ebffc377a878d1a6f3accd9c4a144a7030dafa878a4818d04"
+	objectContractSHA256            = "603afcbf9a1b52d926a1aba6f46b74f76f1783dfd7edc66d1ccc9003ba3d7605"
+	baseObservabilityContractSHA256 = "b1c28a474d2fa79f7e881f862a9f02c27a398261a90f723a07a3f5f54e6f02ae"
 )
 
 var regularIdentifierPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,127}$`)
@@ -174,6 +175,8 @@ func renderBootstrapRegisteredStatement(
 		objectRole, objectName, fields = "dbt_node_results", "dbt_node_results", nodeResultFields
 	case bootstrapCreateRawVolumeV1:
 		objectRole, objectName = "raw_volume", "dbtobsb_raw"
+	case bootstrapCreateStageVolumeV1:
+		objectRole, objectName = "artifact_stage", "dbtobsb_stage"
 	case bootstrapCreateRunHealthViewV1:
 		objectRole, objectName = "dbt_run_health", "dbt_run_health"
 		viewQuery = runHealthViewSQL
@@ -199,9 +202,13 @@ func renderBootstrapRegisteredStatement(
 	}
 	qualified := qualifyBootstrap(parameters.Catalog, parameters.Schema, objectName)
 	switch {
-	case operation == bootstrapCreateRawVolumeV1:
+	case operation == bootstrapCreateRawVolumeV1 || operation == bootstrapCreateStageVolumeV1:
+		role := "raw_volume"
+		if operation == bootstrapCreateStageVolumeV1 {
+			role = "artifact_stage"
+		}
 		semanticBasis = "CREATE VOLUME " + qualified + " COMMENT " + sqlLiteral(
-			"dbtobsb|manifest="+objectManifestVersion+"|contract="+objectContractSHA256+"|role=raw_volume",
+			"dbtobsb|manifest="+objectManifestVersion+"|contract="+objectContractSHA256+"|role="+role,
 		)
 	case viewQuery != "":
 		registry := qualifyBootstrap(parameters.Catalog, parameters.Schema, "dbt_artifact_registry")
@@ -370,7 +377,9 @@ const runHealthViewSQL = `SELECT
   i.status_counts_json
 FROM __REGISTRY__ AS r
 LEFT JOIN __INVOCATIONS__ AS i
-  USING (workspace_id, dbt_task_run_id, normalized_digest)
+  ON r.workspace_id = i.workspace_id
+  AND r.dbt_task_run_id = i.dbt_task_run_id
+  AND r.normalized_digest = i.normalized_digest
 WHERE r.collector_state = 'PUBLISHED'`
 
 const nodeHealthViewSQL = `SELECT

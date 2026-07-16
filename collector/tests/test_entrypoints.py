@@ -146,6 +146,61 @@ def test_run_now_override_is_rejected_before_spark_or_unity_catalog_access(
 
 
 @pytest.mark.parametrize(
+    "code",
+    [
+        "DBTOBSB_DEPLOYED_RUNTIME_CONTRACT_UNAVAILABLE",
+        "DBTOBSB_DEPLOYED_RUNTIME_CONTRACT_INVALID",
+    ],
+)
+@pytest.mark.parametrize("runner", ["_run_bootstrap", "_run_collect", "_run_reconcile"])
+def test_deployed_contract_failure_precedes_spark_for_every_runtime_entrypoint(
+    monkeypatch: pytest.MonkeyPatch,
+    runner: str,
+    code: str,
+) -> None:
+    def deny_contract() -> NoReturn:
+        raise RuntimeError(code)
+
+    def forbidden_spark() -> NoReturn:
+        raise AssertionError("Spark and Unity Catalog must remain untouched")
+
+    monkeypatch.setattr(entrypoints, "load_deployed_runtime_contract", deny_contract)
+    monkeypatch.setattr(entrypoints, "_active_spark", forbidden_spark)
+    arguments = {
+        "_run_bootstrap": {
+            "workspace_id": "1",
+            "catalog": "c",
+            "schema": "s",
+            "warehouse_id": "0123456789abcdef",
+            "observed_job_id": "2",
+            "collector_job_id": "3",
+            "reconciler_job_id": "4",
+            "observed_service_principal_name": "observed-sp",
+            "collector_service_principal_name": "collector-sp",
+            "job_manager_group_name": "job-managers",
+            "collector_environment_sha256": "b" * 64,
+        },
+        "_run_collect": {
+            "workspace_id": "1",
+            "observed_job_id": "2",
+            "observed_job_run_id": "3",
+            "dbt_task_run_id": "4",
+            "observed_task_key": "dbt_build",
+            "repair_count": "0",
+            "execution_count": "1",
+        },
+        "_run_reconcile": {
+            "workspace_id": "1",
+            "reconciler_job_id": "2",
+            "reconciliation_run_id": "3",
+        },
+    }[runner]
+
+    with pytest.raises(RuntimeError, match=code):
+        getattr(entrypoints, runner)(**arguments)
+
+
+@pytest.mark.parametrize(
     ("code", "component", "responsible_actor"),
     [
         (
@@ -157,6 +212,16 @@ def test_run_now_override_is_rejected_before_spark_or_unity_catalog_access(
         ("DBTOBSB_CHILD_READBACK_MISMATCH", "evidence publication", "data operator"),
         (
             "DBTOBSB_DEPLOYMENT_BINDING_NOT_FINALIZED",
+            "installed deployment binding",
+            "deployment/seal verifier",
+        ),
+        (
+            "DBTOBSB_DEPLOYED_RUNTIME_CONTRACT_UNAVAILABLE",
+            "installed deployment binding",
+            "deployment/seal verifier",
+        ),
+        (
+            "DBTOBSB_DEPLOYED_RUNTIME_CONTRACT_INVALID",
             "installed deployment binding",
             "deployment/seal verifier",
         ),
@@ -187,7 +252,7 @@ def test_collect_maps_known_runtime_failures_to_one_safe_recovery(
     assert payload["code"] == code
     assert payload["component"] == component
     assert payload["responsible_actor"] == responsible_actor
-    assert payload["action"].startswith(("Run the reviewed ", "Open /operators/"))
+    assert payload["action"].startswith(("Run the documented ", "Open /operators/"))
 
 
 def test_collect_unknown_runtime_exception_text_is_not_disclosed(
@@ -240,22 +305,22 @@ def test_unknown_cli_argument_is_sanitized_without_argv_echo(
         (
             "DBTOBSB_BOOTSTRAP_ACTOR_SCHEMA_OWNER_MISMATCH",
             "schema ownership",
-            "Run the reviewed schema-ownership reconciliation workflow.",
+            "Run the documented schema-ownership reconciliation workflow.",
         ),
         (
             "DBTOBSB_BOOTSTRAP_PARTIAL_INSTALL",
             "partial fresh installation",
-            "Run the reviewed partial-install cleanup workflow.",
+            "Run the documented partial-install cleanup workflow.",
         ),
         (
             "DBTOBSB_BOOTSTRAP_DIRECT_OBJECT_GRANTS_PRESENT",
             "evidence-object grants",
-            "Run the reviewed evidence-object grant reconciliation workflow.",
+            "Run the documented evidence-object grant reconciliation workflow.",
         ),
         (
             "DBTOBSB_BOOTSTRAP_NATIVE_METADATA_UNAVAILABLE",
             "Databricks metadata compatibility",
-            "Run the reviewed bootstrap compatibility reconciliation workflow.",
+            "Run the documented bootstrap compatibility reconciliation workflow.",
         ),
     ],
 )
@@ -315,6 +380,34 @@ def test_unknown_bootstrap_exception_text_is_not_disclosed(
 
 
 @pytest.mark.parametrize(
+    "code",
+    [
+        "DBTOBSB_DEPLOYED_RUNTIME_CONTRACT_UNAVAILABLE",
+        "DBTOBSB_DEPLOYED_RUNTIME_CONTRACT_INVALID",
+        "DBTOBSB_DEPLOYMENT_BINDING_NOT_FINALIZED",
+    ],
+)
+def test_bootstrap_routes_deployed_contract_failures_to_the_seal_verifier(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    code: str,
+) -> None:
+    def deny(**_: str) -> NoReturn:
+        raise RuntimeError(code)
+
+    monkeypatch.setattr(entrypoints, "_run_bootstrap", deny)
+    monkeypatch.setattr(sys, "argv", _bootstrap_argv(catalog="c", schema="s"))
+
+    with pytest.raises(SystemExit):
+        entrypoints.bootstrap()
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["code"] == code
+    assert payload["component"] == "installed deployment binding"
+    assert payload["responsible_actor"] == "deployment/seal verifier"
+
+
+@pytest.mark.parametrize(
     ("raised", "expected_code", "expected_actor"),
     [
         (
@@ -335,6 +428,16 @@ def test_unknown_bootstrap_exception_text_is_not_disclosed(
         (
             RuntimeError("DBTOBSB_DEPLOYMENT_BINDING_NOT_FINALIZED"),
             "DBTOBSB_DEPLOYMENT_BINDING_NOT_FINALIZED",
+            "deployment/seal verifier",
+        ),
+        (
+            RuntimeError("DBTOBSB_DEPLOYED_RUNTIME_CONTRACT_UNAVAILABLE"),
+            "DBTOBSB_DEPLOYED_RUNTIME_CONTRACT_UNAVAILABLE",
+            "deployment/seal verifier",
+        ),
+        (
+            RuntimeError("DBTOBSB_DEPLOYED_RUNTIME_CONTRACT_INVALID"),
+            "DBTOBSB_DEPLOYED_RUNTIME_CONTRACT_INVALID",
             "deployment/seal verifier",
         ),
     ],

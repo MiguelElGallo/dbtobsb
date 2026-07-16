@@ -47,7 +47,18 @@ _POLICY_KEYS = frozenset(
         "task_key",
     }
 )
-_TARGET_KEYS = frozenset({"catalog", "host", "http_path", "name", "schema", "warehouse_id"})
+_TARGET_KEYS = frozenset(
+    {
+        "artifact_catalog",
+        "artifact_schema",
+        "catalog",
+        "host",
+        "http_path",
+        "name",
+        "schema",
+        "warehouse_id",
+    }
+)
 
 
 class DbtRuntimePolicyError(ValueError):
@@ -137,6 +148,8 @@ class DbtRuntimeTarget:
     http_path: str
     catalog: str
     schema: str
+    artifact_catalog: str
+    artifact_schema: str
 
     def __post_init__(self) -> None:
         match = _WAREHOUSE_HTTP_PATH.fullmatch(self.http_path)
@@ -147,8 +160,15 @@ class DbtRuntimeTarget:
             or match.group("warehouse") != self.warehouse_id
             or _REGULAR_IDENTIFIER.fullmatch(self.catalog) is None
             or _REGULAR_IDENTIFIER.fullmatch(self.schema) is None
+            or _REGULAR_IDENTIFIER.fullmatch(self.artifact_catalog) is None
+            or _REGULAR_IDENTIFIER.fullmatch(self.artifact_schema) is None
         ):
             _fail("DBTOBSB_DBT_POLICY_TARGET_INVALID")
+
+    @property
+    def artifact_attempt_root(self) -> str:
+        """Return the fixed customer-local landing root for dbt task output."""
+        return f"/Volumes/{self.artifact_catalog}/{self.artifact_schema}/dbtobsb_stage/incoming"
 
     def __repr__(self) -> str:
         return "DbtRuntimeTarget(<redacted>)"
@@ -271,6 +291,12 @@ def _validate_target(value: object) -> DbtRuntimeTarget:
             http_path=_string(target["http_path"], code="DBTOBSB_DBT_POLICY_TARGET_INVALID"),
             catalog=_string(target["catalog"], code="DBTOBSB_DBT_POLICY_TARGET_INVALID"),
             schema=_string(target["schema"], code="DBTOBSB_DBT_POLICY_TARGET_INVALID"),
+            artifact_catalog=_string(
+                target["artifact_catalog"], code="DBTOBSB_DBT_POLICY_TARGET_INVALID"
+            ),
+            artifact_schema=_string(
+                target["artifact_schema"], code="DBTOBSB_DBT_POLICY_TARGET_INVALID"
+            ),
         )
     except (DbtRuntimePolicyError, TypeError):
         _fail("DBTOBSB_DBT_POLICY_TARGET_INVALID")
@@ -336,10 +362,16 @@ def parse_dbt_runtime_policy(raw: bytes) -> DbtRuntimePolicySnapshot:
         )
     except (TypeError, ValueError):
         _fail("DBTOBSB_DBT_POLICY_SELECTOR_INVALID")
-    commands = tuple(command.shell_command for command in generate_dbt_commands(policy=installed))
+    target = _validate_target(document["target"])
+    commands = tuple(
+        command.shell_command
+        for command in generate_dbt_commands(
+            policy=installed,
+            attempt_root=target.artifact_attempt_root,
+        )
+    )
     if document["commands"] != list(commands):
         _fail("DBTOBSB_DBT_POLICY_COMMANDS_INVALID")
-    target = _validate_target(document["target"])
 
     expected_digest = _digest(
         document["expected_runtime_policy_sha256"],
@@ -384,7 +416,13 @@ def render_dbt_runtime_policy(inputs: DbtRuntimePolicyInputs) -> DbtRuntimePolic
         include_deps=inputs.include_deps,
     )
     document: dict[str, object] = {
-        "commands": [command.shell_command for command in generate_dbt_commands(policy=installed)],
+        "commands": [
+            command.shell_command
+            for command in generate_dbt_commands(
+                policy=installed,
+                attempt_root=inputs.target.artifact_attempt_root,
+            )
+        ],
         "dependency_definition_files": list(inputs.dependency_definition_files),
         "dependency_lock_sha256": inputs.dependency_lock_sha256,
         "domain": _POLICY_DOMAIN,
@@ -400,6 +438,8 @@ def render_dbt_runtime_policy(inputs: DbtRuntimePolicyInputs) -> DbtRuntimePolic
         "source_sha256": dict(inputs.source_sha256),
         "support_contract_sha256": manifest.canonical_sha256,
         "target": {
+            "artifact_catalog": inputs.target.artifact_catalog,
+            "artifact_schema": inputs.target.artifact_schema,
             "catalog": inputs.target.catalog,
             "host": inputs.target.host,
             "http_path": inputs.target.http_path,

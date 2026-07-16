@@ -30,6 +30,7 @@ from dbtobsb_collector.bootstrap import (
     REGISTRY_TABLE,
     RUN_HEALTH_VIEW,
     RUN_VIEW_FIELDS,
+    STAGE_VOLUME_NAME,
     InstallationBinding,
     bootstrap_objects,
 )
@@ -137,6 +138,7 @@ class _Spark:
     session_actor: str | None = None
     relations: dict[str, _Relation] = field(default_factory=dict)
     volume: dict[str, Any] | None = None
+    stage_volume: dict[str, Any] | None = None
     grant_rows: dict[tuple[str, str], list[dict[str, Any]]] = field(default_factory=dict)
     manifest_rows: list[dict[str, str | int]] = field(default_factory=list)
     statements: list[str] = field(default_factory=list)
@@ -193,7 +195,9 @@ class _Spark:
                 ]
             )
         if upper.startswith("SELECT VOLUME_NAME, VOLUME_TYPE"):
-            return _Frame([] if self.volume is None else [self.volume])
+            return _Frame(
+                [volume for volume in (self.volume, self.stage_volume) if volume is not None]
+            )
         if upper.startswith("SELECT\n  MANIFEST_VERSION,"):
             return _Frame(self.manifest_rows)
         if upper.startswith("SHOW GRANTS ON"):
@@ -226,12 +230,16 @@ class _Spark:
             self.schema_name = schema
             comment = re.search(r" COMMENT '([^']+)'$", query)
             assert comment is not None
-            self.volume = {
+            value = {
                 "volume_name": name,
                 "volume_type": "MANAGED",
                 "volume_owner": self.owner,
                 "comment": comment.group(1),
             }
+            if name == STAGE_VOLUME_NAME:
+                self.stage_volume = value
+            else:
+                self.volume = value
             return _Frame([])
         if upper.startswith("INSERT INTO"):
             assert MANIFEST_TABLE in self._identifiers(query)
@@ -297,15 +305,19 @@ def test_fresh_bootstrap_creates_only_fixed_attested_objects() -> None:
     assert result.object_owner == "installer-owner"
     assert len(result.verified_objects) == 7
     assert result.raw_volume.endswith(".`dbtobsb_raw`")
+    assert result.stage_volume.endswith(".`dbtobsb_stage`")
     rendered = "\n".join(spark.statements).upper()
     assert "CREATE SCHEMA" not in rendered
     assert rendered.count("CREATE TABLE ") == 4
     assert rendered.count("CREATE VIEW ") == 3
-    assert rendered.count("CREATE VOLUME ") == 1
+    assert rendered.count("CREATE VOLUME ") == 2
     assert rendered.count("INSERT INTO ") == 1
     assert "IF NOT EXISTS" not in rendered
     assert "CREATE OR REPLACE" not in rendered
-    assert "USING (WORKSPACE_ID, DBT_TASK_RUN_ID, NORMALIZED_DIGEST)" in rendered
+    assert rendered.count("USING (WORKSPACE_ID, DBT_TASK_RUN_ID, NORMALIZED_DIGEST)") == 1
+    assert "ON R.WORKSPACE_ID = I.WORKSPACE_ID" in rendered
+    assert "AND R.DBT_TASK_RUN_ID = I.DBT_TASK_RUN_ID" in rendered
+    assert "AND R.NORMALIZED_DIGEST = I.NORMALIZED_DIGEST" in rendered
     create_statements = [
         statement for statement in spark.statements if statement.startswith("CREATE")
     ]
@@ -433,7 +445,7 @@ def test_wrong_view_definition_is_rejected() -> None:
     spark = _install_exact()
     view = spark.relations[RUN_HEALTH_VIEW]
     assert view.view_text is not None
-    view.view_text = view.view_text.replace(", normalized_digest", "")
+    view.view_text = view.view_text.replace("r.normalized_digest = i.normalized_digest", "TRUE")
 
     _assert_error(spark, "DBTOBSB_BOOTSTRAP_VIEW_DEFINITION_MISMATCH")
 

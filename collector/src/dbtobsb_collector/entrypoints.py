@@ -19,7 +19,6 @@ from dbtobsb_collector.contracts import AttemptContext
 from dbtobsb_collector.custody import VolumeRawArchiveStore
 from dbtobsb_collector.delta import DeltaEvidenceSink
 from dbtobsb_collector.deployment import load_deployed_runtime_contract
-from dbtobsb_collector.download import HttpsArchiveDownloader
 from dbtobsb_collector.jobs import DatabricksJobsEvidenceReader, JobsEvidenceError
 from dbtobsb_collector.reconcile import (
     RECONCILIATION_OPERATOR_CODES,
@@ -28,14 +27,23 @@ from dbtobsb_collector.reconcile import (
     reconcile_installed_policy,
 )
 from dbtobsb_collector.runtime import collect_task_run
+from dbtobsb_collector.volume_archive import DatabricksArtifactDownloader
 
+_DEPLOYED_RUNTIME_CODES = frozenset(
+    {
+        "DBTOBSB_DEPLOYED_RUNTIME_CONTRACT_UNAVAILABLE",
+        "DBTOBSB_DEPLOYED_RUNTIME_CONTRACT_INVALID",
+        "DBTOBSB_DEPLOYMENT_BINDING_NOT_FINALIZED",
+    }
+)
 _BOOTSTRAP_CODES = frozenset(
     {
         "DBTOBSB_BOOTSTRAP_ACTOR_SCHEMA_OWNER_MISMATCH",
+        "DBTOBSB_BOOTSTRAP_DBT_POLICY_BINDING_INVALID",
         "DBTOBSB_BOOTSTRAP_DIRECT_OBJECT_GRANTS_PRESENT",
+        "DBTOBSB_BOOTSTRAP_ENVIRONMENT_BINDING_INVALID",
         "DBTOBSB_BOOTSTRAP_FIXED_OBJECT_NAME_REQUIRED",
         "DBTOBSB_BOOTSTRAP_GRANT_METADATA_INVALID",
-        "DBTOBSB_BOOTSTRAP_DEMO_SCHEMA_BINDING_INVALID",
         "DBTOBSB_BOOTSTRAP_JOB_BINDING_INVALID",
         "DBTOBSB_BOOTSTRAP_PRINCIPAL_BINDING_INVALID",
         "DBTOBSB_BOOTSTRAP_MANIFEST_ROW_MISMATCH",
@@ -47,18 +55,19 @@ _BOOTSTRAP_CODES = frozenset(
         "DBTOBSB_BOOTSTRAP_OBJECT_SCHEMA_MISMATCH",
         "DBTOBSB_BOOTSTRAP_PARTIAL_INSTALL",
         "DBTOBSB_BOOTSTRAP_TARGET_SCHEMA_NOT_FOUND",
+        "DBTOBSB_BOOTSTRAP_UNSUPPORTED_SCHEMA_STATE",
         "DBTOBSB_BOOTSTRAP_VIEW_DEFINITION_MISMATCH",
         "DBTOBSB_BOOTSTRAP_WAREHOUSE_BINDING_INVALID",
         "DBTOBSB_BOOTSTRAP_WORKSPACE_BINDING_INVALID",
     }
 )
 _COLLECTOR_FAILURES = {
-    "DBTOBSB_DEPLOYMENT_BINDING_UNAVAILABLE": (
+    "DBTOBSB_DEPLOYED_RUNTIME_CONTRACT_UNAVAILABLE": (
         "installed deployment binding",
         "deployment/seal verifier",
         "Open /operators/how-to/reconcile-installation/ and restore the packaged binding.",
     ),
-    "DBTOBSB_DEPLOYMENT_BINDING_INVALID": (
+    "DBTOBSB_DEPLOYED_RUNTIME_CONTRACT_INVALID": (
         "installed deployment binding",
         "deployment/seal verifier",
         "Open /operators/how-to/reconcile-installation/ and restore the packaged binding.",
@@ -81,67 +90,67 @@ _COLLECTOR_FAILURES = {
     "DBTOBSB_BOOTSTRAP_MANIFEST_ROW_MISMATCH": (
         "installed deployment seal",
         "deployment/seal verifier",
-        "Run the reviewed deployment-and-seal reconciliation workflow.",
+        "Run the documented deployment-and-seal reconciliation workflow.",
     ),
     "DBT_RAW_ARCHIVE_WRITE_CONFLICT": (
         "raw archive custody",
         "UC volume operator",
-        "Run the reviewed raw-archive custody reconciliation workflow.",
+        "Run the documented raw-archive custody reconciliation workflow.",
     ),
     "DBT_RAW_ARCHIVE_READBACK_FAILED": (
         "raw archive custody",
         "UC volume operator",
-        "Run the reviewed raw-archive custody reconciliation workflow.",
+        "Run the documented raw-archive custody reconciliation workflow.",
     ),
     "DBT_RAW_ARCHIVE_READBACK_MISMATCH": (
         "raw archive custody",
         "UC volume operator",
-        "Run the reviewed raw-archive custody reconciliation workflow.",
+        "Run the documented raw-archive custody reconciliation workflow.",
     ),
     "DBTOBSB_ATTEMPT_ROOT_DUPLICATE": (
         "evidence publication",
         "data operator",
-        "Run the reviewed evidence-publication reconciliation workflow.",
+        "Run the documented evidence-publication reconciliation workflow.",
     ),
     "DBTOBSB_ATTEMPT_ROOT_CONFLICT": (
         "evidence publication",
         "data operator",
-        "Run the reviewed evidence-publication reconciliation workflow.",
+        "Run the documented evidence-publication reconciliation workflow.",
     ),
     "DBTOBSB_ATTEMPT_ROOT_READBACK_MISMATCH": (
         "evidence publication",
         "data operator",
-        "Run the reviewed evidence-publication reconciliation workflow.",
+        "Run the documented evidence-publication reconciliation workflow.",
     ),
     "DBTOBSB_ATTEMPT_ROOT_WRITE_INDETERMINATE": (
         "evidence publication",
         "data operator",
-        "Run the reviewed evidence-publication reconciliation workflow.",
+        "Run the documented evidence-publication reconciliation workflow.",
     ),
     "DBTOBSB_CHILD_READBACK_MISMATCH": (
         "evidence publication",
         "data operator",
-        "Run the reviewed evidence-publication reconciliation workflow.",
+        "Run the documented evidence-publication reconciliation workflow.",
     ),
     "DBTOBSB_PUBLISH_SENTINEL_NOT_COMMITTED": (
         "evidence publication",
         "data operator",
-        "Run the reviewed evidence-publication reconciliation workflow.",
+        "Run the documented evidence-publication reconciliation workflow.",
     ),
     "DBTOBSB_SUPPORT_MANIFEST_DBT_COMMON_VERSION_INVALID": (
         "release compatibility",
         "deployment/seal verifier",
-        "Run the reviewed deployment-and-seal reconciliation workflow.",
+        "Run the documented deployment-and-seal reconciliation workflow.",
     ),
     "DBTOBSB_SUPPORT_MANIFEST_LOG_VERSION_INVALID": (
         "release compatibility",
         "deployment/seal verifier",
-        "Run the reviewed deployment-and-seal reconciliation workflow.",
+        "Run the documented deployment-and-seal reconciliation workflow.",
     ),
     "DBTOBSB_ACCEPTED_TIMESTAMP_INVALID": (
         "artifact timestamp",
         "data operator",
-        "Run the reviewed evidence-publication reconciliation workflow.",
+        "Run the documented evidence-publication reconciliation workflow.",
     ),
 }
 
@@ -157,40 +166,47 @@ class _SafeArgumentParser(argparse.ArgumentParser):
 def bootstrap_operator_diagnostic(error: Exception) -> OperatorDiagnostic:
     """Map bootstrap failures to one safe owner and recovery workflow."""
     observed = str(error)
-    code = observed if observed in _BOOTSTRAP_CODES else "DBTOBSB_BOOTSTRAP_FAILED"
+    code = (
+        observed
+        if observed
+        in _BOOTSTRAP_CODES | _DEPLOYED_RUNTIME_CODES | {"DBTOBSB_DEPLOYMENT_BINDING_INVALID"}
+        else "DBTOBSB_BOOTSTRAP_FAILED"
+    )
     responsible_actor = "UC operator"
     if code == "DBTOBSB_BOOTSTRAP_ACTOR_SCHEMA_OWNER_MISMATCH":
         component = "schema ownership"
-        action = "Run the reviewed schema-ownership reconciliation workflow."
+        action = "Run the documented schema-ownership reconciliation workflow."
     elif code == "DBTOBSB_BOOTSTRAP_TARGET_SCHEMA_NOT_FOUND":
         component = "customer schema prerequisite"
-        action = "Run the reviewed schema-readiness workflow."
+        action = "Run the documented schema-readiness workflow."
     elif code == "DBTOBSB_BOOTSTRAP_PARTIAL_INSTALL":
         component = "partial fresh installation"
-        action = "Run the reviewed partial-install cleanup workflow."
+        action = "Run the documented partial-install cleanup workflow."
     elif code in {
         "DBTOBSB_BOOTSTRAP_DIRECT_OBJECT_GRANTS_PRESENT",
         "DBTOBSB_BOOTSTRAP_GRANT_METADATA_INVALID",
     }:
         component = "evidence-object grants"
-        action = "Run the reviewed evidence-object grant reconciliation workflow."
+        action = "Run the documented evidence-object grant reconciliation workflow."
     elif code == "DBTOBSB_BOOTSTRAP_NATIVE_METADATA_UNAVAILABLE":
         component = "Databricks metadata compatibility"
-        action = "Run the reviewed bootstrap compatibility reconciliation workflow."
+        action = "Run the documented bootstrap compatibility reconciliation workflow."
     elif code in {
-        "DBTOBSB_BOOTSTRAP_DEMO_SCHEMA_BINDING_INVALID",
+        "DBTOBSB_BOOTSTRAP_DBT_POLICY_BINDING_INVALID",
         "DBTOBSB_BOOTSTRAP_JOB_BINDING_INVALID",
         "DBTOBSB_BOOTSTRAP_MANIFEST_ROW_MISMATCH",
         "DBTOBSB_BOOTSTRAP_PRINCIPAL_BINDING_INVALID",
         "DBTOBSB_BOOTSTRAP_WAREHOUSE_BINDING_INVALID",
         "DBTOBSB_BOOTSTRAP_WORKSPACE_BINDING_INVALID",
+        "DBTOBSB_DEPLOYMENT_BINDING_INVALID",
+        *_DEPLOYED_RUNTIME_CODES,
     }:
         component = "installed deployment binding"
         responsible_actor = "deployment/seal verifier"
-        action = "Run the reviewed deployment-and-seal reconciliation workflow."
+        action = "Run the documented deployment-and-seal reconciliation workflow."
     else:
         component = "fresh-install object contract"
-        action = "Run the reviewed evidence-object reconciliation workflow."
+        action = "Run the documented evidence-object reconciliation workflow."
     return OperatorDiagnostic(
         code=code,
         outcome="denied",
@@ -210,7 +226,7 @@ def collector_operator_diagnostic(error: Exception) -> OperatorDiagnostic:
         code = "DBTOBSB_COLLECTOR_FAILED"
         component = "collector runtime"
         responsible_actor = "data operator"
-        action = "Run the reviewed collector-runtime reconciliation workflow."
+        action = "Run the documented collector-runtime reconciliation workflow."
     else:
         code = observed
         component, responsible_actor, action = known
@@ -347,7 +363,7 @@ def _run_collect(
     record = collect_task_run(
         context=context,
         jobs=jobs_reader,
-        downloader=HttpsArchiveDownloader(),
+        downloader=DatabricksArtifactDownloader(),
         raw_store=VolumeRawArchiveStore(
             (
                 f"/Volumes/{deployed_seal.evidence_catalog}/"
@@ -521,9 +537,7 @@ def reconcile() -> None:
     except Exception as error:
         observed = str(error)
         deployment_runtime_codes = {
-            "DBTOBSB_DEPLOYMENT_BINDING_INVALID",
-            "DBTOBSB_DEPLOYMENT_BINDING_NOT_FINALIZED",
-            "DBTOBSB_DEPLOYMENT_BINDING_UNAVAILABLE",
+            *_DEPLOYED_RUNTIME_CODES,
             "DBTOBSB_DELTA_ATTEMPT_BINDING_MISMATCH",
             "DBTOBSB_DELTA_INSTALLATION_BINDING_MISMATCH",
         }

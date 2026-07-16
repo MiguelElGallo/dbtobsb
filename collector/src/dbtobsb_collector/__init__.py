@@ -6,6 +6,7 @@ from dbtobsb_collector.contracts import (
     CollectionRecord,
     ObservedTaskEvidence,
     RetrievalState,
+    VolumeArtifactReference,
 )
 from dbtobsb_collector.runtime import collect_task_run
 
@@ -15,5 +16,6 @@ __all__ = [
     "CollectionRecord",
     "ObservedTaskEvidence",
     "RetrievalState",
+    "VolumeArtifactReference",
     "collect_task_run",
 ]

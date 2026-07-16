@@ -25,3 +25,5 @@ logs/
 collector/src/dbtobsb_collector/_generated/deployment-binding-v1.json
 .dbtobsb/
 .dbtobsb-app-bindings.generated.yml
+.dbtobsb-observed.generated.yml
+dbtobsb_onboarding/

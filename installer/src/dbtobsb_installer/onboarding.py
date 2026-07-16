@@ -55,6 +55,7 @@ _OUTPUT_ROOT = "dbtobsb_onboarding"
 _GENERATED_PROFILE = "profiles.yml"
 _POLICY_FILE = "dbt-policy-v1.json"
 _PATCH_FILE = "dbt-observed-job.generated.yml"
+_ACTIVE_PATCH_FILE = ".dbtobsb-observed.generated.yml"
 _RECEIPT_FILE = "onboarding-receipt.json"
 _SOURCE_CONTRACT_DOMAIN = "dbtobsb.dbt-source-contract.v1"
 _MAX_SOURCE_FILE_BYTES = 128 * 1024 * 1024
@@ -117,6 +118,8 @@ class DbtTargetBinding:
     warehouse_http_path: str
     catalog: str
     schema: str
+    artifact_catalog: str
+    artifact_schema: str
 
     def __init__(
         self,
@@ -126,6 +129,8 @@ class DbtTargetBinding:
         warehouse_http_path: str,
         catalog: str,
         schema: str,
+        artifact_catalog: str,
+        artifact_schema: str,
         _construction_token: object,
     ) -> None:
         if _construction_token is not _TARGET_TOKEN:
@@ -141,6 +146,8 @@ class DbtTargetBinding:
             or match.group("warehouse") != warehouse_id
             or _REGULAR_IDENTIFIER.fullmatch(catalog) is None
             or _REGULAR_IDENTIFIER.fullmatch(schema) is None
+            or _REGULAR_IDENTIFIER.fullmatch(artifact_catalog) is None
+            or _REGULAR_IDENTIFIER.fullmatch(artifact_schema) is None
         ):
             raise DbtOnboardingError("DBTOBSB_ONBOARDING_TARGET_INVALID")
         object.__setattr__(self, "canonical_workspace_hostname", canonical_workspace_hostname)
@@ -148,6 +155,8 @@ class DbtTargetBinding:
         object.__setattr__(self, "warehouse_http_path", warehouse_http_path)
         object.__setattr__(self, "catalog", catalog)
         object.__setattr__(self, "schema", schema)
+        object.__setattr__(self, "artifact_catalog", artifact_catalog)
+        object.__setattr__(self, "artifact_schema", artifact_schema)
 
     def __repr__(self) -> str:
         return "DbtTargetBinding(<redacted>)"
@@ -191,6 +200,8 @@ def target_from_preflight(
     dbt_warehouse_http_path: str,
     catalog: str,
     schema: str,
+    artifact_catalog: str,
+    artifact_schema: str,
 ) -> DbtTargetBinding:
     """Construct a target only from a previously validated named-profile connection."""
 
@@ -215,6 +226,8 @@ def target_from_preflight(
         warehouse_http_path=dbt_warehouse_http_path,
         catalog=catalog,
         schema=schema,
+        artifact_catalog=artifact_catalog,
+        artifact_schema=artifact_schema,
         _construction_token=_TARGET_TOKEN,
     )
 
@@ -452,6 +465,8 @@ def _runtime_policy(
                     http_path=target.warehouse_http_path,
                     catalog=target.catalog,
                     schema=target.schema,
+                    artifact_catalog=target.artifact_catalog,
+                    artifact_schema=target.artifact_schema,
                 ),
             )
         )
@@ -461,8 +476,11 @@ def _runtime_policy(
 
 def _job_patch(policy: DbtRuntimePolicySnapshot) -> bytes:
     manifest = load_support_manifest()
-    commands = list(policy.commands)
     project_directory = policy.project_directory
+    installed_project_directory = "${workspace.file_path}/" + project_directory.removeprefix("./")
+    installed_policy_path = (
+        installed_project_directory.rsplit("/project", maxsplit=1)[0] + "/dbt-policy-v1.json"
+    )
     packages = cast(Mapping[str, str], manifest.dbt["packages"])
     document = {
         "resources": {
@@ -491,11 +509,27 @@ def _job_patch(policy: DbtRuntimePolicySnapshot) -> bytes:
                             "max_retries": 0,
                             "retry_on_timeout": False,
                             "environment_key": "dbt",
-                            "dbt_task": {
-                                "source": "WORKSPACE",
-                                "project_directory": project_directory,
-                                "profiles_directory": project_directory,
-                                "commands": commands,
+                            "python_wheel_task": {
+                                "package_name": "dbtobsb-collector",
+                                "entry_point": "run-dbt",
+                                "parameters": [
+                                    "--workspace_id",
+                                    "{{workspace.id}}",
+                                    "--observed_job_id",
+                                    "{{job.id}}",
+                                    "--observed_job_run_id",
+                                    "{{job.run_id}}",
+                                    "--dbt_task_run_id",
+                                    "{{task.run_id}}",
+                                    "--repair_count",
+                                    "{{job.repair_count}}",
+                                    "--execution_count",
+                                    "{{task.execution_count}}",
+                                    "--project_directory",
+                                    installed_project_directory,
+                                    "--policy_path",
+                                    installed_policy_path,
+                                ],
                             },
                         },
                         {
@@ -525,8 +559,13 @@ def _job_patch(policy: DbtRuntimePolicySnapshot) -> bytes:
                             "spec": {
                                 "client": str(manifest.platform["serverless_environment_client"]),
                                 "dependencies": [
-                                    f"{name}=={version}"
-                                    for name, version in sorted(packages.items())
+                                    "./contracts/dist/${var.contracts_wheel_filename}",
+                                    "./capture/dist/${var.capture_wheel_filename}",
+                                    "./collector/dist/${var.collector_wheel_filename}",
+                                    *[
+                                        f"{name}=={version}"
+                                        for name, version in sorted(packages.items())
+                                    ],
                                 ],
                             },
                         }
@@ -551,6 +590,32 @@ def _write_tree(root: Path, files: Mapping[str, bytes]) -> None:
         target.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
         target.write_bytes(raw)
         os.chmod(target, 0o644)
+
+
+def _write_active_patch(bundle: Path, raw: bytes) -> None:
+    target = bundle / _ACTIVE_PATCH_FILE
+    temporary: Path | None = None
+    try:
+        if bundle.is_symlink() or not bundle.is_dir() or target.is_symlink():
+            raise DbtOnboardingError("DBTOBSB_ONBOARDING_ACTIVE_PATCH_INVALID")
+        descriptor, temporary_name = tempfile.mkstemp(prefix=".observed-job.", dir=bundle)
+        temporary = Path(temporary_name)
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, target)
+        if target.is_symlink() or target.read_bytes() != raw:
+            raise DbtOnboardingError("DBTOBSB_ONBOARDING_ACTIVE_PATCH_READBACK_FAILED")
+    except DbtOnboardingError:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+        raise
+    except OSError:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+        raise DbtOnboardingError("DBTOBSB_ONBOARDING_ACTIVE_PATCH_WRITE_FAILED") from None
 
 
 def _tree_bytes(root: Path) -> dict[str, bytes]:
@@ -622,23 +687,24 @@ def build_onboarding_plan(inputs: OnboardingInputs) -> DbtOnboardingPlan:
         if destination.exists():
             if destination.is_symlink() or _tree_bytes(destination) != expected:
                 raise DbtOnboardingError("DBTOBSB_ONBOARDING_OUTPUT_CONFLICT")
-            return receipt
-        parent = destination.parent
-        parent.mkdir(parents=True, exist_ok=True, mode=0o755)
-        staged = Path(tempfile.mkdtemp(prefix=f".{source_contract_sha256}.", dir=parent))
-        try:
-            _write_tree(staged, expected)
-            if _tree_bytes(staged) != expected:
-                raise DbtOnboardingError("DBTOBSB_ONBOARDING_OUTPUT_READBACK_FAILED")
-            os.replace(staged, destination)
-        finally:
-            shutil.rmtree(staged, ignore_errors=True)
+        else:
+            parent = destination.parent
+            parent.mkdir(parents=True, exist_ok=True, mode=0o755)
+            staged = Path(tempfile.mkdtemp(prefix=f".{source_contract_sha256}.", dir=parent))
+            try:
+                _write_tree(staged, expected)
+                if _tree_bytes(staged) != expected:
+                    raise DbtOnboardingError("DBTOBSB_ONBOARDING_OUTPUT_READBACK_FAILED")
+                os.replace(staged, destination)
+            finally:
+                shutil.rmtree(staged, ignore_errors=True)
     except DbtOnboardingError:
         raise
     except OSError:
         raise DbtOnboardingError("DBTOBSB_ONBOARDING_OUTPUT_WRITE_FAILED") from None
     if _tree_bytes(destination) != expected:
         raise DbtOnboardingError("DBTOBSB_ONBOARDING_OUTPUT_READBACK_FAILED")
+    _write_active_patch(bundle, patch_raw)
     return receipt
 
 
@@ -664,6 +730,8 @@ def _read_target(stream: Any) -> DbtTargetBinding:
     except (AttributeError, OSError, UnicodeError, ValueError, json.JSONDecodeError):
         raise DbtOnboardingError("DBTOBSB_ONBOARDING_TARGET_INPUT_INVALID") from None
     keys = {
+        "artifact_catalog",
+        "artifact_schema",
         "canonical_workspace_hostname",
         "warehouse_id",
         "warehouse_http_path",

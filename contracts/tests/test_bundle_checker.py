@@ -1,4 +1,4 @@
-"""Closed fixed-demo Bundle and source-attestation tests."""
+"""Closed generated-onboarding Bundle and source-attestation tests."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import json
 import runpy
 import shutil
 from collections.abc import Callable
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, cast
 
@@ -25,30 +26,51 @@ BundleContractError = CHECKER["BundleContractError"]
 def _document() -> dict[str, Any]:
     value = yaml.safe_load(BUNDLE.read_text(encoding="utf-8"))
     assert isinstance(value, dict)
+    overlay = yaml.safe_load((ROOT / ".dbtobsb-observed.generated.yml").read_text())
+    value["resources"]["jobs"]["dbtobsb_observed"] = deepcopy(
+        overlay["resources"]["jobs"]["dbtobsb_observed"]
+    )
     return value
 
 
 def _write_bundle(tmp_path: Path, document: dict[str, Any]) -> Path:
-    shutil.copytree(ROOT / "demo_dbt", tmp_path / "demo_dbt")
+    document = deepcopy(document)
+    observed = document["resources"]["jobs"].pop("dbtobsb_observed")
+    shutil.copytree(ROOT / "dbtobsb_onboarding", tmp_path / "dbtobsb_onboarding")
+    (tmp_path / ".dbtobsb-observed.generated.yml").write_text(
+        yaml.safe_dump(
+            {"resources": {"jobs": {"dbtobsb_observed": observed}}},
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
     path = tmp_path / "databricks.yml"
     path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     return path
 
 
-def _demo_job(document: dict[str, Any]) -> dict[str, Any]:
-    return document["resources"]["jobs"]["dbtobsb_demo"]
+def _observed_job(document: dict[str, Any]) -> dict[str, Any]:
+    return document["resources"]["jobs"]["dbtobsb_observed"]
+
+
+def _generated_project(bundle_path: Path, document: dict[str, Any]) -> Path:
+    parameters = _dbt_task(document)["parameters"]
+    relative = parameters[parameters.index("--project_directory") + 1].removeprefix(
+        "${workspace.file_path}/"
+    )
+    return bundle_path / relative
 
 
 def _dbt_wrapper(document: dict[str, Any]) -> dict[str, Any]:
-    return _demo_job(document)["tasks"][0]
+    return _observed_job(document)["tasks"][0]
 
 
 def _dbt_task(document: dict[str, Any]) -> dict[str, Any]:
-    return _dbt_wrapper(document)["dbt_task"]
+    return _dbt_wrapper(document)["python_wheel_task"]
 
 
 def _collector_wrapper(document: dict[str, Any]) -> dict[str, Any]:
-    return _demo_job(document)["tasks"][1]
+    return _observed_job(document)["tasks"][1]
 
 
 def _collector_job(document: dict[str, Any]) -> dict[str, Any]:
@@ -56,10 +78,10 @@ def _collector_job(document: dict[str, Any]) -> dict[str, Any]:
 
 
 def _dbt_environment(document: dict[str, Any]) -> dict[str, Any]:
-    return _demo_job(document)["environments"][0]["spec"]
+    return _observed_job(document)["environments"][0]["spec"]
 
 
-def test_checked_in_bundle_matches_the_complete_fixed_demo_contract() -> None:
+def test_checked_in_bundle_matches_the_generated_onboarding_contract() -> None:
     validate_bundle(BUNDLE)
 
 
@@ -70,7 +92,7 @@ def test_success_diagnostic_limits_acceptance_to_local_unsealed_preview(
 
     print_diagnostic(diagnostic, output_format="human")
     human = capsys.readouterr().out
-    assert "Accepted for the local fixed-demo engineering preview" in human
+    assert "Accepted for the local private release candidate" in human
     assert "Installed deployment integrity is not sealed" in human
     assert human.count("Next action:") == 1
 
@@ -79,9 +101,7 @@ def test_success_diagnostic_limits_acceptance_to_local_unsealed_preview(
     assert payload["outcome"] == "accepted"
     assert payload["code"] == "DBTOBSB_BUNDLE_DBT_CONTRACT_OK"
     assert payload["responsible_actor"] == "deployment/seal verifier"
-    assert payload["action"] == (
-        "Continue only with the reviewed installer deployment-and-seal workflow."
-    )
+    assert payload["action"] == ("Continue with the documented deployment-and-seal workflow.")
 
 
 @pytest.mark.parametrize(
@@ -90,7 +110,7 @@ def test_success_diagnostic_limits_acceptance_to_local_unsealed_preview(
         ("DBTOBSB_BUNDLE_TARGET_INVALID", "deployment target binding"),
         ("DBTOBSB_BUNDLE_DBT_COMMAND_DRIFT", "dbt runtime contract"),
         ("DBTOBSB_BUNDLE_COLLECT_TASK_INVALID", "collector handoff"),
-        ("DBTOBSB_DEMO_SOURCE_HASH_DRIFT", "dbt demo source"),
+        ("DBTOBSB_ONBOARDED_SOURCE_HASH_DRIFT", "onboarded dbt source"),
     ],
 )
 def test_failure_diagnostic_is_actionable_and_contains_no_observed_values(
@@ -140,6 +160,14 @@ def test_include_drift_is_rejected(tmp_path: Path) -> None:
         validate_bundle(_write_bundle(tmp_path, document))
 
 
+def test_generated_onboarding_sync_include_drift_is_rejected(tmp_path: Path) -> None:
+    document = _document()
+    document["sync"]["include"] = ["caller-controlled/**"]
+
+    with pytest.raises(ValueError, match="DBTOBSB_BUNDLE_SYNC_INVALID"):
+        validate_bundle(_write_bundle(tmp_path, document))
+
+
 def test_unknown_root_extension_is_rejected(tmp_path: Path) -> None:
     document = _document()
     document["unknown_future_root"] = ["caller-controlled"]
@@ -165,24 +193,40 @@ def test_additional_target_is_rejected(tmp_path: Path) -> None:
         validate_bundle(_write_bundle(tmp_path, document))
 
 
-def test_fixed_demo_variable_default_drift_is_rejected(tmp_path: Path) -> None:
+def test_fixed_evidence_variable_default_drift_is_rejected(tmp_path: Path) -> None:
     document = _document()
-    document["variables"]["demo_schema"]["default"] = "caller_controlled"
+    document["variables"]["evidence_schema"]["default"] = "caller_controlled"
 
     with pytest.raises(ValueError, match="DBTOBSB_BUNDLE_VARIABLES_INVALID"):
+        validate_bundle(_write_bundle(tmp_path, document))
+
+
+def test_runtime_wheel_filename_default_drift_is_rejected(tmp_path: Path) -> None:
+    document = _document()
+    document["variables"]["collector_wheel_filename"]["default"] = "caller.whl"
+
+    with pytest.raises(ValueError, match="DBTOBSB_BUNDLE_VARIABLES_INVALID"):
+        validate_bundle(_write_bundle(tmp_path, document))
+
+
+def test_runtime_artifact_source_drift_is_rejected(tmp_path: Path) -> None:
+    document = _document()
+    document["artifacts"]["collector_wheel"]["files"][0]["source"] = "./caller.whl"
+
+    with pytest.raises(ValueError, match="DBTOBSB_BUNDLE_ARTIFACTS_INVALID"):
         validate_bundle(_write_bundle(tmp_path, document))
 
 
 @pytest.mark.parametrize(
     ("field", "value", "code"),
     [
-        ("source", "GIT", "DBT_SOURCE_DRIFT"),
-        ("source", None, "DBT_SOURCE_DRIFT"),
-        ("project_directory", "./another_project", "PROJECT_DIRECTORY_DRIFT"),
-        ("commands", ["dbt build"], "DBT_COMMAND_DRIFT"),
-        ("warehouse_id", "caller", "DBT_TARGET_DRIFT"),
-        ("catalog", "caller", "DBT_TARGET_DRIFT"),
-        ("schema", "caller", "DBT_TARGET_DRIFT"),
+        ("package_name", "caller", "DBT_TASK_CONFIGURATION_UNSUPPORTED"),
+        ("entry_point", "collect", "DBT_TASK_CONFIGURATION_UNSUPPORTED"),
+        (
+            "parameters",
+            ["--project_directory", "./another_project"],
+            "DBT_TASK_CONFIGURATION_UNSUPPORTED",
+        ),
     ],
 )
 def test_exact_dbt_task_source_and_target_drift_is_rejected(
@@ -203,16 +247,16 @@ def test_exact_dbt_task_source_and_target_drift_is_rejected(
         ("task", "git_source"),
         ("task", "parameters"),
         ("task", "libraries"),
-        ("dbt_task", "profiles_directory"),
+        ("dbt_task", "warehouse_id"),
         ("dbt_task", "unknown_future_field"),
     ],
 )
-def test_demo_job_and_task_extensions_are_rejected(
+def test_observed_job_and_task_extensions_are_rejected(
     tmp_path: Path, location: str, field: str
 ) -> None:
     document = _document()
     target = {
-        "job": _demo_job(document),
+        "job": _observed_job(document),
         "task": _dbt_wrapper(document),
         "dbt_task": _dbt_task(document),
     }[location]
@@ -278,9 +322,9 @@ def test_collector_job_has_no_overridable_installation_binding(tmp_path: Path, n
         validate_bundle(_write_bundle(tmp_path, document))
 
 
-def test_demo_task_order_and_membership_are_exact(tmp_path: Path) -> None:
+def test_observed_task_order_and_membership_are_exact(tmp_path: Path) -> None:
     document = _document()
-    _demo_job(document)["tasks"].reverse()
+    _observed_job(document)["tasks"].reverse()
 
     with pytest.raises(ValueError, match="DBTOBSB_BUNDLE_DBT_TASK_INVALID"):
         validate_bundle(_write_bundle(tmp_path, document))
@@ -316,12 +360,12 @@ def test_exact_project_profile_and_required_version_are_attested(
     tmp_path: Path, field: str, value: object
 ) -> None:
     bundle_path = _write_bundle(tmp_path, _document())
-    project_path = tmp_path / "demo_dbt" / "dbt_project.yml"
+    project_path = _generated_project(tmp_path, _document()) / "dbt_project.yml"
     project = yaml.safe_load(project_path.read_text(encoding="utf-8"))
     project[field] = value
     project_path.write_text(yaml.safe_dump(project, sort_keys=False), encoding="utf-8")
 
-    with pytest.raises(ValueError, match="DBTOBSB_DEMO_PROJECT_CONFIGURATION_INVALID"):
+    with pytest.raises(ValueError, match="DBTOBSB_ONBOARDED_SOURCE_HASH_DRIFT"):
         validate_bundle(bundle_path)
 
 
@@ -329,24 +373,25 @@ def test_exact_project_profile_and_required_version_are_attested(
     ("path", "value"),
     [
         (("target",), "other"),
-        (("outputs", "demo", "type"), "spark"),
-        (("outputs", "demo", "catalog"), "{{ env_var('CALLER') }}"),
-        (("outputs", "demo", "http_path"), "caller"),
+        (("outputs", "dbtobsb", "type"), "spark"),
+        (("outputs", "dbtobsb", "catalog"), "{{ env_var('CALLER') }}"),
+        (("outputs", "dbtobsb", "http_path"), "caller"),
     ],
 )
 def test_exact_profile_target_adapter_and_env_shape_are_attested(
     tmp_path: Path, path: tuple[str, ...], value: object
 ) -> None:
     bundle_path = _write_bundle(tmp_path, _document())
-    profile_path = tmp_path / "demo_dbt" / "profiles.yml"
+    profile_path = _generated_project(tmp_path, _document()) / "profiles.yml"
     profile = yaml.safe_load(profile_path.read_text(encoding="utf-8"))
-    current = profile["dbtobsb_demo"]
+    profile_name = next(iter(profile))
+    current = profile[profile_name]
     for part in path[:-1]:
         current = current[part]
     current[path[-1]] = value
     profile_path.write_text(yaml.safe_dump(profile, sort_keys=False), encoding="utf-8")
 
-    with pytest.raises(ValueError, match="DBTOBSB_DEMO_PROFILE_CONFIGURATION_INVALID"):
+    with pytest.raises(ValueError, match="DBTOBSB_ONBOARDED_SOURCE_HASH_DRIFT"):
         validate_bundle(bundle_path)
 
 
@@ -362,7 +407,7 @@ def test_exact_selector_definition_is_attested(
     tmp_path: Path, path: tuple[str, ...], value: object
 ) -> None:
     bundle_path = _write_bundle(tmp_path, _document())
-    selector_path = tmp_path / "demo_dbt" / "selectors.yml"
+    selector_path = _generated_project(tmp_path, _document()) / "selectors.yml"
     selectors = yaml.safe_load(selector_path.read_text(encoding="utf-8"))
     current = selectors["selectors"][0]
     for part in path[:-1]:
@@ -370,7 +415,7 @@ def test_exact_selector_definition_is_attested(
     current[path[-1]] = value
     selector_path.write_text(yaml.safe_dump(selectors, sort_keys=False), encoding="utf-8")
 
-    with pytest.raises(ValueError, match="DBTOBSB_DEMO_SELECTORS_CONFIGURATION_INVALID"):
+    with pytest.raises(ValueError, match="DBTOBSB_ONBOARDED_SOURCE_HASH_DRIFT"):
         validate_bundle(bundle_path)
 
 
@@ -385,26 +430,29 @@ def test_exact_selector_definition_is_attested(
         "seeds/weather_observations.csv",
     ],
 )
-def test_reviewer_source_byte_mutation_is_rejected(tmp_path: Path, relative: str) -> None:
-    bundle_path = _write_bundle(tmp_path, _document())
-    source = tmp_path / "demo_dbt" / relative
+def test_onboarded_source_byte_mutation_is_rejected(tmp_path: Path, relative: str) -> None:
+    document = _document()
+    bundle_path = _write_bundle(tmp_path, document)
+    source = _generated_project(tmp_path, document) / relative
     source.write_bytes(source.read_bytes() + b"\n")
 
-    with pytest.raises(ValueError, match="DBTOBSB_DEMO_SOURCE_HASH_DRIFT"):
+    with pytest.raises(ValueError, match="DBTOBSB_ONBOARDED_SOURCE_HASH_DRIFT"):
         validate_bundle(bundle_path)
 
 
-def test_extra_or_missing_demo_source_file_is_rejected(tmp_path: Path) -> None:
-    bundle_path = _write_bundle(tmp_path, _document())
-    macro = tmp_path / "demo_dbt" / "macros" / "caller.sql"
+def test_extra_or_missing_onboarded_source_file_is_rejected(tmp_path: Path) -> None:
+    document = _document()
+    bundle_path = _write_bundle(tmp_path, document)
+    project = _generated_project(tmp_path, document)
+    macro = project / "macros" / "caller.sql"
     macro.parent.mkdir()
     macro.write_text("{% macro caller() %}{% endmacro %}", encoding="utf-8")
 
-    with pytest.raises(ValueError, match="DBTOBSB_DEMO_SOURCE_FILE_SET_DRIFT"):
+    with pytest.raises(ValueError, match="DBTOBSB_ONBOARDED_SOURCE_FILE_SET_DRIFT"):
         validate_bundle(bundle_path)
 
     macro.unlink()
     macro.parent.rmdir()
-    (tmp_path / "demo_dbt" / "models" / "stg_weather.sql").unlink()
-    with pytest.raises(ValueError, match="DBTOBSB_DEMO_SOURCE_FILE_SET_DRIFT"):
+    (project / "models" / "stg_weather.sql").unlink()
+    with pytest.raises(ValueError, match="DBTOBSB_ONBOARDED_SOURCE_FILE_SET_DRIFT"):
         validate_bundle(bundle_path)

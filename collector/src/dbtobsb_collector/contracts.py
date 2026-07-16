@@ -77,6 +77,18 @@ class ArtifactReference:
 
 
 @dataclass(frozen=True, slots=True)
+class VolumeArtifactReference:
+    """Closed customer-local attempt root used to assemble one bounded archive."""
+
+    source_root: str = field(repr=False)
+    archive_root: str = field(repr=False)
+    include_deps: bool
+
+
+type ArtifactSource = ArtifactReference | VolumeArtifactReference
+
+
+@dataclass(frozen=True, slots=True)
 class ObservedTaskEvidence:
     """Allowlisted Jobs facts plus an optional ephemeral artifact reference."""
 
@@ -85,7 +97,7 @@ class ObservedTaskEvidence:
     lakeflow_result_state: str
     attempt_number: int
     logs_truncated: bool | None
-    artifact_reference: ArtifactReference | None
+    artifact_reference: ArtifactSource | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,7 +122,7 @@ class JobsEvidenceReader(Protocol):
 class ArchiveDownloader(Protocol):
     """Consume one ephemeral artifact reference into bounded closed bytes."""
 
-    def download(self, reference: ArtifactReference) -> bytes: ...
+    def download(self, reference: ArtifactSource) -> bytes: ...
 
 
 class RawArchiveStore(Protocol):

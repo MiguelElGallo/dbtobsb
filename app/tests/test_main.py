@@ -11,7 +11,10 @@ from yaml import safe_load
 def test_bundle_keeps_smoke_app_stopped_and_unbound_by_default() -> None:
     repository_root = Path(__file__).resolve().parents[2]
     bundle = safe_load((repository_root / "databricks.yml").read_text(encoding="utf-8"))
-    assert bundle["include"] == [".dbtobsb-app-bindings.generated.yml"]
+    assert bundle["include"] == [
+        ".dbtobsb-observed.generated.yml",
+        ".dbtobsb-app-bindings.generated.yml",
+    ]
     overlay = safe_load(
         (repository_root / ".dbtobsb-app-bindings.generated.yml").read_text(encoding="utf-8")
     )
@@ -30,10 +33,16 @@ def test_bundle_keeps_smoke_app_stopped_and_unbound_by_default() -> None:
 def test_demo_passes_only_correlated_attempt_parameters_to_triggered_collector() -> None:
     repository_root = Path(__file__).resolve().parents[2]
     bundle = safe_load((repository_root / "databricks.yml").read_text(encoding="utf-8"))
-    demo_tasks = bundle["resources"]["jobs"]["dbtobsb_demo"]["tasks"]
+    observed = safe_load(
+        (repository_root / ".dbtobsb-observed.generated.yml").read_text(encoding="utf-8")
+    )
+    demo_tasks = observed["resources"]["jobs"]["dbtobsb_observed"]["tasks"]
+    dbt_task = next(task for task in demo_tasks if task["task_key"] == "dbt_build")
     collector_edge = next(task for task in demo_tasks if task["task_key"] == "collect_dbt_evidence")
     parameters = collector_edge["run_job_task"]["job_parameters"]
 
+    assert dbt_task["python_wheel_task"]["entry_point"] == "run-dbt"
+    assert dbt_task["python_wheel_task"]["package_name"] == "dbtobsb-collector"
     assert set(parameters) == {
         "workspace_id",
         "observed_job_id",

@@ -55,7 +55,7 @@ _EXPECTED_DECLARED_DEPENDENCIES = (
     "./contracts/dist/dbtobsb_contracts-0.3.0b1-py3-none-any.whl",
     "./capture/dist/dbtobsb_capture-0.3.0b1-py3-none-any.whl",
     "./collector/dist/dbtobsb_collector-0.3.0b1-py3-none-any.whl",
-    "databricks-sdk==0.120.0",
+    "databricks-sdk==0.117.0",
 )
 _RESOLVED_WHEEL_PATTERNS = (
     re.compile(
@@ -72,14 +72,14 @@ _RESOLVED_WHEEL_PATTERNS = (
     ),
 )
 _DBT_DEPENDENCIES = (
-    "dbt-core==1.11.12",
-    "dbt-databricks==1.12.2",
-    "dbt-adapters==1.24.5",
-    "dbt-common==1.37.5",
-    "dbt-spark==1.10.3",
-    "dbt-protos==1.0.541",
     "databricks-sdk==0.117.0",
     "databricks-sql-connector==4.3.0",
+    "dbt-adapters==1.24.5",
+    "dbt-common==1.37.5",
+    "dbt-core==1.11.12",
+    "dbt-databricks==1.12.2",
+    "dbt-protos==1.0.541",
+    "dbt-spark==1.10.3",
 )
 _CREDENTIAL_ENVIRONMENT_NAMES = {
     "AZURE_CLIENT_ID",
@@ -390,7 +390,7 @@ def _validated_environment(
         if exact != _EXPECTED_DECLARED_DEPENDENCIES:
             raise RuntimeSealError(code)
         return exact
-    if artifact_root is None or exact[-1] != "databricks-sdk==0.120.0":
+    if artifact_root is None or exact[-1] != "databricks-sdk==0.117.0":
         raise RuntimeSealError(code)
     expected_parent = PurePosixPath(artifact_root)
     for dependency, pattern in zip(exact[:-1], _RESOLVED_WHEEL_PATTERNS, strict=True):
@@ -428,6 +428,11 @@ def _validate_inputs(inputs: RuntimeSealInputs) -> None:
         raise RuntimeSealError("DBTOBSB_RUNTIME_CANDIDATE_IDENTIFIER_INVALID") from None
     if _WAREHOUSE_ID.fullmatch(inputs.warehouse_id) is None:
         raise RuntimeSealError("DBTOBSB_RUNTIME_CANDIDATE_WAREHOUSE_INVALID")
+    if (
+        inputs.dbt_policy.target.artifact_catalog != inputs.evidence_catalog
+        or inputs.dbt_policy.target.artifact_schema != inputs.evidence_schema
+    ):
+        raise RuntimeSealError("DBTOBSB_RUNTIME_CANDIDATE_DBT_POLICY_INVALID")
     principals = (
         inputs.observed_service_principal_name,
         inputs.collector_service_principal_name,
@@ -571,10 +576,14 @@ def _parse_bundle_summary(
     resources = _mapping(root.get("resources"), code=code)
     jobs = _mapping(resources.get("jobs"), code=code)
     workspace_root = workspace.get("root_path")
-    try:
-        workspace_host = _canonical_azure_host(workspace.get("host"))
-    except RuntimeSealError:
-        raise RuntimeSealError(code) from None
+    workspace_host_value = workspace.get("host")
+    if workspace_host_value is None:
+        workspace_host = authenticated_host
+    else:
+        try:
+            workspace_host = _canonical_azure_host(workspace_host_value)
+        except RuntimeSealError:
+            raise RuntimeSealError(code) from None
     expected_suffix = f"/.bundle/dbtobsb/{target}"
     if (
         bundle.get("name") != "dbtobsb"
@@ -755,13 +764,19 @@ def _expected_job_settings(
     project_directory = (
         f"{state.workspace_root}/files/{policy.project_directory.removeprefix('./')}"
     )
+    policy_path = project_directory.rsplit("/project", maxsplit=1)[0] + "/dbt-policy-v1.json"
+    product_wheels = tuple(
+        dependency for dependency in resolved_dependencies if dependency.endswith(".whl")
+    )
     expected = _common_settings(
         name="dbtobsb-observed",
-        description="Approved customer dbt Core build followed by fixed evidence collection.",
+        description=(
+            "Approved customer dbt Core project with deterministic dbtobsb evidence collection."
+        ),
         timeout_seconds=1200,
         run_as=inputs.observed_service_principal_name,
         workspace_root=state.workspace_root,
-        environments=_environment_document("dbt", _DBT_DEPENDENCIES),
+        environments=_environment_document("dbt", (*product_wheels, *_DBT_DEPENDENCIES)),
     )
     expected["tasks"] = [
         {
@@ -785,11 +800,27 @@ def _expected_job_settings(
             "timeout_seconds": 900,
         },
         {
-            "dbt_task": {
-                "commands": list(policy.commands),
-                "profiles_directory": project_directory,
-                "project_directory": project_directory,
-                "source": policy.source,
+            "python_wheel_task": {
+                "entry_point": "run-dbt",
+                "package_name": "dbtobsb-collector",
+                "parameters": [
+                    "--workspace_id",
+                    "{{workspace.id}}",
+                    "--observed_job_id",
+                    "{{job.id}}",
+                    "--observed_job_run_id",
+                    "{{job.run_id}}",
+                    "--dbt_task_run_id",
+                    "{{task.run_id}}",
+                    "--repair_count",
+                    "{{job.repair_count}}",
+                    "--execution_count",
+                    "{{task.execution_count}}",
+                    "--project_directory",
+                    project_directory,
+                    "--policy_path",
+                    policy_path,
+                ],
             },
             "disabled": False,
             "email_notifications": {},
@@ -1323,7 +1354,7 @@ def _resolved_dependencies_for_version(*, artifact_root: str, version: str) -> t
         f"{artifact_root}/dbtobsb_contracts-{version}-py3-none-any.whl",
         f"{artifact_root}/dbtobsb_capture-{version}-py3-none-any.whl",
         f"{artifact_root}/dbtobsb_collector-{version}-py3-none-any.whl",
-        "databricks-sdk==0.120.0",
+        "databricks-sdk==0.117.0",
     )
 
 

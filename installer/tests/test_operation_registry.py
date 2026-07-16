@@ -59,9 +59,9 @@ def test_python_bootstrap_registry_matches_the_packaged_native_vectors() -> None
         parameters["marker_token"] = marker_token
         observed.append(descriptor)
 
-    assert len(operations) == 9
+    assert len(operations) == 10
     assert observed == vectors["operations"]
-    assert len({operation.statement_sha256 for operation in operations}) == 9
+    assert len({operation.statement_sha256 for operation in operations}) == 10
     assert all(
         "bootstrap_" in operation._base_statement._native_operation for operation in operations
     )

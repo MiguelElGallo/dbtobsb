@@ -24,14 +24,15 @@ from dbtobsb_collector.delta import (
     DeltaEvidenceSink,
     SparkRuntimeSession,
 )
-from dbtobsb_collector.download import HttpsArchiveDownloader
 from dbtobsb_collector.jobs import (
     DatabricksJobsEvidenceReader,
     JobsEvidenceError,
     _collector_environment_matches,
+    _task_has_no_retries,
     attempt_context_from_resolved_task,
 )
 from dbtobsb_collector.runtime import collect_task_run
+from dbtobsb_collector.volume_archive import DatabricksArtifactDownloader
 
 _MAX_PARENT_RUNS = 100
 _MAX_TASK_RUN_IDS = 500
@@ -106,14 +107,14 @@ class InstalledPolicyReconciliationController:
             "{{job.run_id}}",
         )
 
-    def _task_matches(self, task: Any) -> bool:
+    def _task_matches(self, task: Any, *, run_projection: bool = False) -> bool:
         wheel = getattr(task, "python_wheel_task", None)
+        timeout_seconds = getattr(task, "timeout_seconds", None)
         return not (
             getattr(task, "task_key", None) != "reconcile"
             or getattr(task, "environment_key", None) != "collector"
-            or getattr(task, "timeout_seconds", None) != 900
-            or getattr(task, "max_retries", None) != 0
-            or getattr(task, "retry_on_timeout", None) is not False
+            or (timeout_seconds not in {None, 900} if run_projection else timeout_seconds != 900)
+            or not _task_has_no_retries(task)
             or getattr(wheel, "package_name", None) != "dbtobsb-collector"
             or getattr(wheel, "entry_point", None) != "reconcile"
             or tuple(getattr(wheel, "parameters", None) or ()) != self._task_parameters()
@@ -132,6 +133,7 @@ class InstalledPolicyReconciliationController:
         try:
             if self.client.get_workspace_id() != seal.workspace_id:
                 raise ReconciliationError("DBTOBSB_RECONCILIATION_BINDING_MISMATCH")
+            authenticated = self.client.current_user.me()
             job = self.client.jobs.get(seal.reconciler_job_id)
             active = tuple(
                 islice(
@@ -153,6 +155,8 @@ class InstalledPolicyReconciliationController:
         schedule = getattr(settings, "schedule", None)
         if (
             getattr(job, "job_id", None) != seal.reconciler_job_id
+            or getattr(job, "run_as_user_name", None) != seal.collector_service_principal_name
+            or getattr(authenticated, "user_name", None) != seal.collector_service_principal_name
             or getattr(settings, "max_concurrent_runs", None) != 1
             or getattr(settings, "timeout_seconds", None) != 900
             or _enum_value(getattr(settings, "performance_target", None), fallback="UNKNOWN")
@@ -187,7 +191,9 @@ class InstalledPolicyReconciliationController:
             or getattr(active[0], "run_id", None) != reconciliation_run_id
             or getattr(current, "run_id", None) != reconciliation_run_id
             or getattr(current, "job_id", None) != seal.reconciler_job_id
-            or getattr(current, "run_as_user_name", None) != seal.collector_service_principal_name
+            or _enum_value(getattr(current, "run_type", None), fallback="UNKNOWN") != "JOB_RUN"
+            or _enum_value(getattr(current, "trigger", None), fallback="UNKNOWN")
+            not in {"PERIODIC", "ONE_TIME"}
             or _enum_value(
                 getattr(current, "effective_performance_target", None), fallback="UNKNOWN"
             )
@@ -195,7 +201,7 @@ class InstalledPolicyReconciliationController:
             or actual_parameters
             or not _empty_override(getattr(current, "overriding_parameters", None))
             or len(run_tasks) != 1
-            or not self._task_matches(run_tasks[0])
+            or not self._task_matches(run_tasks[0], run_projection=True)
         ):
             raise ReconciliationError("DBTOBSB_RECONCILIATION_BINDING_MISMATCH")
 
@@ -380,7 +386,7 @@ def reconcile_installed_policy(
             collect_task_run(
                 context=context,
                 jobs=reader,
-                downloader=HttpsArchiveDownloader(),
+                downloader=DatabricksArtifactDownloader(),
                 raw_store=VolumeRawArchiveStore(
                     f"/Volumes/{seal.evidence_catalog}/{seal.evidence_schema}/{RAW_VOLUME_NAME}",
                     require_volume=True,

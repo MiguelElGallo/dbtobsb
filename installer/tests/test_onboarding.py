@@ -74,6 +74,8 @@ def _target() -> DbtTargetBinding:
         dbt_warehouse_http_path=f"/sql/1.0/warehouses/{_WAREHOUSE}",
         catalog="analytics",
         schema="weather_prod",
+        artifact_catalog="observability",
+        artifact_schema="dbtobsb",
     )
 
 
@@ -153,14 +155,19 @@ def test_non_demo_project_generates_exact_custom_profile_policy_and_job_patch(
     assert "--selector weather_release" in policy["commands"][0]
 
     patch = yaml.safe_load((bundle / plan.job_patch_relative_path).read_bytes())
+    active_patch = bundle / ".dbtobsb-observed.generated.yml"
+    assert active_patch.read_bytes() == (bundle / plan.job_patch_relative_path).read_bytes()
+    assert active_patch.stat().st_mode & 0o777 == 0o600
     job = patch["resources"]["jobs"]["dbtobsb_observed"]
-    dbt_task = job["tasks"][0]["dbt_task"]
-    assert dbt_task == {
-        "source": "WORKSPACE",
-        "project_directory": policy["project_directory"],
-        "profiles_directory": policy["project_directory"],
-        "commands": policy["commands"],
-    }
+    dbt_task = job["tasks"][0]["python_wheel_task"]
+    installed_project_directory = f"${{workspace.file_path}}/{plan.project_relative_path}"
+    assert dbt_task["package_name"] == "dbtobsb-collector"
+    assert dbt_task["entry_point"] == "run-dbt"
+    parameters = dbt_task["parameters"]
+    assert parameters[parameters.index("--project_directory") + 1] == installed_project_directory
+    assert parameters[parameters.index("--policy_path") + 1] == (
+        f"${{workspace.file_path}}/{Path(plan.policy_relative_path).as_posix()}"
+    )
     assert {"warehouse_id", "catalog", "schema"}.isdisjoint(dbt_task)
     assert job["tasks"][1]["run_if"] == "ALL_DONE"
     assert job["tasks"][1]["run_job_task"]["job_id"] == ("${resources.jobs.dbtobsb_collector.id}")
@@ -393,6 +400,8 @@ def test_target_binding_requires_matching_verified_azure_values() -> None:
             warehouse_http_path=f"/sql/1.0/warehouses/{_WAREHOUSE}",
             catalog="analytics",
             schema="weather_prod",
+            artifact_catalog="observability",
+            artifact_schema="dbtobsb",
             _construction_token=object(),
         )
 
@@ -410,4 +419,6 @@ def test_target_binding_requires_matching_verified_azure_values() -> None:
             dbt_warehouse_http_path="/sql/1.0/warehouses/fedcba9876543210",
             catalog="analytics",
             schema="weather_prod",
+            artifact_catalog="observability",
+            artifact_schema="dbtobsb",
         )
