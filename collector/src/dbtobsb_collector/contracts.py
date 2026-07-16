@@ -8,6 +8,7 @@ from enum import StrEnum
 from typing import Protocol
 
 from dbtobsb_capture import ArchiveCapture
+from dbtobsb_contracts import AttemptIdentity
 
 
 class RetrievalState(StrEnum):
@@ -53,6 +54,17 @@ class AttemptContext:
             or not self.observed_task_key.replace("_", "").isalnum()
         ):
             raise ValueError("observed_task_key must be a bounded alphanumeric key")
+
+    def as_dbt_attempt_identity(self) -> AttemptIdentity:
+        """Map native dynamic references to the shared immutable path identity."""
+        return AttemptIdentity(
+            workspace_id=self.workspace_id,
+            job_id=self.observed_job_id,
+            job_run_id=self.observed_job_run_id,
+            task_run_id=self.dbt_task_run_id,
+            repair_count=self.repair_count,
+            execution_count=self.execution_count,
+        )
 
 
 @dataclass(frozen=True, slots=True)

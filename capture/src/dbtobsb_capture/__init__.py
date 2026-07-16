@@ -3,6 +3,7 @@
 from dbtobsb_capture.archive import (
     ArchiveCapture,
     CaptureState,
+    StructuredLogState,
     inspect_dbt_output_archive,
     unavailable_archive_capture,
 )
@@ -34,6 +35,7 @@ __all__ = [
     "NativeStatusCount",
     "NodeResultProjection",
     "PairState",
+    "StructuredLogState",
     "inspect_and_project_artifact_pair",
     "inspect_artifact_pair",
     "inspect_dbt_output_archive",

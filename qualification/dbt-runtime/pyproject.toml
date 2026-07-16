@@ -1,0 +1,18 @@
+[project]
+name = "dbtobsb-dbt-runtime-qualification"
+version = "0.3.0b1"
+description = "Locked dbt runtime used only to qualify generated customer snapshots"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "databricks-sdk==0.117.0",
+    "databricks-sql-connector==4.3.0",
+    "dbt-adapters==1.24.5",
+    "dbt-common==1.37.5",
+    "dbt-core==1.11.12",
+    "dbt-databricks==1.12.2",
+    "dbt-protos==1.0.541",
+    "dbt-spark==1.10.3",
+]
+
+[tool.uv]
+package = false

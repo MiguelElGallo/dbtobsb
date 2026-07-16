@@ -1,6 +1,6 @@
 [project]
 name = "dbtobsb-capture"
-version = "0.2.0a3"
+version = "0.3.0b1"
 description = "Offline dbt Core artifact validation for dbtobsb"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -11,6 +11,7 @@ dependencies = [
     "referencing==0.37.0",
     "rpds-py==2026.6.3",
     "typing-extensions==4.16.0",
+    "dbtobsb-contracts==0.3.0b1",
 ]
 
 [build-system]
@@ -44,6 +45,10 @@ quote-style = "double"
 
 [tool.ty.environment]
 python-version = "3.12"
+extra-paths = ["../contracts/src"]
+
+[tool.uv.sources]
+dbtobsb-contracts = { path = "../contracts" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dbtobsb_capture"]

@@ -1,14 +1,49 @@
-"""Minimal HTTP surface for the first Databricks App smoke test."""
+"""Read-only FastAPI surface for customer-local dbt Core observability."""
 
+from __future__ import annotations
+
+import json
 import logging
+import os
 import sys
-from typing import Literal
+import uuid
+from collections.abc import Callable, Mapping
+from typing import cast
 
-from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, Query, Response
+from fastapi.responses import HTMLResponse, JSONResponse
+
+from dbtobsb_app.configuration import BindingState, ResourceBindings, resolve_bindings
+from dbtobsb_app.models import (
+    CollectionList,
+    ErrorCode,
+    ErrorDetail,
+    ErrorResponse,
+    HealthResponse,
+    NodeList,
+    ReadinessResponse,
+    ResponsibleActor,
+    RunList,
+)
+from dbtobsb_app.repository import (
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
+    AppDataAccessError,
+    ObservabilityRepository,
+    databricks_repository,
+)
+from dbtobsb_app.ui import (
+    collection_runbook_page,
+    dashboard_page,
+    installation_runbook_page,
+    landing_page,
+    setup_page,
+)
 
 SERVICE_NAME = "dbtobsb"
-SERVICE_VERSION = "0.1.0"
+SERVICE_VERSION = "0.3.0b1"
+
+RepositoryFactory = Callable[[ResourceBindings], ObservabilityRepository]
 
 logger = logging.getLogger(SERVICE_NAME)
 logger.setLevel(logging.INFO)
@@ -18,115 +53,348 @@ if not logger.handlers:
     stdout_handler.setFormatter(logging.Formatter("%(message)s"))
     logger.addHandler(stdout_handler)
 
-OPENAPI_TAGS: list[dict[str, str]] = [
-    {
-        "name": "Service",
-        "description": "Non-sensitive P0 service discovery. No product-readiness claim.",
-    },
-    {
-        "name": "Operations",
-        "description": "Process-liveness checks for deployment smoke testing.",
-    },
-]
 
-
-class ServiceLinks(BaseModel):
-    """Stable links exposed from the service index."""
-
-    health: str = Field(description="Token-accessible process-liveness endpoint.")
-    openapi: str = Field(description="Token-accessible OpenAPI document.")
-
-
-class ServiceIndex(BaseModel):
-    """Public service metadata."""
-
-    service: str = Field(description="Stable service name.", examples=[SERVICE_NAME])
-    version: str = Field(description="Application shell version.", examples=[SERVICE_VERSION])
-    phase: Literal["p0_smoke"] = Field(
-        description="Implementation phase; this shell is not the observability product."
-    )
-    links: ServiceLinks
-
-
-class HealthResponse(BaseModel):
-    """Machine-readable process-liveness response without a readiness claim."""
-
-    status: Literal["alive"] = Field(
-        description="The App process served this request.", examples=["alive"]
-    )
-    check: Literal["process_liveness"] = Field(
-        description="The narrow scope of this check.", examples=["process_liveness"]
-    )
-    readiness: Literal["not_evaluated"] = Field(
-        description="Product and dependency readiness are intentionally not checked.",
-        examples=["not_evaluated"],
-    )
-    phase: Literal["p0_smoke"] = Field(
-        description="This endpoint belongs to the bounded P0 smoke shell.",
-        examples=["p0_smoke"],
-    )
-    service: str = Field(description="Stable service name.", examples=[SERVICE_NAME])
-    version: str = Field(description="Application shell version.", examples=[SERVICE_VERSION])
-
-
-app = FastAPI(
-    title="dbtobsb",
-    summary="P0 App process-liveness shell for future dbt Core observability",
-    description=(
-        "This bounded shell proves that a stopped-by-default Databricks App can serve "
-        "FastAPI requests. It does not evaluate product readiness and has no data, job, "
-        "secret, warehouse, or model-serving bindings. Interactive API documentation is "
-        "disabled to avoid public runtime asset dependencies."
+_COST_HEADER_VALUE = "query-may-auto-start-bound-sql-warehouse"
+_COST_RESPONSE_HEADER = {
+    "description": (
+        "This data read may auto-start the installer-bound SQL warehouse and accrue cost."
     ),
-    version=SERVICE_VERSION,
-    docs_url=None,
-    redoc_url=None,
-    openapi_url="/api/openapi.json",
-    openapi_tags=OPENAPI_TAGS,
-)
-
-
-@app.get(
-    "/",
-    response_model=ServiceIndex,
-    tags=["Service"],
-    summary="Discover the P0 smoke API",
-    description="Returns public shell metadata and token-accessible API links.",
-    response_description="P0 smoke discovery metadata; not product readiness.",
-    operation_id="getP0SmokeServiceIndex",
-)
-def service_index() -> ServiceIndex:
-    """Return non-sensitive service metadata and discovery links."""
-    return ServiceIndex(
-        service=SERVICE_NAME,
-        version=SERVICE_VERSION,
-        phase="p0_smoke",
-        links=ServiceLinks(health="/api/health", openapi="/api/openapi.json"),
-    )
-
-
-@app.get(
-    "/api/health",
-    response_model=HealthResponse,
-    tags=["Operations"],
-    summary="Check App process liveness",
-    description=(
-        "Confirms only that the P0 App process can serve a request. It does not check "
-        "dbt, Databricks resources, storage, capture, authorization, or product readiness."
+    "schema": {"type": "string", "enum": [_COST_HEADER_VALUE]},
+}
+_ERRORS: dict[str, tuple[str, ResponsibleActor, str]] = {
+    "DBTOBSB_CONFIGURATION_INVALID": (
+        "The installer-owned App resource configuration is invalid.",
+        "deployment/seal verifier",
+        "Open /operators/how-to/reconcile-installation/ and follow this code.",
     ),
-    response_description="App process is alive; product readiness was not evaluated.",
-    operation_id="getP0SmokeProcessLiveness",
-)
-def health() -> HealthResponse:
-    """Confirm that the application process can serve requests."""
-    logger.info(
-        '{"event":"health_check","status":"alive","readiness":"not_evaluated","phase":"p0_smoke"}'
+    "DBTOBSB_APP_AUTH_INVALID": (
+        "The App service identity could not authenticate for the data read.",
+        "deployment/seal verifier",
+        "Open /operators/how-to/reconcile-installation/ and follow this code.",
+    ),
+    "DBTOBSB_APP_QUERY_FAILED": (
+        "The bound observability data source could not complete the read.",
+        "data operator",
+        "Open /operators/how-to/reconcile-collection/ and follow this code.",
+    ),
+    "DBTOBSB_APP_RUN_VIEW_CONTRACT_MISMATCH": (
+        "The run-health view does not match this dbtobsb release.",
+        "deployment/seal verifier",
+        "Open /operators/how-to/reconcile-installation/ and follow this code.",
+    ),
+    "DBTOBSB_APP_NODE_VIEW_CONTRACT_MISMATCH": (
+        "The node-health view does not match this dbtobsb release.",
+        "deployment/seal verifier",
+        "Open /operators/how-to/reconcile-installation/ and follow this code.",
+    ),
+    "DBTOBSB_APP_COLLECTION_VIEW_CONTRACT_MISMATCH": (
+        "The collection-health view does not match this dbtobsb release.",
+        "deployment/seal verifier",
+        "Open /operators/how-to/reconcile-installation/ and follow this code.",
+    ),
+}
+
+
+def _error_detail(code: str, *, surface: str) -> ErrorDetail:
+    safe_code = cast(ErrorCode, code if code in _ERRORS else "DBTOBSB_APP_QUERY_FAILED")
+    message, responsible_actor, action = _ERRORS[safe_code]
+    detail = ErrorDetail(
+        code=safe_code,
+        message=message,
+        responsible_actor=responsible_actor,
+        action=action,
+        correlation_id=uuid.uuid4().hex[:16],
     )
-    return HealthResponse(
-        status="alive",
-        check="process_liveness",
-        readiness="not_evaluated",
-        phase="p0_smoke",
-        service=SERVICE_NAME,
+    logger.error(
+        json.dumps(
+            {
+                "event": "app_data_read_denied",
+                "surface": surface,
+                "code": detail.code,
+                "correlation_id": detail.correlation_id,
+                "responsible_actor": detail.responsible_actor,
+                "action": detail.action,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    )
+    return detail
+
+
+def _exception_detail(error: Exception, *, surface: str) -> ErrorDetail:
+    code = error.code if isinstance(error, AppDataAccessError) else "DBTOBSB_APP_QUERY_FAILED"
+    return _error_detail(code, surface=surface)
+
+
+def _safe_error(detail: ErrorDetail) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content=ErrorResponse(error=detail).model_dump(mode="json"),
+        headers={"X-DBTOBSB-Cost-Notice": _COST_HEADER_VALUE},
+    )
+
+
+def create_app(
+    *,
+    environment: Mapping[str, str] | None = None,
+    repository_factory: RepositoryFactory = databricks_repository,
+) -> FastAPI:
+    """Create an App with injected configuration and data access dependencies."""
+    bindings = resolve_bindings(os.environ if environment is None else environment)
+    app = FastAPI(
+        title="dbtobsb",
+        summary="Read-only dbt Core observability in the customer Databricks workspace",
+        description=(
+            "Queries only the installer-bound sanitized run, node, and collection health views. "
+            "It exposes no raw artifacts, SQL, log messages, paths, or credentials."
+        ),
         version=SERVICE_VERSION,
+        docs_url=None,
+        redoc_url=None,
+        openapi_url="/api/openapi.json",
     )
+    app.state.bindings = bindings
+    app.state.repository_factory = repository_factory
+
+    def repository() -> ObservabilityRepository:
+        return repository_factory(bindings)
+
+    safe_html_headers = {
+        "Cache-Control": "no-store",
+        "Content-Security-Policy": (
+            "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; "
+            "form-action 'none'; frame-ancestors 'self'"
+        ),
+        "Referrer-Policy": "no-referrer",
+        "X-Content-Type-Options": "nosniff",
+    }
+
+    @app.get("/api/health", response_model=HealthResponse, tags=["Operations"])
+    def health() -> HealthResponse:
+        """Confirm process liveness without contacting a SQL warehouse."""
+        logger.info('{"event":"health_check","status":"alive"}')
+        return HealthResponse(
+            status="alive",
+            check="process_liveness",
+            service="dbtobsb",
+            version=SERVICE_VERSION,
+        )
+
+    @app.get(
+        "/api/readiness",
+        response_model=ReadinessResponse,
+        responses={503: {"model": ReadinessResponse}},
+        tags=["Operations"],
+    )
+    def readiness() -> ReadinessResponse | JSONResponse:
+        """Report configuration readiness without starting billable SQL compute."""
+        response = ReadinessResponse(
+            status=bindings.state.value,
+            check="resource_binding_configuration",
+            service="dbtobsb",
+            version=SERVICE_VERSION,
+            required_bindings=bindings.missing,
+        )
+        if bindings.ready:
+            return response
+        return JSONResponse(status_code=503, content=response.model_dump(mode="json"))
+
+    @app.get(
+        "/api/v1/runs",
+        response_model=RunList,
+        responses={
+            200: {"headers": {"X-DBTOBSB-Cost-Notice": _COST_RESPONSE_HEADER}},
+            503: {
+                "model": ErrorResponse,
+                "headers": {"X-DBTOBSB-Cost-Notice": _COST_RESPONSE_HEADER},
+            },
+        },
+        tags=["Observability"],
+    )
+    def recent_runs(
+        response: Response,
+        limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
+    ) -> RunList | JSONResponse:
+        """Return recent runs; this query can auto-start the bound SQL warehouse and cost."""
+        response.headers["X-DBTOBSB-Cost-Notice"] = _COST_HEADER_VALUE
+        if bindings.state is BindingState.SETUP_REQUIRED:
+            return RunList(
+                state="setup_required",
+                limit=limit,
+                items=(),
+                required_bindings=bindings.missing,
+            )
+        if bindings.state is BindingState.INVALID:
+            return _safe_error(_error_detail("DBTOBSB_CONFIGURATION_INVALID", surface="runs"))
+        try:
+            source = repository()
+            items = source.recent_runs(limit)
+        except Exception as error:
+            return _safe_error(_exception_detail(error, surface="runs"))
+        return RunList(state="ready", limit=limit, items=items)
+
+    @app.get(
+        "/api/v1/nodes",
+        response_model=NodeList,
+        responses={
+            200: {"headers": {"X-DBTOBSB-Cost-Notice": _COST_RESPONSE_HEADER}},
+            503: {
+                "model": ErrorResponse,
+                "headers": {"X-DBTOBSB-Cost-Notice": _COST_RESPONSE_HEADER},
+            },
+        },
+        tags=["Observability"],
+    )
+    def recent_nodes(
+        response: Response,
+        limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
+    ) -> NodeList | JSONResponse:
+        """Return recent nodes; this query can auto-start the bound SQL warehouse and cost."""
+        response.headers["X-DBTOBSB-Cost-Notice"] = _COST_HEADER_VALUE
+        if bindings.state is BindingState.SETUP_REQUIRED:
+            return NodeList(
+                state="setup_required",
+                limit=limit,
+                items=(),
+                required_bindings=bindings.missing,
+            )
+        if bindings.state is BindingState.INVALID:
+            return _safe_error(_error_detail("DBTOBSB_CONFIGURATION_INVALID", surface="nodes"))
+        try:
+            source = repository()
+            items = source.recent_nodes(limit)
+        except Exception as error:
+            return _safe_error(_exception_detail(error, surface="nodes"))
+        return NodeList(state="ready", limit=limit, items=items)
+
+    @app.get(
+        "/api/v1/collection",
+        response_model=CollectionList,
+        responses={
+            200: {"headers": {"X-DBTOBSB-Cost-Notice": _COST_RESPONSE_HEADER}},
+            503: {
+                "model": ErrorResponse,
+                "headers": {"X-DBTOBSB-Cost-Notice": _COST_RESPONSE_HEADER},
+            },
+        },
+        tags=["Observability"],
+    )
+    def recent_collection(
+        response: Response,
+        limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
+    ) -> CollectionList | JSONResponse:
+        """Return collection lifecycle; this query can auto-start the SQL warehouse."""
+        response.headers["X-DBTOBSB-Cost-Notice"] = _COST_HEADER_VALUE
+        if bindings.state is BindingState.SETUP_REQUIRED:
+            return CollectionList(
+                state="setup_required",
+                limit=limit,
+                items=(),
+                required_bindings=bindings.missing,
+            )
+        if bindings.state is BindingState.INVALID:
+            return _safe_error(_error_detail("DBTOBSB_CONFIGURATION_INVALID", surface="collection"))
+        try:
+            source = repository()
+            items = source.recent_collection(limit)
+        except Exception as error:
+            return _safe_error(_exception_detail(error, surface="collection"))
+        return CollectionList(state="ready", limit=limit, items=items)
+
+    @app.get("/", response_class=HTMLResponse, include_in_schema=False)
+    def landing() -> HTMLResponse:
+        """Render a non-querying setup or cost-awareness landing page."""
+        if bindings.state is BindingState.SETUP_REQUIRED:
+            return HTMLResponse(setup_page(bindings.missing), headers=safe_html_headers)
+        if bindings.state is BindingState.INVALID:
+            return HTMLResponse(
+                setup_page((), invalid=True), status_code=503, headers=safe_html_headers
+            )
+        return HTMLResponse(landing_page(), headers=safe_html_headers)
+
+    @app.get(
+        "/operators/how-to/reconcile-collection/",
+        response_class=HTMLResponse,
+        include_in_schema=False,
+    )
+    def collection_runbook() -> HTMLResponse:
+        """Explain fixed collection recovery without contacting a SQL warehouse."""
+        return HTMLResponse(collection_runbook_page(), headers=safe_html_headers)
+
+    @app.get(
+        "/operators/how-to/reconcile-installation/",
+        response_class=HTMLResponse,
+        include_in_schema=False,
+    )
+    def installation_runbook() -> HTMLResponse:
+        """Explain fail-closed installer recovery without contacting a SQL warehouse."""
+        return HTMLResponse(installation_runbook_page(), headers=safe_html_headers)
+
+    @app.get("/observability", response_class=HTMLResponse, include_in_schema=False)
+    def dashboard(limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT)) -> HTMLResponse:
+        """Explicitly load observability data, which can auto-start the SQL warehouse."""
+        if bindings.state is BindingState.SETUP_REQUIRED:
+            return HTMLResponse(setup_page(bindings.missing), headers=safe_html_headers)
+        if bindings.state is BindingState.INVALID:
+            return HTMLResponse(
+                setup_page((), invalid=True), status_code=503, headers=safe_html_headers
+            )
+        try:
+            source = repository()
+        except Exception as error:
+            failure = _exception_detail(error, surface="dashboard")
+            return HTMLResponse(
+                dashboard_page(
+                    (),
+                    (),
+                    (),
+                    run_failure=failure,
+                    node_failure=failure,
+                    collection_failure=failure,
+                ),
+                status_code=503,
+                headers=safe_html_headers,
+            )
+        run_failure: ErrorDetail | None = None
+        node_failure: ErrorDetail | None = None
+        collection_failure: ErrorDetail | None = None
+        try:
+            runs = source.recent_runs(limit)
+        except Exception as error:
+            runs = ()
+            run_failure = _exception_detail(error, surface="dashboard-runs")
+        try:
+            nodes = source.recent_nodes(limit)
+        except Exception as error:
+            nodes = ()
+            node_failure = _exception_detail(error, surface="dashboard-nodes")
+        try:
+            collection = source.recent_collection(limit)
+        except Exception as error:
+            collection = ()
+            collection_failure = _exception_detail(error, surface="dashboard-collection")
+        status_code = (
+            503
+            if run_failure is not None
+            and node_failure is not None
+            and collection_failure is not None
+            else 200
+        )
+        return HTMLResponse(
+            dashboard_page(
+                runs,
+                nodes,
+                collection,
+                run_failure=run_failure,
+                node_failure=node_failure,
+                collection_failure=collection_failure,
+            ),
+            status_code=status_code,
+            headers=safe_html_headers,
+        )
+
+    return app
+
+
+app = create_app()

@@ -14,6 +14,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 from jsonschema import Draft202012Validator
 
+import dbtobsb_capture
 from dbtobsb_capture import (
     ArtifactPairIssue,
     ArtifactPairReport,
@@ -85,6 +86,13 @@ def _primary_code(report: dict[str, Any]) -> str:
     code = primary["code"]
     assert isinstance(code, str)
     return code
+
+
+def test_selector_aware_inspector_is_internal_only() -> None:
+    assert "inspect_artifact_pair_for_selector" not in dbtobsb_capture.__all__
+    assert not hasattr(dbtobsb_capture, "inspect_artifact_pair_for_selector")
+    assert not hasattr(inspector_module, "inspect_artifact_pair_for_selector")
+    assert hasattr(inspector_module, "_inspect_artifact_pair_for_selector")
 
 
 def _closed_issue(code: str) -> ArtifactPairIssue:

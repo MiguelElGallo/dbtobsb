@@ -22,10 +22,11 @@ wheels = [
 
 [[package]]
 name = "dbtobsb-capture"
-version = "0.2.0a3"
+version = "0.3.0b1"
 source = { editable = "." }
 dependencies = [
     { name = "attrs" },
+    { name = "dbtobsb-contracts" },
     { name = "jsonschema" },
     { name = "jsonschema-specifications" },
     { name = "referencing" },
@@ -44,6 +45,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "attrs", specifier = "==26.1.0" },
+    { name = "dbtobsb-contracts", directory = "../contracts" },
     { name = "jsonschema", specifier = "==4.26.0" },
     { name = "jsonschema-specifications", specifier = "==2025.9.1" },
     { name = "referencing", specifier = "==0.37.0" },
@@ -55,6 +57,25 @@ requires-dist = [
 dev = [
     { name = "hypothesis", specifier = "==6.136.9" },
     { name = "pytest", specifier = "==9.0.3" },
+    { name = "ruff", specifier = "==0.15.21" },
+    { name = "ty", specifier = "==0.0.58" },
+]
+
+[[package]]
+name = "dbtobsb-contracts"
+version = "0.3.0b1"
+source = { directory = "../contracts" }
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "dbt-adapters", specifier = "==1.24.5" },
+    { name = "dbt-common", specifier = "==1.37.5" },
+    { name = "dbt-core", specifier = "==1.11.12" },
+    { name = "dbt-protos", specifier = "==1.0.541" },
+    { name = "pytest", specifier = "==9.0.3" },
+    { name = "pyyaml", specifier = "==6.0.3" },
     { name = "ruff", specifier = "==0.15.21" },
     { name = "ty", specifier = "==0.0.58" },
 ]

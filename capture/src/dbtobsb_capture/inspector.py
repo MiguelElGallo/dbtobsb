@@ -34,7 +34,6 @@ from dbtobsb_capture.schemas import (
 SUPPORTED_DBT_VERSION = "1.11.12"
 SUPPORTED_ADAPTER_TYPE = "databricks"
 SUPPORTED_COMMAND = "build"
-SUPPORTED_SELECTOR = "observability_demo"
 SUPPORTED_MANIFEST_SCHEMA = "https://schemas.getdbt.com/dbt/manifest/v12.json"
 SUPPORTED_RUN_RESULTS_SCHEMA = "https://schemas.getdbt.com/dbt/run-results/v6.json"
 MAX_PRIMARY_ARTIFACT_BYTES = 128 * 1024 * 1024
@@ -439,7 +438,9 @@ def _invalid(codes: list[str]) -> ArtifactPairReport:
     )
 
 
-def inspect_artifact_pair(*, manifest: bytes, run_results: bytes) -> ArtifactPairReport:
+def _inspect_artifact_pair_for_selector(
+    *, manifest: bytes, run_results: bytes, expected_selector: str
+) -> ArtifactPairReport:
     """Inspect one in-memory pair without opening caller paths or external services.
 
     Expected evidence failures return ``PAIR_INVALID`` with static issue text. The
@@ -519,7 +520,7 @@ def inspect_artifact_pair(*, manifest: bytes, run_results: bytes) -> ArtifactPai
         codes.append("DBT_ADAPTER_TYPE_UNSUPPORTED")
     if (
         run_args.get("which") != SUPPORTED_COMMAND
-        or run_args.get("selector") != SUPPORTED_SELECTOR
+        or run_args.get("selector") != expected_selector
         or run_args.get("select") != []
         or run_args.get("exclude") != []
         or run_args.get("indirect_selection") != "eager"
@@ -602,3 +603,16 @@ def inspect_artifact_pair(*, manifest: bytes, run_results: bytes) -> ArtifactPai
         ),
     )
     return ArtifactPairReport(state=PairState.VALID, summary=summary, issues=())
+
+
+def inspect_artifact_pair(*, manifest: bytes, run_results: bytes) -> ArtifactPairReport:
+    """Inspect one pair against the fixed engineering-preview selector.
+
+    The v1 collector uses the internal selector-aware inspector with a selector
+    obtained from installed configuration. This wrapper preserves the P1.1 public API.
+    """
+    return _inspect_artifact_pair_for_selector(
+        manifest=manifest,
+        run_results=run_results,
+        expected_selector="observability_demo",
+    )
