@@ -15,7 +15,9 @@ concurrency:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    # The private beta packages a sealed darwin-arm64 native bridge. Run the
+    # complete installer suite on the same supported OS/architecture boundary.
+    runs-on: macos-15
     timeout-minutes: 20
     env:
       APP_PYTHON_VERSION: "3.11.9"
