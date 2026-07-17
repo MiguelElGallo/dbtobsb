@@ -1,18 +1,33 @@
-# Operate the SQL-first preview
+# Operate dbtobsb
 
-This documentation is for the maintainer-operated private engineering preview. It uses Azure Databricks, Unity Catalog, serverless Jobs, one existing SQL warehouse for dbt, and dbt Core. No external telemetry platform receives evidence.
+dbtobsb uses Azure Databricks, Unity Catalog, serverless Jobs, SQL warehouses, and dbt Core. No
+external telemetry platform receives evidence.
 
-The preview is for personal/test workspaces and synthetic data. It is not a production, regulated, Marketplace, or separation-of-duties claim.
+## v0.3 release operations
+
+These procedures describe the stopped-by-default v0.3 release with distinct observed and collector
+service principals, attended installation, bounded collection reconciliation, and a read-only App.
+Regulated use still requires customer governance approval. Databricks Marketplace is out of scope.
+
+- [Reconcile missing dbt evidence](how-to/reconcile-collection.md)
+- [Reconcile an installation](how-to/reconcile-installation.md)
+
+## Historical v0.2 evidence
+
+The remaining tutorial and reference pages describe the older maintainer-operated SQL-first
+engineering preview with synthetic data. It is not a production, regulated, Marketplace, or
+separation-of-duties claim.
 
 ## Learn by doing
 
-- [Capture the first dbt run](tutorials/first-capture.md)
+- [Install the private v0.3 release](tutorials/install-private-release.md)
+- [Review the historical v0.2 capture tutorial](tutorials/first-capture.md)
 
 ## Complete a task
 
 - [Wire a supported dbt Job](how-to/wire-a-dbt-job.md)
 - [Recover a non-complete capture](how-to/recover-capture-states.md)
-- [Stop compute and remove the preview](how-to/cleanup.md)
+- [Stop compute and uninstall](how-to/cleanup.md)
 
 ## Look up facts
 
@@ -24,8 +39,9 @@ The preview is for personal/test workspaces and synthetic data. It is not a prod
 
 - [Raw artifact custody](../developers/explanation/raw-artifact-custody.md)
 - [Pair validity, dbt outcome, and capture state](../developers/explanation/pair-validity-vs-dbt-outcome-vs-capture-state.md)
-- [Decision 0003: native hybrid collector](../decisions/0003-native-hybrid-collector.md)
+- [Decision 0003: Databricks-native staged collector](../decisions/0003-native-hybrid-collector.md)
 
 ## See real evidence
 
+- [v0.3 final Azure Databricks acceptance from 2026-07-17](../evidence/v0.3.0-live-acceptance-2026-07-17.md)
 - [Sanitized Azure Databricks capture from 2026-07-16](../evidence/p2-live-capture-2026-07-16.md)

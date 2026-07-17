@@ -2,27 +2,29 @@
 
 Customer-local observability for dbt Core jobs running on Databricks.
 
-This private repository contains a working SQL-first engineering preview and the reviewed plan for a future private Databricks App. Databricks Declarative Automation Bundles deliver the preview Jobs and stopped App shell. Required data, compute, identity, audit, and retention stay inside the customer's Databricks environment; no external telemetry platform is required.
+This private repository contains the supported v0.3 release: a private Databricks App and three Lakeflow Jobs deployed through a Databricks Declarative Automation Bundle. Required data, compute, identity, audit, and retention stay inside the customer's Azure Databricks workspace; no external telemetry platform is required. Databricks Marketplace is out of scope for this release.
 
 ## What works now
 
-The P2 preview now runs the pinned dbt Core job, retrieves its native Databricks task archive, preserves the exact bytes in a managed Unity Catalog Volume, validates `manifest.json` plus `run_results.json`, and publishes allowlisted fields to three Delta tables and two read views. A live Azure Databricks proof captured a changed-seed weather build as `COMPLETE` and `PAIR_VALID`; identical replay kept one invocation and 9 node rows with the same digest and timestamps.
+The sealed observed Job runs the pinned dbt Core project without a shell, uploads only `manifest.json`, `run_results.json`, and bounded structured logs to a managed staging Volume, and verifies every uploaded byte. The distinct collector service principal builds and preserves a deterministic archive, validates the artifact pair, and publishes allowlisted fields to three evidence tables behind three read-only health views. The exact raw archive remains in a separate managed Volume.
 
 Object creation is intentionally split from collection. An authorized administrator may run the fixed, versioned `BOOTSTRAP_ALLOWED` entry point against an intentionally selected production catalog; it creates or verifies the product schema objects idempotently. The ordinary `RUNTIME_DML_ONLY` collector entry point performs only fixed writes to those existing objects. It cannot be switched into bootstrap mode with a runtime flag.
 
-Start with the [SQL-first preview tutorial](docs/operators/tutorials/first-capture.md) and the [sanitized live capture](docs/evidence/p2-live-capture-2026-07-16.md). This is a private personal/test engineering preview, not a production, regulated, or Marketplace release. The FastAPI App remains a stopped process-liveness shell and is not the observability surface yet.
+Start with [Install the private v0.3 release](docs/operators/tutorials/install-private-release.md), then read [Wire a supported dbt Job](docs/operators/how-to/wire-a-dbt-job.md) and the [evidence schema reference](docs/operators/reference/evidence-schema.md). The full machine contract and governance boundary are in the [v0.3 supported-release contract](docs/releases/v0.3.0-support-contract.md). The App is read-only and stopped by default; explicitly starting it can incur App compute cost.
+
+The latest sanitized execution proof is [v0.3 final Azure Databricks acceptance](docs/evidence/v0.3.0-live-acceptance-2026-07-17.md).
 
 ## Release status
 
-Version `v0.2.0-alpha.1` is the private personal/test, synthetic-data, combined-role engineering preview. It is not regulated production, Marketplace, or Databricks App product readiness.
+The private `v0.3.0` support contract is final for the `0.3.0b1` artifacts. Marketplace distribution is not included. Regulated use requires customer governance approval; dbtobsb is not certified or attested against a regulatory framework.
 
 | Release component | Version |
 | --- | --- |
-| Git release/tag | `v0.2.0-alpha.1` |
-| Evidence object manifest | `dbtobsb.evidence.v0.2.0-alpha.1` |
-| `dbtobsb-capture` package | `0.2.0a3` |
-| `dbtobsb-collector` package | `0.2.0a14` |
-| P0 App shell | `0.1.0` |
+| Git release/tag | `v0.3.0b1` |
+| Evidence object manifest | `dbtobsb.evidence.v1.0.0-rc.11` |
+| Python packages | `0.3.0b1` plus content-addressed final wheel versions |
+| Support contract | `dbtobsb.support.v1` |
+| App | `0.3.0b1`, read-only and stopped by default |
 
 P1.1 remains available as an offline strict artifact-pair inspector. Its synthetic fixtures make pair validity, native dbt outcome, and capture state visibly separate.
 
@@ -44,7 +46,9 @@ uv run --project capture --no-sync dbtobsb-capture inspect-artifact-pair \
 
 The first line is `PAIR_VALID`. That means only that the two files satisfy the pinned P1.1 contract. Follow the [developer tutorial](docs/developers/tutorials/inspect-an-artifact-pair.md) for the valid-failure and invalid-pair examples, or use the [CLI report and exit-code reference](docs/developers/reference/cli-report-and-exit-codes.md) for automation.
 
-## Run the P0 smoke
+## Run the legacy App-shell development smoke
+
+This section validates only the earlier empty App shell in a dedicated disposable workspace. It is not the v0.3 installation or acceptance route.
 
 ### 1. Check the supported workspace and tools
 
@@ -159,4 +163,4 @@ Detailed migration, trust, deployment, controlled-action, and dbt contracts live
 
 ## Current baseline
 
-Planning baseline: **0.20**. Implemented product slice: **P2 private engineering preview `v0.2.0-alpha.1`**. Every independently deliverable slice requires Databricks, dbt Core, and usability reviews. Documentation additionally requires Diataxis, FastAPI-style, security/compliance, and usability/accessibility passes. The exact working agreement is in [AGENTS.md](AGENTS.md).
+Planning baseline: **0.20**. Implemented product slice: **supported private v0.3 release**. Release acceptance uses automated local gates, adversarial contract tests, clean bootstrap, two live Azure Databricks end-to-end attempts, controlled failure and reconciliation cases, SQL/App result comparison, both uninstall modes, and a zero-running-compute cleanup audit. The exact working agreement is in [AGENTS.md](AGENTS.md).

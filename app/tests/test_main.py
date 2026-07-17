@@ -1,125 +1,61 @@
-"""Contract tests for the minimal Databricks App HTTP surface."""
+"""Bundle and bounded live-smoke safeguards retained for the App."""
 
-import logging
 import os
 import stat
 import subprocess
-import sys
 from pathlib import Path
 
-from fastapi.testclient import TestClient
 from yaml import safe_load
-
-from dbtobsb_app.main import SERVICE_NAME, SERVICE_VERSION, app, logger
-
-client = TestClient(app)
-
-
-def test_health_contract() -> None:
-    response = client.get("/api/health")
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "status": "alive",
-        "check": "process_liveness",
-        "readiness": "not_evaluated",
-        "phase": "p0_smoke",
-        "service": SERVICE_NAME,
-        "version": SERVICE_VERSION,
-    }
-
-
-def test_health_logger_emits_info_to_stdout() -> None:
-    stdout_handlers = [
-        handler
-        for handler in logger.handlers
-        if isinstance(handler, logging.StreamHandler) and handler.stream is sys.stdout
-    ]
-
-    assert logger.level == logging.INFO
-    assert logger.propagate is False
-    assert len(stdout_handlers) == 1
-
-
-def test_service_index_contains_only_public_discovery_metadata() -> None:
-    response = client.get("/")
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "service": SERVICE_NAME,
-        "version": SERVICE_VERSION,
-        "phase": "p0_smoke",
-        "links": {"health": "/api/health", "openapi": "/api/openapi.json"},
-    }
-
-
-def test_openapi_exposes_stable_health_contract() -> None:
-    response = client.get("/api/openapi.json")
-
-    assert response.status_code == 200
-    document = response.json()
-    assert document["info"]["title"] == "dbtobsb"
-    assert document["info"]["version"] == SERVICE_VERSION
-    service_operation = document["paths"]["/"]["get"]
-    assert service_operation["operationId"] == "getP0SmokeServiceIndex"
-    assert service_operation["summary"] == "Discover the P0 smoke API"
-    assert service_operation["description"].startswith("Returns public shell metadata")
-    assert service_operation["responses"]["200"]["description"] == (
-        "P0 smoke discovery metadata; not product readiness."
-    )
-    health_operation = document["paths"]["/api/health"]["get"]
-    assert health_operation["operationId"] == "getP0SmokeProcessLiveness"
-    assert health_operation["summary"] == "Check App process liveness"
-    assert health_operation["description"].startswith("Confirms only")
-    assert health_operation["responses"]["200"]["description"] == (
-        "App process is alive; product readiness was not evaluated."
-    )
-    health_properties = document["components"]["schemas"]["HealthResponse"]["properties"]
-    assert health_properties["status"]["description"] == "The App process served this request."
-    assert health_properties["status"]["examples"] == ["alive"]
-    assert health_properties["readiness"]["description"].startswith("Product and dependency")
-    assert health_properties["readiness"]["examples"] == ["not_evaluated"]
-    assert document["tags"] == [
-        {
-            "name": "Service",
-            "description": "Non-sensitive P0 service discovery. No product-readiness claim.",
-        },
-        {
-            "name": "Operations",
-            "description": "Process-liveness checks for deployment smoke testing.",
-        },
-    ]
-
-
-def test_interactive_docs_with_public_assets_are_disabled() -> None:
-    assert client.get("/docs").status_code == 404
-    assert client.get("/redoc").status_code == 404
 
 
 def test_bundle_keeps_smoke_app_stopped_and_unbound_by_default() -> None:
     repository_root = Path(__file__).resolve().parents[2]
     bundle = safe_load((repository_root / "databricks.yml").read_text(encoding="utf-8"))
-    app_resource = bundle["resources"]["apps"]["dbtobsb_smoke"]
+    assert bundle["include"] == [
+        ".dbtobsb-observed.generated.yml",
+        ".dbtobsb-app-bindings.generated.yml",
+        ".dbtobsb-bundle-base/*.yml",
+    ]
+    overlay = safe_load(
+        (repository_root / ".dbtobsb-app-bindings.generated.yml").read_text(encoding="utf-8")
+    )
+    app_resource = overlay["resources"]["apps"]["dbtobsb_smoke"]
 
     assert bundle["targets"]["smoke"]["default"] is True
     assert app_resource["lifecycle"]["started"] is False
-    assert "resources" not in app_resource
+    assert app_resource["resources"] == []
+    assert app_resource["permissions"] == []
+    assert app_resource["config"] == {"env": []}
     description = app_resource["description"]
-    assert "stopped by default" in description
-    assert "billable App compute" in description
-    assert "No data or compute bindings" in description
+    assert "stopped until attended installation completes" in description
+    assert "compute can incur cost" in description
 
 
-def test_demo_passes_fixed_storage_parameters_to_triggered_collector() -> None:
+def test_demo_passes_only_correlated_attempt_parameters_to_triggered_collector() -> None:
     repository_root = Path(__file__).resolve().parents[2]
     bundle = safe_load((repository_root / "databricks.yml").read_text(encoding="utf-8"))
-    demo_tasks = bundle["resources"]["jobs"]["dbtobsb_demo"]["tasks"]
+    observed = safe_load(
+        (repository_root / ".dbtobsb-observed.generated.yml").read_text(encoding="utf-8")
+    )
+    demo_tasks = observed["resources"]["jobs"]["dbtobsb_observed"]["tasks"]
+    dbt_task = next(task for task in demo_tasks if task["task_key"] == "dbt_build")
     collector_edge = next(task for task in demo_tasks if task["task_key"] == "collect_dbt_evidence")
     parameters = collector_edge["run_job_task"]["job_parameters"]
 
-    assert parameters["catalog"] == "${var.evidence_catalog}"
-    assert parameters["schema"] == "${var.evidence_schema}"
-    assert parameters["raw_volume_name"] == "${var.raw_volume_name}"
+    assert dbt_task["python_wheel_task"]["entry_point"] == "run-dbt"
+    assert dbt_task["python_wheel_task"]["package_name"] == "dbtobsb-collector"
+    assert set(parameters) == {
+        "workspace_id",
+        "observed_job_id",
+        "observed_job_run_id",
+        "dbt_task_run_id",
+        "observed_task_key",
+        "repair_count",
+        "execution_count",
+    }
+    assert "catalog" not in parameters
+    assert "schema" not in parameters
+    assert "raw_volume_name" not in bundle["variables"]
 
 
 def _write_executable(path: Path, source: str) -> None:

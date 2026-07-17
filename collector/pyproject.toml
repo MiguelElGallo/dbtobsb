@@ -1,11 +1,12 @@
 [project]
 name = "dbtobsb-collector"
-version = "0.2.0a14"
+version = "0.3.0b1"
 description = "Customer-local Databricks collector for dbt Core task evidence"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "databricks-sdk==0.120.0",
-    "dbtobsb-capture==0.2.0a3",
+    "databricks-sdk==0.117.0",
+    "dbtobsb-capture==0.3.0b1",
+    "dbtobsb-contracts==0.3.0b1",
 ]
 
 [build-system]
@@ -15,6 +16,9 @@ build-backend = "hatchling.build"
 [project.scripts]
 bootstrap = "dbtobsb_collector.entrypoints:bootstrap"
 collect = "dbtobsb_collector.entrypoints:collect"
+reconcile = "dbtobsb_collector.entrypoints:reconcile"
+run-dbt = "dbtobsb_collector.runner:entrypoint"
+uninstall-delete = "dbtobsb_collector.entrypoints:uninstall_delete"
 dbtobsb-collector = "dbtobsb_collector.entrypoints:main"
 
 [dependency-groups]
@@ -26,6 +30,7 @@ dev = [
 
 [tool.uv.sources]
 dbtobsb-capture = { path = "../capture" }
+dbtobsb-contracts = { path = "../contracts" }
 
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers -q"
@@ -44,7 +49,7 @@ quote-style = "double"
 
 [tool.ty.environment]
 python-version = "3.12"
-extra-paths = ["../capture/src"]
+extra-paths = ["../capture/src", "../contracts/src"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dbtobsb_collector"]

@@ -1,4 +1,6 @@
-# Capture the first dbt run
+# Historical v0.2 first-capture tutorial
+
+> This page records the earlier maintainer-operated v0.2 preview and its command shape. Do not use it to install v0.3. Start with [Wire a supported dbt Job](../how-to/wire-a-dbt-job.md) and the [v0.3 supported-release contract](../../releases/v0.3.0-support-contract.md).
 
 In this tutorial you deploy the private preview, create its fixed evidence objects, run the synthetic weather project, and query the result. The App stays stopped.
 

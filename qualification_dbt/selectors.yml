@@ -1,0 +1,6 @@
+selectors:
+  - name: weather_release
+    description: Fixed weather-operations graph used for the Azure release qualification.
+    definition:
+      method: path
+      value: "*"

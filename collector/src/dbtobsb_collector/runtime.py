@@ -7,6 +7,7 @@ import json
 from datetime import UTC, datetime
 
 from dbtobsb_capture import inspect_dbt_output_archive, unavailable_archive_capture
+from dbtobsb_contracts import InstalledDbtPolicy, expected_dbt_output
 
 from dbtobsb_collector.contracts import (
     ArchiveDownloader,
@@ -40,6 +41,18 @@ def _digest(record: CollectionRecord) -> str:
             "archive_sha256": capture.archive_sha256,
             "manifest_sha256": capture.manifest_sha256,
             "run_results_sha256": capture.run_results_sha256,
+            "include_deps": capture.include_deps,
+            "structured_logs": [
+                {
+                    "ordinal": item.ordinal,
+                    "state": item.state.value,
+                    "sha256": item.sha256,
+                    "size_bytes": item.size_bytes,
+                    "file_count": item.file_count,
+                    "log_version": item.log_version,
+                }
+                for item in capture.structured_logs
+            ],
         },
         "outer": {
             "task_start_time": (
@@ -95,25 +108,36 @@ def collect_task_run(
     downloader: ArchiveDownloader,
     raw_store: RawArchiveStore,
     sink: EvidenceSink,
+    installed_policy: InstalledDbtPolicy,
     now: datetime | None = None,
 ) -> CollectionRecord:
     """Retrieve, preserve, classify, and idempotently publish one task attempt."""
+    expectation = expected_dbt_output(
+        attempt=context.as_dbt_attempt_identity(),
+        policy=installed_policy,
+    )
     observed = jobs.read(context)
     raw_locator: str | None = None
     reference = observed.artifact_reference
     if reference is None:
         retrieval_state = RetrievalState.UNAVAILABLE
-        capture = unavailable_archive_capture(issue_code="DBT_ARCHIVE_LINK_UNAVAILABLE")
+        capture = unavailable_archive_capture(
+            issue_code="DBT_ARCHIVE_LINK_UNAVAILABLE",
+            expectation=expectation,
+        )
     else:
         try:
             archive = downloader.download(reference)
         except ArtifactDownloadError as exc:
             retrieval_state = RetrievalState.UNAVAILABLE
-            capture = unavailable_archive_capture(issue_code=exc.code)
+            capture = unavailable_archive_capture(issue_code=exc.code, expectation=expectation)
         else:
             retrieval_state = RetrievalState.RETRIEVED
             raw_locator = raw_store.preserve(context=context, archive=archive)
-            capture = inspect_dbt_output_archive(archive=archive)
+            capture = inspect_dbt_output_archive(
+                archive=archive,
+                expectation=expectation,
+            )
 
     provisional = CollectionRecord(
         context=context,

@@ -1,0 +1,11 @@
+weather_operations:
+  target: qualification
+  outputs:
+    qualification:
+      type: databricks
+      catalog: "{{ env_var('DBTOBSB_QUALIFICATION_CATALOG', 'replace_me') }}"
+      schema: "{{ env_var('DBTOBSB_QUALIFICATION_SCHEMA', 'weather_operations') }}"
+      host: "{{ env_var('DATABRICKS_HOST', 'https://placeholder.azuredatabricks.net') }}"
+      http_path: "{{ env_var('DATABRICKS_HTTP_PATH', '/sql/1.0/warehouses/placeholder') }}"
+      token: "{{ env_var('DATABRICKS_TOKEN', 'local-parse-placeholder-not-a-credential') }}"
+      threads: 1

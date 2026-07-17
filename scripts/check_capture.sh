@@ -9,7 +9,9 @@ capture_python="${CAPTURE_PYTHON_VERSION:-3.12}"
 temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/dbtobsb-capture-check.XXXXXX")"
 trap 'rm -rf "$temporary_root"' EXIT
 
-uv sync --project capture --locked --python "$capture_python"
+uv sync --project capture --locked --python "$capture_python" \
+  --reinstall-package dbtobsb-contracts \
+  --reinstall-package dbtobsb-capture
 uv run --project capture python capture/scripts/generate_report_schema.py --check
 uv run --project capture pytest capture/tests
 uv run --project capture python scripts/check_markdown_links.py --revision HEAD
@@ -49,16 +51,19 @@ printf '%s' "$api_example_json" \
   | "$temporary_root/runtime/bin/python" -c \
     'import json, sys; report = json.load(sys.stdin); assert report["pair_state"] == "PAIR_VALID"'
 
+uv build --project contracts --wheel --out-dir "$temporary_root/dist"
 uv build --project capture --wheel --out-dir "$temporary_root/dist"
 shopt -s nullglob
-wheels=("$temporary_root"/dist/*.whl)
-if [[ "${#wheels[@]}" -ne 1 ]]; then
+contracts_wheels=("$temporary_root"/dist/dbtobsb_contracts-*.whl)
+capture_wheels=("$temporary_root"/dist/dbtobsb_capture-*.whl)
+if [[ "${#contracts_wheels[@]}" -ne 1 || "${#capture_wheels[@]}" -ne 1 ]]; then
   printf '%s\n' "DBTOBSB_CAPTURE_WHEEL_COUNT_ERROR" >&2
   exit 1
 fi
 
 uv venv --python "$capture_python" "$temporary_root/venv"
-UV_LINK_MODE=copy uv pip install --python "$temporary_root/venv/bin/python" "${wheels[0]}"
+UV_LINK_MODE=copy uv pip install --python "$temporary_root/venv/bin/python" \
+  "${contracts_wheels[0]}" "${capture_wheels[0]}"
 
 "$temporary_root/venv/bin/dbtobsb-capture" inspect-artifact-pair \
   --manifest capture/tests/fixtures/artifact_pair/valid_success/manifest.json \
