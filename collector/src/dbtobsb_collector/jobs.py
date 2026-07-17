@@ -277,9 +277,56 @@ def attempt_context_from_resolved_task(
     if (
         not isinstance(policy, DbtRuntimePolicySnapshot)
         or getattr(task, "task_key", None) != policy.task_key
-        or getattr(task, "dbt_task", None) is None
     ):
         raise JobsEvidenceError("DBT_JOBS_TASK_CORRELATION_MISMATCH")
+    if getattr(task, "dbt_task", None) is None:
+        project = _runner_project_directory(task, policy=policy)
+        if project is None:
+            raise JobsEvidenceError("DBT_JOBS_TASK_CORRELATION_MISMATCH")
+        resolved = getattr(task, "resolved_values", None)
+        resolved_wheel = getattr(resolved, "python_wheel_task", None)
+        parameters = getattr(resolved_wheel, "parameters", None)
+        configured_wheel = getattr(task, "python_wheel_task", None)
+        configured = tuple(getattr(configured_wheel, "parameters", None) or ())
+        expected_flags = (
+            "--workspace_id",
+            "--observed_job_id",
+            "--observed_job_run_id",
+            "--dbt_task_run_id",
+            "--repair_count",
+            "--execution_count",
+            "--project_directory",
+            "--policy_path",
+        )
+        if (
+            not isinstance(parameters, list)
+            or len(parameters) != 16
+            or tuple(parameters[::2]) != expected_flags
+            or any(not isinstance(value, str) for value in parameters)
+            or tuple(parameters[12:]) != configured[12:]
+            or parameters[13] != project
+        ):
+            raise JobsEvidenceError("DBT_JOBS_RESOLVED_ATTEMPT_BINDING_MISMATCH")
+        numeric = parameters[1:12:2]
+        if (
+            any(re.fullmatch(r"[1-9][0-9]*", value) is None for value in numeric[:4])
+            or re.fullmatch(r"[0-9]+", numeric[4]) is None
+            or re.fullmatch(r"[1-9][0-9]*", numeric[5]) is None
+        ):
+            raise JobsEvidenceError("DBT_JOBS_RESOLVED_ATTEMPT_BINDING_MISMATCH")
+        context = AttemptContext(
+            workspace_id=int(numeric[0]),
+            observed_job_id=int(numeric[1]),
+            observed_job_run_id=int(numeric[2]),
+            dbt_task_run_id=int(numeric[3]),
+            observed_task_key=policy.task_key,
+            repair_count=int(numeric[4]),
+            execution_count=int(numeric[5]),
+        )
+        if getattr(task, "run_id", None) != context.dbt_task_run_id:
+            raise JobsEvidenceError("DBT_JOBS_RESOLVED_ATTEMPT_BINDING_MISMATCH")
+        return context
+
     resolved = getattr(task, "resolved_values", None)
     resolved_dbt = getattr(resolved, "dbt_task", None)
     resolved_commands = getattr(resolved_dbt, "commands", None)
@@ -547,15 +594,17 @@ class DatabricksJobsEvidenceReader:
         except Exception as error:
             raise JobsEvidenceError("DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH") from error
         tasks = list(getattr(parent, "tasks", None) or ())
-        dbt_tasks = [
+        dbt_history = [
             task
             for task in tasks
             if getattr(task, "task_key", None) == context.observed_task_key
-            and getattr(task, "run_id", None) == context.dbt_task_run_id
             and (
                 getattr(task, "dbt_task", None) is not None
                 or _runner_project_directory(task, policy=self._policy) is not None
             )
+        ]
+        dbt_tasks = [
+            task for task in dbt_history if getattr(task, "run_id", None) == context.dbt_task_run_id
         ]
         collector_tasks = [
             task
@@ -564,7 +613,14 @@ class DatabricksJobsEvidenceReader:
             and getattr(task, "run_id", None) == collector_task_run_id
             and getattr(task, "run_job_task", None) is not None
         ]
-        if len(dbt_tasks) != 1 or len(collector_tasks) != 1 or len(tasks) != 2:
+        dbt_run_ids = [getattr(task, "run_id", None) for task in dbt_history]
+        if (
+            len(dbt_tasks) != 1
+            or len(collector_tasks) != 1
+            or len(dbt_history) + len(collector_tasks) != len(tasks)
+            or any(type(run_id) is not int or run_id <= 0 for run_id in dbt_run_ids)
+            or len(set(dbt_run_ids)) != len(dbt_run_ids)
+        ):
             raise JobsEvidenceError("DBT_JOBS_INSTALLED_COLLECTOR_BINDING_MISMATCH")
         collector_task = collector_tasks[0]
         run_job_task = getattr(collector_task, "run_job_task", None)
@@ -783,13 +839,28 @@ class DatabricksJobsEvidenceReader:
         if len(matches) != 1:
             raise JobsEvidenceError("DBT_JOBS_TASK_CORRELATION_MISMATCH")
         if require_direct_parent:
+            dbt_history = [
+                candidate
+                for candidate in tasks
+                if candidate.task_key == context.observed_task_key
+                and (
+                    getattr(candidate, "dbt_task", None) is not None
+                    or _runner_project_directory(candidate, policy=self._policy) is not None
+                )
+            ]
             collector_tasks = [
                 candidate
                 for candidate in tasks
                 if candidate.task_key == "collect_dbt_evidence"
                 and candidate.run_job_task is not None
             ]
-            if len(tasks) != 2 or len(collector_tasks) != 1:
+            dbt_run_ids = [getattr(candidate, "run_id", None) for candidate in dbt_history]
+            if (
+                len(collector_tasks) != 1
+                or len(dbt_history) + len(collector_tasks) != len(tasks)
+                or any(type(run_id) is not int or run_id <= 0 for run_id in dbt_run_ids)
+                or len(set(dbt_run_ids)) != len(dbt_run_ids)
+            ):
                 raise JobsEvidenceError("DBT_JOBS_TASK_CORRELATION_MISMATCH")
             collector_task = collector_tasks[0]
             collector_task_run_id = getattr(collector_task, "run_id", None)
@@ -816,10 +887,8 @@ class DatabricksJobsEvidenceReader:
         )
         if not isinstance(project_directory, str):
             raise JobsEvidenceError("DBT_JOBS_DBT_PROJECT_BINDING_MISMATCH")
-        if (
-            dbt_task is not None
-            and getattr(task, "resolved_values", None) is not None
-            and (attempt_context_from_resolved_task(task, policy=self._policy) != context)
+        if getattr(task, "resolved_values", None) is not None and (
+            attempt_context_from_resolved_task(task, policy=self._policy) != context
         ):
             raise JobsEvidenceError("DBT_JOBS_RESOLVED_ATTEMPT_BINDING_MISMATCH")
         self._attest_deployed_source(project_directory)

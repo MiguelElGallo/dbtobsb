@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: stg_weather_observations
+    description: Typed weather observations for release qualification.
+    columns:
+      - name: city
+        data_tests: [not_null]
+      - name: observed_date
+        data_tests: [not_null]
+  - name: daily_weather_operations
+    description: Daily operating conditions across reporting cities.
+    columns:
+      - name: observed_date
+        data_tests: [unique, not_null]
+  - name: weather_operations_alerts
+    description: Weather states that can affect daily operations.
+    columns:
+      - name: operations_state
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [high_wind, heavy_rain, warm, normal]

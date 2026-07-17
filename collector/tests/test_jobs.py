@@ -27,6 +27,7 @@ from dbtobsb_collector.jobs import (
     DatabricksJobsEvidenceReader,
     JobsEvidenceError,
     _allow_internal_artifact_http,
+    attempt_context_from_resolved_task,
 )
 
 
@@ -123,6 +124,43 @@ def _resolved_commands() -> list[str]:
         command.replace(unresolved, _context().as_dbt_attempt_identity().key)
         for command in _canonical_commands()
     ]
+
+
+def _resolved_runner_task() -> SimpleNamespace:
+    project = (
+        "/Workspace/Users/reviewer@example.com/.bundle/dbtobsb/smoke/files/"
+        f"{_policy().project_directory.removeprefix('./')}"
+    )
+    configured = [
+        "--workspace_id",
+        "{{workspace.id}}",
+        "--observed_job_id",
+        "{{job.id}}",
+        "--observed_job_run_id",
+        "{{job.run_id}}",
+        "--dbt_task_run_id",
+        "{{task.run_id}}",
+        "--repair_count",
+        "{{job.repair_count}}",
+        "--execution_count",
+        "{{task.execution_count}}",
+        "--project_directory",
+        project,
+        "--policy_path",
+        f"{project.rsplit('/project', maxsplit=1)[0]}/dbt-policy-v1.json",
+    ]
+    resolved = configured.copy()
+    resolved[1:12:2] = ["101", "201", "301", "401", "0", "1"]
+    return SimpleNamespace(
+        task_key="dbt_build",
+        run_id=401,
+        python_wheel_task=SimpleNamespace(
+            package_name="dbtobsb-collector",
+            entry_point="run-dbt",
+            parameters=configured,
+        ),
+        resolved_values=SimpleNamespace(python_wheel_task=SimpleNamespace(parameters=resolved)),
+    )
 
 
 class _Jobs:
@@ -471,6 +509,24 @@ def test_https_link_does_not_request_internal_http_capability() -> None:
     )
 
 
+def test_resolved_product_runner_yields_the_complete_attempt_context() -> None:
+    assert (
+        attempt_context_from_resolved_task(_resolved_runner_task(), policy=_policy()) == _context()
+    )
+
+
+@pytest.mark.parametrize("index", [0, 1, 7, 9, 13, 15])
+def test_resolved_product_runner_rejects_parameter_drift(index: int) -> None:
+    task = _resolved_runner_task()
+    task.resolved_values.python_wheel_task.parameters[index] = "drift"
+
+    with pytest.raises(
+        JobsEvidenceError,
+        match="DBT_JOBS_RESOLVED_ATTEMPT_BINDING_MISMATCH",
+    ):
+        attempt_context_from_resolved_task(task, policy=_policy())
+
+
 def test_untrusted_cleartext_links_are_not_recognized() -> None:
     candidates = (
         "http://signed.blob.core.windows.net/path/archive",
@@ -588,6 +644,19 @@ def test_real_sdk_run_model_has_no_fabricated_run_as_identity_field() -> None:
     assert isinstance(current, jobs.Run)
     assert not hasattr(current, "run_as_user_name")
     assert _reader(client).read(_context()).lakeflow_result_state == "SUCCESS"
+
+
+def test_direct_reader_accepts_sealed_dbt_retry_history() -> None:
+    current = _task()
+    prior = _task(result="FAILED")
+    prior.run_id = 399
+    client = _client(current)
+    client.jobs._pages[0].tasks.insert(0, prior)
+
+    evidence = _reader(client).read(_context())
+
+    assert evidence.lakeflow_result_state == "SUCCESS"
+    assert client.jobs.dbt_output_calls == 1
 
 
 def test_reader_rejects_authenticated_identity_drift_before_parent_read() -> None:

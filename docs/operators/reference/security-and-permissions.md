@@ -1,6 +1,6 @@
 # Security and permissions
 
-The private `v0.3.0` candidate keeps evidence customer-local and is designed for regulated deployment constraints. Its first supported route still uses one combined administrator; it does not claim independent separation of duties.
+The private `v0.3.0` release keeps evidence customer-local and is designed for regulated deployment constraints. Its supported route uses one combined administrator; it does not claim independent separation of duties.
 
 ## Trust boundary
 
@@ -22,7 +22,7 @@ Customer-local does not mean non-sensitive. Raw dbt artifacts can contain Person
 
 The first row corrects an important misconception: creating production tables is not inherently invalid. It is valid when the customer deliberately authorizes the fixed installation or upgrade operation. What is invalid is allowing an ordinary collection request to acquire DDL capability implicitly.
 
-The current preview's reusable bootstrap Job runs as the deploying owner and verifies visible schemas, not the full production ownership, table-format, view-definition, grant, and authority-retirement contract. That is one reason this release is not production-qualified.
+The attended launcher deploys one temporary bootstrap Job that runs as the deploying administrator and exact existing schema owner. It creates or verifies only the fixed product objects, validates the versioned object manifest and ownership, applies the enumerated grants, waits for terminal readback, and removes the temporary Job. The combined administrator and principals with residual `MODIFY` or management authority remain explicit trusted roots.
 
 ## Minimum Unity Catalog capabilities
 
@@ -40,7 +40,7 @@ The observed runner receives parent usage and `READ VOLUME` plus `WRITE VOLUME` 
 
 Databricks documents that creating or updating files requires both `READ VOLUME` and `WRITE VOLUME` with parent usage privileges ([Volume privileges](https://learn.microsoft.com/en-us/azure/databricks/volumes/privileges)). Because table `MODIFY` can also permit schema-altering operations, the runtime identity and its code/job managers remain trusted roots; a production installer must review that residual authority explicitly.
 
-Ordinary readers should receive parent usage and `SELECT` on `dbt_run_health` and `dbt_node_health`, not the raw Volume or restricted tables.
+Ordinary readers should receive parent usage and `SELECT` on `dbt_run_health`, `dbt_node_health`, and `dbt_collection_health`, not the raw Volume or restricted tables.
 
 ## Job identities
 

@@ -678,6 +678,29 @@ def test_same_content_version_cannot_publish_different_wheel_bytes(
     assert {path.name for path in private_root.iterdir()} == {first.candidate_id}
 
 
+def test_runtime_package_source_digest_changes_with_console_or_source_code(
+    tmp_path: Path,
+) -> None:
+    roots = tuple(tmp_path / name for name in ("contracts", "capture", "collector"))
+    for root in roots:
+        (root / "src" / root.name).mkdir(parents=True)
+        (root / "pyproject.toml").write_text(
+            f'[project]\nname = "{root.name}"\nversion = "1.0.0"\n',
+            encoding="utf-8",
+        )
+        (root / "src" / root.name / "__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
+
+    first = runtime_seal._package_source_sha256(roots)
+    assert runtime_seal._package_source_sha256(roots) == first
+
+    (roots[2] / "pyproject.toml").write_text(
+        '[project]\nname = "collector"\nversion = "1.0.0"\n'
+        '[project.scripts]\nbootstrap = "collector:bootstrap"\n',
+        encoding="utf-8",
+    )
+    assert runtime_seal._package_source_sha256(roots) != first
+
+
 def test_candidate_lock_denies_concurrent_packaging(private_root: Path) -> None:
     del private_root
     with (

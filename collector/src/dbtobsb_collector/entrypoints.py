@@ -13,6 +13,7 @@ from dbtobsb_collector.bootstrap import (
     RAW_VOLUME_NAME,
     InstallationBinding,
     bootstrap_objects,
+    delete_installation_objects,
     read_installation_seal,
 )
 from dbtobsb_collector.contracts import AttemptContext
@@ -436,6 +437,47 @@ def bootstrap() -> None:
             collector_service_principal_name=arguments.collector_service_principal_name,
             job_manager_group_name=arguments.job_manager_group_name,
             collector_environment_sha256=arguments.collector_environment_sha256,
+        )
+    except Exception as error:
+        print(
+            json.dumps(
+                bootstrap_operator_diagnostic(error).as_dict(),
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        )
+        raise SystemExit(1) from None
+
+
+def uninstall_delete() -> None:
+    """Delete only the verified v1 objects from the sealed installed schema."""
+
+    parser = _SafeArgumentParser(prog="dbtobsb-uninstall-delete", allow_abbrev=False)
+    parser.add_argument("--catalog", required=True)
+    parser.add_argument("--schema", required=True)
+    try:
+        arguments = parser.parse_args()
+        deployed = load_deployed_runtime_contract()
+        if (
+            arguments.catalog != deployed.seal.evidence_catalog
+            or arguments.schema != deployed.seal.evidence_schema
+        ):
+            raise RuntimeError("DBTOBSB_DEPLOYMENT_BINDING_INVALID")
+        result = delete_installation_objects(
+            _active_spark(),
+            catalog=arguments.catalog,
+            schema=arguments.schema,
+        )
+        print(
+            json.dumps(
+                {
+                    "deleted_object_count": result.deleted_object_count,
+                    "event": "dbtobsb_delete_uninstall_verified",
+                    "schema_preserved": True,
+                },
+                separators=(",", ":"),
+                sort_keys=True,
+            )
         )
     except Exception as error:
         print(

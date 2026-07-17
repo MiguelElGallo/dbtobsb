@@ -6,7 +6,7 @@
 - Readability benchmark: FastAPI documentation
 - Visual benchmark: the established bricks-cli documentation style, subject to accessibility review
 
-> **v0.3.0 documentation overlay:** The [v0.3.0 supported-release contract](../releases/v0.3.0-support-contract.md) is authoritative for current release documentation. v0.3.0 documents only combined-role installation, the temporary serverless bootstrap Job, eight customer objects, real `WORKSPACE` dbt onboarding, the read-only three-view App, and the six supported lifecycle operations. Separated duties, Statement Execution migration, runtime-trust ledgers, controlled actions, system enrichment, upgrade, and rollback below are future information architecture, not current instructions or release gates.
+> **v0.3.0 documentation overlay:** The [v0.3.0 supported-release contract](../releases/v0.3.0-support-contract.md) is authoritative for current release documentation. v0.3.0 documents only combined-role installation, the temporary serverless bootstrap Job, nine customer objects, real `WORKSPACE` dbt onboarding, the read-only three-view App, and the six supported lifecycle operations. Separated duties, Statement Execution migration, runtime-trust ledgers, controlled actions, system enrichment, upgrade, and rollback below are future information architecture, not current instructions or release gates.
 
 ## Documentation outcome
 

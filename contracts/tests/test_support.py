@@ -10,11 +10,11 @@ import pytest
 from dbtobsb_contracts import load_support_manifest, parse_support_manifest
 
 
-def test_packaged_support_manifest_is_exact_and_candidate_only() -> None:
+def test_packaged_support_manifest_is_exact_and_final() -> None:
     manifest = load_support_manifest()
 
     assert manifest.contract_version == "dbtobsb.support.v1"
-    assert manifest.release_state == "CANDIDATE"
+    assert manifest.release_state == "FINAL"
     assert manifest.platform["cloud"] == "AZURE_DATABRICKS"
     assert manifest.installation["launcher"] == "dbtobsb bootstrap"
     assert manifest.installation["runtime_trust_ledger"] == "NOT_IN_V0_3_SUPPORTED_PATH"
@@ -115,7 +115,7 @@ def test_manifest_rejects_weakened_or_unreviewed_values(
     with pytest.raises(ValueError, match=f"DBTOBSB_SUPPORT_MANIFEST_{code}"):
         parse_support_manifest(json.dumps(raw).encode())
 
-    assert packaged.release_state == "CANDIDATE"
+    assert packaged.release_state == "FINAL"
 
 
 def test_manifest_rejects_duplicate_keys() -> None:

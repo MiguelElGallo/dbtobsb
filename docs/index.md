@@ -1,13 +1,14 @@
 # dbtobsb documentation
 
-The repository contains the private v0.3 release candidate, its machine-readable support contract, a stopped-by-default read-only Databricks App, the observed/collector/reconciler Jobs, and the offline artifact-pair inspector.
+The repository contains the supported private v0.3 release, its machine-readable support contract, a stopped-by-default read-only Databricks App, the observed/collector/reconciler Jobs, and the offline artifact-pair inspector.
 
 ## Start here
 
 - [Operator documentation](operators/index.md)
+- [Install the private v0.3 release](operators/tutorials/install-private-release.md)
 - [Wire a supported dbt Job](operators/how-to/wire-a-dbt-job.md)
 - [v0.3 supported-release contract](releases/v0.3.0-support-contract.md)
-- [v0.3 live Azure Databricks acceptance](evidence/v0.3.0-live-acceptance-2026-07-16.md)
+- [v0.3 final Azure Databricks acceptance](evidence/v0.3.0-live-acceptance-2026-07-17.md)
 - [Sanitized P2 live capture](evidence/p2-live-capture-2026-07-16.md)
 - [Product and delivery plan](plans/product-plan.md)
 - [Review process](plans/review-process.md)

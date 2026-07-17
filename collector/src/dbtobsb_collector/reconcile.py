@@ -287,7 +287,18 @@ class InstalledPolicyReconciliationController:
         for parent_run_id, task_run_id in sorted(task_run_ids):
             task = task_snapshots.get(task_run_id)
             if task is None or getattr(task, "resolved_values", None) is None:
-                task = self._get_run(task_run_id, include_resolved_values=True)
+                run = self._get_run(task_run_id, include_resolved_values=True)
+                if getattr(run, "task_key", None) is not None:
+                    task = run
+                else:
+                    matching = [
+                        candidate
+                        for candidate in (getattr(run, "tasks", None) or ())
+                        if getattr(candidate, "run_id", None) == task_run_id
+                    ]
+                    if len(matching) != 1:
+                        raise ReconciliationError("DBTOBSB_RECONCILIATION_TASK_CONTEXT_INVALID")
+                    task = matching[0]
             if getattr(task, "task_key", None) != self.policy.task_key:
                 continue
             try:

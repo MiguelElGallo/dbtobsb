@@ -1,0 +1,20 @@
+name: weather_operations
+version: 1.0.0
+config-version: 2
+
+require-dbt-version: "=1.11.12"
+profile: weather_operations
+
+model-paths: [models]
+seed-paths: [seeds]
+test-paths: [tests]
+
+clean-targets: [target, logs]
+
+models:
+  weather_operations:
+    +materialized: view
+
+seeds:
+  weather_operations:
+    +quote_columns: false

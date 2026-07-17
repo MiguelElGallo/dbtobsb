@@ -36,6 +36,6 @@ fi
 uv venv --python "$contracts_python" "$temporary_root/venv"
 UV_LINK_MODE=copy uv pip install --python "$temporary_root/venv/bin/python" "${wheels[0]}"
 "$temporary_root/venv/bin/python" -c \
-  'from dbtobsb_contracts import load_support_manifest; assert load_support_manifest().release_state == "CANDIDATE"'
+  'from dbtobsb_contracts import load_support_manifest; assert load_support_manifest().release_state == "FINAL"'
 
 printf '%s\n' "DBTOBSB_CONTRACTS_CHECK_PASSED"

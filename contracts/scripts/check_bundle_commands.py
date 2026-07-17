@@ -35,6 +35,7 @@ _BUNDLE_FIELDS = frozenset({"name", "databricks_cli_version", "engine"})
 _INCLUDE_FILES = (
     ".dbtobsb-observed.generated.yml",
     ".dbtobsb-app-bindings.generated.yml",
+    ".dbtobsb-bundle-base/*.yml",
 )
 _SYNC_EXCLUDES = (
     "app/tests/**",
@@ -270,7 +271,7 @@ def bundle_success_diagnostic() -> OperatorDiagnostic:
         code="DBTOBSB_BUNDLE_DBT_CONTRACT_OK",
         outcome="accepted",
         component="local generated onboarding and Bundle contract",
-        summary="Accepted for the local private release candidate.",
+        summary="Accepted for the supported private release.",
         consequence="Installed deployment integrity is not sealed or verified by this check.",
         responsible_actor="deployment/seal verifier",
         action="Continue with the documented deployment-and-seal workflow.",

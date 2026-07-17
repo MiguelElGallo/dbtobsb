@@ -6,6 +6,7 @@ bundle:
 include:
   - .dbtobsb-observed.generated.yml
   - .dbtobsb-app-bindings.generated.yml
+  - .dbtobsb-bundle-base/*.yml
 
 sync:
   include:

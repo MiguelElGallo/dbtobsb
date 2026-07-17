@@ -401,6 +401,7 @@ dependencies = [
     { name = "dbt-core" },
     { name = "dbt-protos" },
     { name = "dbtobsb-collector" },
+    { name = "dbtobsb-contracts" },
     { name = "pyyaml" },
 ]
 
@@ -420,6 +421,7 @@ requires-dist = [
     { name = "dbt-core", specifier = "==1.11.12" },
     { name = "dbt-protos", specifier = "==1.0.541" },
     { name = "dbtobsb-collector", directory = "../collector" },
+    { name = "dbtobsb-contracts", directory = "../contracts" },
     { name = "pyyaml", specifier = "==6.0.3" },
 ]
 

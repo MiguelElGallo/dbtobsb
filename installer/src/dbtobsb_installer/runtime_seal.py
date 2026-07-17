@@ -124,6 +124,7 @@ _PACKAGE_SPECS = (
     ("capture", "dbtobsb-capture", "dbtobsb_capture"),
     ("collector", "dbtobsb-collector", "dbtobsb_collector"),
 )
+_PACKAGE_SOURCE_ROOTS = tuple(_REPO_ROOT / name for name in ("contracts", "capture", "collector"))
 
 
 class RuntimeSealError(RuntimeError):
@@ -316,6 +317,45 @@ def _canonical_json(value: Any) -> bytes:
 
 def _sha256(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
+
+
+def _package_source_sha256(package_roots: Sequence[Path] | None = None) -> str:
+    """Bind content versions to every local file that can affect the runtime wheels."""
+
+    roots = tuple(package_roots) if package_roots is not None else _PACKAGE_SOURCE_ROOTS
+    source: dict[str, str] = {}
+    try:
+        for root in roots:
+            if root.is_symlink() or not root.is_dir():
+                raise OSError
+            candidates = [root / "pyproject.toml"]
+            readme = root / "README.md"
+            if readme.exists():
+                candidates.append(readme)
+            candidates.extend(sorted((root / "src").rglob("*")))
+            for path in candidates:
+                if path.is_dir():
+                    continue
+                if "__pycache__" in path.parts or path.suffix == ".pyc":
+                    continue
+                if path.is_symlink() or not path.is_file():
+                    raise OSError
+                relative = f"{root.name}/{path.relative_to(root).as_posix()}"
+                if relative in source:
+                    raise OSError
+                source[relative] = _sha256(path.read_bytes())
+    except (OSError, ValueError):
+        raise RuntimeSealError("DBTOBSB_RUNTIME_CANDIDATE_SOURCE_INVALID") from None
+    if not source:
+        raise RuntimeSealError("DBTOBSB_RUNTIME_CANDIDATE_SOURCE_INVALID")
+    return _sha256(
+        _canonical_json(
+            {
+                "domain": "dbtobsb.runtime-package-source.v1",
+                "source_sha256": source,
+            }
+        )
+    )
 
 
 def _parse_json(raw: bytes, *, code: str) -> dict[str, Any]:
@@ -1697,6 +1737,7 @@ class _RuntimeCandidateBuilder:
                 "evidence_catalog": inputs.evidence_catalog,
                 "evidence_schema": inputs.evidence_schema,
                 "job_manager_group_name": before.binding.job_manager_group_name,
+                "package_source_sha256": _package_source_sha256(),
                 "observed_job_id": before.binding.observed_job_id,
                 "observed_service_principal_name": (before.binding.observed_service_principal_name),
                 "dbt_runtime_policy_sha256": (inputs.dbt_policy.expected_runtime_policy_sha256),
