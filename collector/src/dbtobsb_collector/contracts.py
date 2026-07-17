@@ -8,6 +8,7 @@ from enum import StrEnum
 from typing import Protocol
 
 from dbtobsb_capture import ArchiveCapture
+from dbtobsb_contracts import AttemptIdentity
 
 
 class RetrievalState(StrEnum):
@@ -54,6 +55,17 @@ class AttemptContext:
         ):
             raise ValueError("observed_task_key must be a bounded alphanumeric key")
 
+    def as_dbt_attempt_identity(self) -> AttemptIdentity:
+        """Map native dynamic references to the shared immutable path identity."""
+        return AttemptIdentity(
+            workspace_id=self.workspace_id,
+            job_id=self.observed_job_id,
+            job_run_id=self.observed_job_run_id,
+            task_run_id=self.dbt_task_run_id,
+            repair_count=self.repair_count,
+            execution_count=self.execution_count,
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class ArtifactReference:
@@ -65,6 +77,18 @@ class ArtifactReference:
 
 
 @dataclass(frozen=True, slots=True)
+class VolumeArtifactReference:
+    """Closed customer-local attempt root used to assemble one bounded archive."""
+
+    source_root: str = field(repr=False)
+    archive_root: str = field(repr=False)
+    include_deps: bool
+
+
+type ArtifactSource = ArtifactReference | VolumeArtifactReference
+
+
+@dataclass(frozen=True, slots=True)
 class ObservedTaskEvidence:
     """Allowlisted Jobs facts plus an optional ephemeral artifact reference."""
 
@@ -73,7 +97,7 @@ class ObservedTaskEvidence:
     lakeflow_result_state: str
     attempt_number: int
     logs_truncated: bool | None
-    artifact_reference: ArtifactReference | None
+    artifact_reference: ArtifactSource | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,7 +122,7 @@ class JobsEvidenceReader(Protocol):
 class ArchiveDownloader(Protocol):
     """Consume one ephemeral artifact reference into bounded closed bytes."""
 
-    def download(self, reference: ArtifactReference) -> bytes: ...
+    def download(self, reference: ArtifactSource) -> bytes: ...
 
 
 class RawArchiveStore(Protocol):

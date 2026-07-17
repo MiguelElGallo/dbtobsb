@@ -1,0 +1,138 @@
+{
+  "binding": {
+    "collector_environment_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "collector_job_id": 102,
+    "collector_service_principal_name": "collector runtime",
+    "expected_runtime_policy_sha256": "6a7bb95bee4285103bff3e0a904280c1e2537b195a3fdaf578618ba941c37c65",
+    "job_manager_group_name": "dbtobsb job managers",
+    "observed_job_id": 101,
+    "observed_service_principal_name": "observed principal's runtime",
+    "reconciler_job_id": 103,
+    "source_contract_sha256": "832cb9145fa60d05c702d99a244b2dcd83a26a3ac2e5b476ec2fcc45a90c8205",
+    "warehouse_id": "0123456789abcdef",
+    "workspace_id": 1234567890123456
+  },
+  "catalog": "observability",
+  "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+  "operations": [
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_artifact_registry_table_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "a11598c896797c3f2413cedea89fa4b12c5946230025a8f0cd488a131f03a1df"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_invocations_table_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "2ff1572a15717c757a995f7e6c79a37d13e622aa3fa05ecc9120d508fbc9f399"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_node_results_table_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "c99fb59484ea39bde2cf62973d9a92325a6c1204fd28a9af5d4ce1e9ae5ef73e"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_raw_volume_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "44c184b0eb288275c48396014230c8cd820ddc68d04adf8bcc7f0b3b80f725c5"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_stage_volume_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "c5e10bb6a671ed6b5100d7c0140033b4c492e3f72ed16ce78f3e18c518faa346"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_run_health_view_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "f095e6609839aca8f35f557b65fa9a587a4b2d3171bbcf431e386a08b1e4d0bc"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_node_health_view_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "813b6e01b69fc2f911416d74201dbd890bd88cab2df232ad0da37ad594818e26"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_collection_health_view_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "5916a049c22170cdea0739299347a6635ef69718eb2a480ebc9f9bbbd422f3d0"
+    },
+    {
+      "parameters": {
+        "catalog": "observability",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "schema": "dbtobsb"
+      },
+      "registry_operation": "bootstrap_create_object_manifest_table_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "3000dcf431a1a96570c31fbc100b031067680ef9ef0c0b5a2ecdda42af88eb15"
+    },
+    {
+      "parameters": {
+        "base_observability_contract_sha256": "b1c28a474d2fa79f7e881f862a9f02c27a398261a90f723a07a3f5f54e6f02ae",
+        "catalog": "observability",
+        "collector_environment_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "collector_job_id": "102",
+        "collector_service_principal_name": "collector runtime",
+        "evidence_catalog": "observability",
+        "evidence_schema": "dbtobsb",
+        "expected_runtime_policy_sha256": "6a7bb95bee4285103bff3e0a904280c1e2537b195a3fdaf578618ba941c37c65",
+        "installation_id": "5448eb6a8ca2aed37e294d4216b2f93fa35ffb0dd8330ab48f36ba9ffbf31377",
+        "job_manager_group_name": "dbtobsb job managers",
+        "manifest_version": "dbtobsb.evidence.v1.0.0-rc.11",
+        "marker_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.A.B",
+        "object_contract_sha256": "603afcbf9a1b52d926a1aba6f46b74f76f1783dfd7edc66d1ccc9003ba3d7605",
+        "observed_job_id": "101",
+        "observed_service_principal_name": "observed principal's runtime",
+        "reconciler_job_id": "103",
+        "schema": "dbtobsb",
+        "source_contract_sha256": "832cb9145fa60d05c702d99a244b2dcd83a26a3ac2e5b476ec2fcc45a90c8205",
+        "warehouse_id": "0123456789abcdef",
+        "workspace_id": "1234567890123456"
+      },
+      "registry_operation": "bootstrap_insert_object_manifest_v1",
+      "registry_version": "dbtobsb.native-operation-registry.v1",
+      "semantic_sha256": "a15fa27c20871b1aea0e0b070ca37321467b98ec0b85b6d0c60987144ed5be38"
+    }
+  ],
+  "schema": "dbtobsb",
+  "vector_schema": "dbtobsb.native-bootstrap-registry-vectors.v1"
+}

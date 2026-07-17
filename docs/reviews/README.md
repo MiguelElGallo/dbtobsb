@@ -1,6 +1,17 @@
 # Review records
 
-This directory preserves immutable findings and re-review verdicts for each independently deliverable part. The latest reports below are authoritative for their named slice; earlier numbered reports remain as the audit trail and are not rewritten to hide failed passes.
+This directory preserves review evidence. Starting with v0.3.0, current work uses one [release acceptance ledger](v0.3.0-release/acceptance-ledger.md), stable domain rubrics, and re-review of changed criteria only. The older part-by-part reports below remain as historical evidence; their repeated three-reviewer cadence is not the current process.
+
+See the [review process](../plans/review-process.md) for routing tags, boundary triggers, domain rubrics, evidence packets, and milestone gates.
+
+## v0.3.0 release
+
+| Record | Purpose |
+|---|---|
+| [Acceptance ledger](v0.3.0-release/acceptance-ledger.md) | One deduplicated list of release outcomes, owners, gates, and evidence |
+| [Support contract](../releases/v0.3.0-support-contract.md) | Frozen customer promise under review |
+
+## Historical records
 
 ## P2 native Databricks collector
 
@@ -59,10 +70,11 @@ The [final resolution](p0-planning-baseline/resolution.md) binds the reviewed ha
 
 ## Rules
 
-- Every report names an exact file set and content hash.
+- Current reviews name an immutable evidence packet, affected rubric checks, and one acceptance outcome.
 - Reviewers do not edit the files they review.
-- Findings remain in history after resolution.
-- `CHANGES_REQUIRED` and blocking findings require a new frozen input and re-review.
+- Findings remain in history after resolution, but related symptoms are consolidated under one root outcome.
+- `CHANGES_REQUIRED` and blocking findings require new evidence only for the changed criterion.
 - `PASS_WITH_FOLLOW_UP` is acceptable only when the report names a later product gate and the item does not block the reviewed slice.
+- One domain owner reviews an ordinary slice. Boundary triggers add only the named second owner. All three owners participate only at contract freeze, local release candidate, and live Azure proof.
 - AI-generated reviews support defect finding and traceability; they do not replace accountable human approval.
 - Rendered-site, browser, keyboard, contrast, responsive-layout, and screen-reader validation cannot pass until a complete documentation site exists.

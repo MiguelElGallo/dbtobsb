@@ -6,6 +6,7 @@ import hashlib
 import os
 from contextlib import suppress
 from pathlib import Path, PurePosixPath
+from uuid import uuid4
 
 from dbtobsb_collector.contracts import AttemptContext
 
@@ -38,7 +39,7 @@ class VolumeRawArchiveStore:
             / f"{digest}.tar.gz"
         )
         destination.parent.mkdir(parents=True, exist_ok=True)
-        temporary = destination.with_suffix(".part")
+        temporary = destination.with_name(f".{destination.name}.{uuid4().hex}.part")
 
         if destination.exists():
             self._verify(destination=destination, expected=archive, digest=digest)
@@ -53,6 +54,11 @@ class VolumeRawArchiveStore:
                 stream.write(archive)
                 stream.flush()
                 os.fsync(stream.fileno())
+            if destination.exists():
+                self._verify(destination=destination, expected=archive, digest=digest)
+                return str(destination)
+            # The content-addressed destination makes identical writers idempotent:
+            # each promotes only a closed private file, then reads back the winner.
             os.replace(temporary, destination)
         except FileExistsError:
             if not destination.exists():

@@ -1,0 +1,50 @@
+name: Release quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    # The private beta packages a sealed darwin-arm64 native bridge. Run the
+    # complete installer suite on the same supported OS/architecture boundary.
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      APP_PYTHON_VERSION: "3.11.9"
+      CAPTURE_PYTHON_VERSION: "3.12.3"
+      COLLECTOR_PYTHON_VERSION: "3.12.3"
+      CONTRACTS_PYTHON_VERSION: "3.12.3"
+    steps:
+      - name: Check out the reviewed source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Install the pinned Go release
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: native/go.mod
+          cache: false
+
+      - name: Install the pinned Node.js release
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "26.5.0"
+          package-manager-cache: false
+
+      - name: Install the pinned uv release
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+        with:
+          version: "0.11.28"
+          enable-cache: false
+
+      - name: Run all release quality gates
+        run: scripts/check_all.sh

@@ -12,10 +12,10 @@ from typing import Any
 
 from dbtobsb_capture.contracts import ArtifactPairReport, PairState
 from dbtobsb_capture.inspector import (
+    _inspect_artifact_pair_for_selector,
     _mapping,
     _parse_json,
     _resource_match,
-    inspect_artifact_pair,
 )
 
 
@@ -75,7 +75,7 @@ def _required_number(mapping: dict[str, Any], key: str) -> float:
 
 
 def inspect_and_project_artifact_pair(
-    *, manifest: bytes, run_results: bytes
+    *, manifest: bytes, run_results: bytes, expected_selector: str = "observability_demo"
 ) -> ArtifactPairInspection:
     """Strictly validate then project only the closed restricted-field allowlist.
 
@@ -83,7 +83,11 @@ def inspect_and_project_artifact_pair(
     duplicate-rejecting UTF-8 JSON decoder.  Spark and SQL never reinterpret rejected
     evidence; they receive only these typed values after ``PAIR_VALID``.
     """
-    report = inspect_artifact_pair(manifest=manifest, run_results=run_results)
+    report = _inspect_artifact_pair_for_selector(
+        manifest=manifest,
+        run_results=run_results,
+        expected_selector=expected_selector,
+    )
     if report.state is PairState.INVALID:
         return ArtifactPairInspection(report=report, projection=None)
 

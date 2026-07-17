@@ -1,0 +1,480 @@
+{
+  "contract_version": "dbtobsb.support.v1",
+  "release_state": "FINAL",
+  "platform": {
+    "cloud": "AZURE_DATABRICKS",
+    "bundle_engine": "DIRECT",
+    "databricks_cli": "1.7.0",
+    "bootstrap_compute": "SERVERLESS_LAKEFLOW_PYTHON_WHEEL_JOB",
+    "dbt_task_compute": "SERVERLESS_LAKEFLOW_JOB",
+    "app_compute": "DATABRICKS_APP_SERVERLESS",
+    "serverless_environment_client": "5",
+    "python": "3.12.3"
+  },
+  "installation": {
+    "mode": "COMBINED_ROLE",
+    "launcher": "dbtobsb bootstrap",
+    "host": "MANAGED_MACOS_ARM64",
+    "authentication": "DATABRICKS_CLI_OAUTH_U2M_NAMED_PROFILE",
+    "human_actor_count": 1,
+    "independent_human_separation": false,
+    "data_mutation_observer_separation": false,
+    "independent_sp_role_reviewer": false,
+    "schema_requirement": "EXISTING_DEDICATED_SCHEMA_SESSION_USER_IS_OWNER",
+    "bootstrap_run_as": "BUNDLE_DEPLOYER_COMBINED_ADMIN",
+    "bootstrap_job_lifecycle": "TEMPORARY_REMOVE_AFTER_TERMINAL_READBACK",
+    "native_mutation_registry": "FOUNDATION_NOT_INVOKED_V0_3",
+    "bundle_sql_hooks": false,
+    "bootstrap_idempotency": "EXACT_PRE_BINDING_ONLY",
+    "post_binding_resume": "LIFECYCLE_READBACK_NO_BOOTSTRAP_REPLAY",
+    "runtime_trust_ledger": "NOT_IN_V0_3_SUPPORTED_PATH"
+  },
+  "customer_state": {
+    "schema_created": false,
+    "objects": [
+      {
+        "name": "dbtobsb_object_manifest",
+        "kind": "MANAGED_TABLE"
+      },
+      {
+        "name": "dbt_artifact_registry",
+        "kind": "MANAGED_TABLE"
+      },
+      {
+        "name": "dbt_invocations",
+        "kind": "MANAGED_TABLE"
+      },
+      {
+        "name": "dbt_node_results",
+        "kind": "MANAGED_TABLE"
+      },
+      {
+        "name": "dbt_run_health",
+        "kind": "VIEW"
+      },
+      {
+        "name": "dbt_node_health",
+        "kind": "VIEW"
+      },
+      {
+        "name": "dbt_collection_health",
+        "kind": "VIEW"
+      },
+      {
+        "name": "dbtobsb_raw",
+        "kind": "MANAGED_VOLUME"
+      },
+      {
+        "name": "dbtobsb_stage",
+        "kind": "MANAGED_VOLUME"
+      }
+    ],
+    "direct_grants": [
+      {
+        "principal": "COLLECTOR_SERVICE_PRINCIPAL",
+        "securable": "PARENT_CATALOG",
+        "privileges": [
+          "USE CATALOG"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "COLLECTOR_SERVICE_PRINCIPAL",
+        "securable": "EVIDENCE_SCHEMA",
+        "privileges": [
+          "USE SCHEMA"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "COLLECTOR_SERVICE_PRINCIPAL",
+        "securable": "dbtobsb_object_manifest",
+        "privileges": [
+          "SELECT"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "COLLECTOR_SERVICE_PRINCIPAL",
+        "securable": "dbt_artifact_registry",
+        "privileges": [
+          "MODIFY",
+          "SELECT"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "COLLECTOR_SERVICE_PRINCIPAL",
+        "securable": "dbt_invocations",
+        "privileges": [
+          "MODIFY",
+          "SELECT"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "COLLECTOR_SERVICE_PRINCIPAL",
+        "securable": "dbt_node_results",
+        "privileges": [
+          "MODIFY",
+          "SELECT"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "COLLECTOR_SERVICE_PRINCIPAL",
+        "securable": "dbtobsb_raw",
+        "privileges": [
+          "READ VOLUME",
+          "WRITE VOLUME"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "COLLECTOR_SERVICE_PRINCIPAL",
+        "securable": "dbtobsb_stage",
+        "privileges": [
+          "READ VOLUME"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "OBSERVED_SERVICE_PRINCIPAL",
+        "securable": "PARENT_CATALOG",
+        "privileges": [
+          "USE CATALOG"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "OBSERVED_SERVICE_PRINCIPAL",
+        "securable": "EVIDENCE_SCHEMA",
+        "privileges": [
+          "USE SCHEMA"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "OBSERVED_SERVICE_PRINCIPAL",
+        "securable": "dbtobsb_stage",
+        "privileges": [
+          "READ VOLUME",
+          "WRITE VOLUME"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "APP_SERVICE_PRINCIPAL",
+        "securable": "PARENT_CATALOG",
+        "privileges": [
+          "USE CATALOG"
+        ],
+        "provisioner": "DATABRICKS_APP_RESOURCE_BINDING"
+      },
+      {
+        "principal": "APP_SERVICE_PRINCIPAL",
+        "securable": "EVIDENCE_SCHEMA",
+        "privileges": [
+          "USE SCHEMA"
+        ],
+        "provisioner": "DATABRICKS_APP_RESOURCE_BINDING"
+      },
+      {
+        "principal": "APP_SERVICE_PRINCIPAL",
+        "securable": "dbt_run_health",
+        "privileges": [
+          "SELECT"
+        ],
+        "provisioner": "DATABRICKS_APP_RESOURCE_BINDING"
+      },
+      {
+        "principal": "APP_SERVICE_PRINCIPAL",
+        "securable": "dbt_node_health",
+        "privileges": [
+          "SELECT"
+        ],
+        "provisioner": "DATABRICKS_APP_RESOURCE_BINDING"
+      },
+      {
+        "principal": "APP_SERVICE_PRINCIPAL",
+        "securable": "dbt_collection_health",
+        "privileges": [
+          "SELECT"
+        ],
+        "provisioner": "DATABRICKS_APP_RESOURCE_BINDING"
+      },
+      {
+        "principal": "APP_SERVICE_PRINCIPAL",
+        "securable": "APP_QUERY_WAREHOUSE",
+        "privileges": [
+          "CAN_USE"
+        ],
+        "provisioner": "DATABRICKS_APP_RESOURCE_BINDING"
+      }
+    ],
+    "trusted_roots": [
+      "SCHEMA_AND_OBJECT_OWNER",
+      "CATALOG_OR_METASTORE_ADMIN",
+      "WORKSPACE_ADMIN",
+      "JOB_MANAGER_GROUP",
+      "APP_MANAGER"
+    ]
+  },
+  "dbt": {
+    "adapter_type": "databricks",
+    "packages": {
+      "databricks-sdk": "0.117.0",
+      "databricks-sql-connector": "4.3.0",
+      "dbt-adapters": "1.24.5",
+      "dbt-common": "1.37.5",
+      "dbt-core": "1.11.12",
+      "dbt-databricks": "1.12.2",
+      "dbt-protos": "1.0.541",
+      "dbt-spark": "1.10.3"
+    },
+    "command_sequence": [
+      "OPTIONAL_DEPS",
+      "REQUIRED_BUILD"
+    ],
+    "primary_command": "build",
+    "selector_contract": "INSTALLED_NAMED_SELECTOR",
+    "selector_pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
+    "attempt_key_template": "w{{workspace.id}}-j{{job.id}}-r{{job.run_id}}-t{{task.run_id}}-p{{job.repair_count}}-e{{task.execution_count}}",
+    "attempt_root_template": "$PWD/target/dbtobsb/attempts/{attempt_key}",
+    "deps_ordinal": "000-deps",
+    "build_ordinal": "001-build",
+    "manifest_schema": "https://schemas.getdbt.com/dbt/manifest/v12.json",
+    "manifest_schema_sha256": "b290bb419026be3fa361ead7f0d8e3bb0eb6bca8c3a3fb7971f5d252fd0825b3",
+    "manifest_schema_exceptions": [
+      {
+        "document_path": "macros.macro.dbt.materialization_function_default.supported_languages",
+        "schema_path": "properties.macros.additionalProperties.properties.supported_languages.anyOf",
+        "accepted_value": [
+          "sql",
+          "python",
+          "javascript"
+        ]
+      }
+    ],
+    "run_results_schema": "https://schemas.getdbt.com/dbt/run-results/v6.json",
+    "run_results_schema_sha256": "1783bda55656bde624ed67640375640a2919a8608e2505e3a02c04cd139e2cdf",
+    "structured_log_version": 3
+  },
+  "onboarding": {
+    "policy_contract_version": "dbtobsb.dbt-policy.v1",
+    "source_type": "WORKSPACE",
+    "task_key": "dbt_build",
+    "environment_key": "dbt",
+    "project_directory": "PRODUCT_GENERATED_BUNDLE_RELATIVE_SNAPSHOT",
+    "profiles_directory": "MATCH_PROJECT_DIRECTORY",
+    "profile_policy": "PRODUCT_GENERATED_PROJECT_ROOT_PROFILE",
+    "profile_target": {
+      "profile_name_source": "DBT_PROJECT_YML_PROFILE_SCALAR",
+      "profile_name_pattern": "^[A-Za-z][A-Za-z0-9_-]{0,127}$",
+      "target_name": "dbtobsb",
+      "connection_source": "PRODUCT_GENERATED_PROJECT_ROOT_PROFILE",
+      "dbt_task_warehouse_id": "ABSENT_CUSTOM_PROFILE",
+      "dbt_task_catalog": "ABSENT_CUSTOM_PROFILE",
+      "dbt_task_schema": "ABSENT_CUSTOM_PROFILE",
+      "dbt_task_profiles_directory": "MATCH_PROJECT_DIRECTORY",
+      "output_keys": [
+        "type",
+        "method",
+        "host",
+        "http_path",
+        "token",
+        "catalog",
+        "schema",
+        "threads"
+      ],
+      "type": "databricks",
+      "method": "http",
+      "host": "INSTALLER_RENDERED_CANONICAL_WORKSPACE_SERVER_HOSTNAME",
+      "host_source": "AUTHENTICATED_NAMED_DATABRICKS_CLI_PROFILE",
+      "host_canonicalization": "HTTPS_AZURE_WORKSPACE_URL_TO_LOWERCASE_DNS_NAME",
+      "http_path": "INSTALLER_RESOLVED_EXISTING_SQL_WAREHOUSE_HTTP_PATH",
+      "token": "{{ env_var('DBT_ACCESS_TOKEN') }}",
+      "catalog": "INSTALLER_RENDERED_LITERAL_CATALOG",
+      "schema": "INSTALLER_RENDERED_LITERAL_SCHEMA",
+      "threads": 1,
+      "secret_values_in_snapshot": false,
+      "run_as_authentication": "DATABRICKS_INJECTED_DBT_ACCESS_TOKEN",
+      "operator_supplied_connection_fields": []
+    },
+    "required_files": [
+      "dbt_project.yml",
+      "profiles.yml",
+      "selectors.yml"
+    ],
+    "excluded_roots": [
+      "logs",
+      "target"
+    ],
+    "selector_count": 1,
+    "dependency_definition_files": [
+      "dependencies.yml",
+      "packages.yml"
+    ],
+    "dependency_lock_file": "package-lock.yml",
+    "dependency_policy": "NO_DEPENDENCIES_OR_COMMITTED_MATCHING_LOCK",
+    "generated_patch": "SOURCE_CONTROLLED_NON_MUTATING_UNTIL_APPROVED",
+    "rollback": "RESTORE_PREVIOUS_JOB_DEFINITION",
+    "policy_change": "RESCAN_AND_REAPPROVE_WITHIN_SUPPORT_MANIFEST",
+    "release_change": "NEW_SUPPORT_MANIFEST_RELEASE_AND_LIVE_QUALIFICATION"
+  },
+  "governed_output": {
+    "anonymous_usage": false,
+    "artifact_ingest_upload": false,
+    "write_json": true,
+    "file_log_format": "json",
+    "file_log_level": "info",
+    "file_log_max_bytes": 20971520,
+    "file_log_max_files": 6,
+    "file_log_total_max_bytes": 125829120,
+    "primary_artifact_max_bytes": 134217728,
+    "paths": "PRODUCT_GENERATED_PER_ATTEMPT",
+    "raw_archive_custody": "MANDATORY_FOR_EVERY_RETRIEVED_ARCHIVE"
+  },
+  "app": {
+    "initial_state": "STOPPED",
+    "start_command": "dbtobsb start",
+    "stop_command": "dbtobsb stop",
+    "landing_queries": false,
+    "load_action": "EXPLICIT_LOAD_OBSERVABILITY",
+    "warehouse_may_auto_start_after_load": true,
+    "browser_close_stops_compute": false,
+    "resources": [
+      "APP_QUERY_WAREHOUSE",
+      "dbt_run_health",
+      "dbt_node_health",
+      "dbt_collection_health"
+    ],
+    "first_answer": [
+      "LAKEFLOW_TASK",
+      "ARTIFACT_RETRIEVAL",
+      "ARTIFACT_PAIR",
+      "DBT_INVOCATION",
+      "NODE_RESULTS",
+      "COLLECTION",
+      "NEXT_ACTION"
+    ]
+  },
+  "lifecycle": {
+    "default_action": "STOP",
+    "operations": [
+      {
+        "action": "BOOTSTRAP",
+        "command": "dbtobsb bootstrap",
+        "approval": "EXACT_OBJECT_GRANT_JOB_AND_APP_PREVIEW",
+        "persistent_state": "CREATE_OR_VERIFY_AND_BIND",
+        "app_state": "STOPPED",
+        "jobs_state": "DEPLOYED_RECONCILER_PAUSED",
+        "compute_state": "BOOTSTRAP_TERMINAL_WAREHOUSES_UNCHANGED",
+        "destructive": false,
+        "safe_default": false,
+        "indeterminate_action": "RECONCILE_REMOTE_STATE_NO_AUTOMATIC_REPLAY"
+      },
+      {
+        "action": "RESUME",
+        "command": "dbtobsb bootstrap",
+        "approval": "ONLY_NEW_OR_CHANGED_STAGE",
+        "persistent_state": "DISCOVER_AND_CONTINUE_FROM_DURABLE_STAGE",
+        "app_state": "STAGE_DEPENDENT_FAIL_CLOSED",
+        "jobs_state": "STAGE_DEPENDENT_FAIL_CLOSED",
+        "compute_state": "RESTORE_PRODUCT_STARTED_RESOURCES_BEFORE_SUCCESS",
+        "destructive": false,
+        "safe_default": false,
+        "indeterminate_action": "RECONCILE_REMOTE_STATE_NO_AUTOMATIC_REPLAY"
+      },
+      {
+        "action": "START",
+        "command": "dbtobsb start",
+        "approval": "APP_COST_ACKNOWLEDGEMENT",
+        "persistent_state": "UNCHANGED",
+        "app_state": "ACTIVE",
+        "jobs_state": "UNCHANGED_RECONCILER_PAUSED",
+        "compute_state": "APP_ACTIVE_WAREHOUSE_UNCHANGED_UNTIL_LOAD",
+        "destructive": false,
+        "safe_default": false,
+        "indeterminate_action": "READ_APP_STATE_BEFORE_RETRY"
+      },
+      {
+        "action": "STOP",
+        "command": "dbtobsb stop",
+        "approval": "NONE",
+        "persistent_state": "PRESERVE_ALL_DATA_CONFIG_AND_GRANTS",
+        "app_state": "STOPPED",
+        "jobs_state": "PRESERVED_RECONCILER_PAUSED_RUNS_TERMINAL",
+        "compute_state": "PRODUCT_STARTED_COMPUTE_STOPPED_OR_PRIOR_STATE_RESTORED",
+        "destructive": false,
+        "safe_default": true,
+        "indeterminate_action": "CONTINUE_STOP_AND_INVENTORY"
+      },
+      {
+        "action": "RETAIN_UNINSTALL",
+        "command": "dbtobsb uninstall --retain",
+        "approval": "RESOURCE_REMOVAL_AND_EXISTING_OWNER_RETENTION",
+        "persistent_state": "PRESERVE_OBJECTS_AND_RAW_ARCHIVES_WITH_EXISTING_COMBINED_ADMIN_OWNER",
+        "app_state": "REMOVED",
+        "jobs_state": "REMOVED",
+        "compute_state": "PRODUCT_STARTED_COMPUTE_STOPPED_OR_PRIOR_STATE_RESTORED",
+        "destructive": false,
+        "safe_default": false,
+        "indeterminate_action": "CONTINUE_INVENTORY_AND_EXACT_RESOURCE_REMOVAL"
+      },
+      {
+        "action": "DELETE_UNINSTALL",
+        "command": "dbtobsb uninstall --delete",
+        "approval": "SEPARATE_DESTRUCTIVE_RETENTION_LEGAL_HOLD_AND_EXPORT_ACKNOWLEDGEMENT",
+        "persistent_state": "DELETE_EXACT_PRODUCT_OBJECTS_AND_RAW_ARCHIVES_PRESERVE_SCHEMA_AND_UNRELATED_STATE",
+        "app_state": "REMOVED",
+        "jobs_state": "REMOVED",
+        "compute_state": "PRODUCT_STARTED_COMPUTE_STOPPED_OR_PRIOR_STATE_RESTORED",
+        "destructive": true,
+        "safe_default": false,
+        "indeterminate_action": "CONTINUE_INVENTORY_NEVER_REPEAT_UNPROVEN_DELETE"
+      }
+    ]
+  },
+  "qualification": {
+    "local_cases": [
+      "SUCCESS",
+      "DBT_NODE_FAILURE",
+      "EARLY_FAILURE",
+      "PARTIAL_ARTIFACT",
+      "RETRY",
+      "REPAIR",
+      "MISSED_COLLECTION",
+      "IDENTICAL_REPLAY",
+      "CONFLICTING_REPLAY",
+      "RECONCILIATION",
+      "EMPTY_APP",
+      "APP_QUERY_FAILURE"
+    ],
+    "live_cases": [
+      "TWO_COMPLETE_DETERMINISTIC_RUNS",
+      "ONE_DBT_FAILURE_OR_PARTIAL_ARTIFACT",
+      "MISSED_COLLECTION_RECONCILED",
+      "DISTINCT_ATTEMPT_HISTORIES",
+      "QUERYABLE_RUN_NODE_COLLECTION_ROWS",
+      "APP_RESULT_MATCHES_ROWS",
+      "RETAIN_UNINSTALL",
+      "DELETE_UNINSTALL",
+      "ZERO_PRODUCT_STARTED_COMPUTE"
+    ]
+  },
+  "outcome_axes": [
+    "LAKEFLOW_TASK",
+    "ARTIFACT_RETRIEVAL",
+    "ARTIFACT_PAIR",
+    "DBT_INVOCATION",
+    "COLLECTION"
+  ],
+  "distribution": {
+    "marketplace": false,
+    "required_external_telemetry": false,
+    "read_only_app": true,
+    "production_use": "ONLY_AFTER_LOCAL_RC_AND_LIVE_AZURE_GATES",
+    "regulated_use": "CUSTOMER_GOVERNANCE_APPROVAL_REQUIRED_NO_CERTIFICATION_OR_ATTESTATION"
+  }
+}

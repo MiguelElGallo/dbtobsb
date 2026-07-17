@@ -1,6 +1,6 @@
 # Evidence tables and views
 
-The fixed bootstrap creates or verifies three managed Delta tables, one managed Volume, and two SQL views in the selected Unity Catalog schema.
+The fixed bootstrap creates or verifies four managed Delta tables, two managed Volumes, and three SQL views in the selected Unity Catalog schema. `dbtobsb_object_manifest` is the installation record; the remaining three tables hold runtime evidence.
 
 It is valid to run this bootstrap against production when an authorized administrator intentionally selects the production destination and approves the fixed object manifest. The ordinary collector uses only the existing objects and does not run DDL.
 
@@ -16,7 +16,7 @@ One published row per Databricks dbt task run. It joins the attempt registry wit
 | --- | --- | --- |
 | Attempt correlation | `workspace_id`, `dbt_task_run_id`, `observed_job_id`, `observed_job_run_id`, `observed_task_key`, `repair_count`, `execution_count`, `attempt_number` | Correlate the installed Job and exact task attempt. Treat IDs as restricted operational metadata. |
 | Native task | `task_start_time`, `task_end_time`, `lakeflow_result_state`, `logs_truncated` | Preserve Databricks task timing and result separately from evidence quality. |
-| Evidence quality | `retrieval_state`, `capture_state`, `pair_state`, `issue_code` | Explain whether the native archive was retrieved and accepted. |
+| Evidence quality | `retrieval_state`, `capture_state`, `pair_state`, `issue_code` | Explain whether staged artifacts were acquired, assembled, and accepted. |
 | Integrity | archive and primary-artifact hashes and sizes, `expected_node_count`, `normalized_digest`, `collected_at`, `published_at` | Support custody, replay, and completeness checks without exposing raw content. |
 | dbt invocation | `invocation_id`, `generated_at`, `elapsed_time`, `dbt_version`, `adapter_type`, `command`, `result_count`, `status_counts_json` | Small allowlisted summary from accepted primary artifacts. |
 
@@ -58,9 +58,15 @@ At most one accepted invocation projection per task-run key. It contains the dbt
 
 The accepted allowlisted node projection. Its natural publication key extends the task-run key with `unique_id`.
 
-## Restricted managed Volume
+### `dbtobsb_object_manifest`
 
-`dbtobsb_raw` stores the exact native archive bytes before parsing. The object name is configurable at installation, but each archive path is constructed by fixed code and verified by size and SHA-256 readback.
+One sealed installation row that binds the exact object contract, installation identity, Jobs, warehouse, principals, and final collector environment digest. The collector can read but not modify it.
+
+## Restricted managed Volumes
+
+`dbtobsb_stage` holds only the fixed per-attempt artifact and structured-log allowlist uploaded by the observed service principal. The collector has read-only access.
+
+`dbtobsb_raw` stores the exact deterministic archive bytes before parsing. Each archive path is constructed by fixed code and verified by size and SHA-256 readback.
 
 Raw archives can contain Personal Data, secrets, SQL, messages, paths, relation names, logs, environment-derived values, and workspace topology. Access, retention, export, and deletion are customer policy decisions.
 
