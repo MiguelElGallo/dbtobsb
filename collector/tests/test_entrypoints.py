@@ -73,6 +73,10 @@ def _reconcile_argv() -> list[str]:
     ]
 
 
+def _delete_argv(*, catalog: str = "c", schema: str = "s") -> list[str]:
+    return ["dbtobsb-uninstall-delete", "--catalog", catalog, "--schema", schema]
+
+
 def test_collect_prints_safe_machine_readable_runtime_denial(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -274,7 +278,7 @@ def test_collect_unknown_runtime_exception_text_is_not_disclosed(
     assert canary not in json.dumps(payload, sort_keys=True)
 
 
-@pytest.mark.parametrize("entrypoint", ["collect", "bootstrap", "reconcile"])
+@pytest.mark.parametrize("entrypoint", ["collect", "bootstrap", "reconcile", "uninstall_delete"])
 def test_unknown_cli_argument_is_sanitized_without_argv_echo(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -285,6 +289,7 @@ def test_unknown_cli_argument_is_sanitized_without_argv_echo(
         "collect": _collect_argv(),
         "bootstrap": _bootstrap_argv(catalog="c", schema="s"),
         "reconcile": _reconcile_argv(),
+        "uninstall_delete": _delete_argv(),
     }[entrypoint]
     arguments.extend(["--unknown-secret", canary])
     monkeypatch.setattr(sys, "argv", arguments)
@@ -297,6 +302,63 @@ def test_unknown_cli_argument_is_sanitized_without_argv_echo(
     assert canary not in captured.out
     assert canary not in captured.err
     assert json.loads(captured.out)["outcome"] == "denied"
+
+
+def test_delete_uninstall_uses_deployed_binding_and_reports_exact_count(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    spark = object()
+    monkeypatch.setattr(
+        entrypoints,
+        "load_deployed_runtime_contract",
+        lambda: SimpleNamespace(seal=SimpleNamespace(evidence_catalog="c", evidence_schema="s")),
+    )
+    monkeypatch.setattr(entrypoints, "_active_spark", lambda: spark)
+    monkeypatch.setattr(
+        entrypoints,
+        "delete_installation_objects",
+        lambda actual, *, catalog, schema: (
+            SimpleNamespace(deleted_object_count=9)
+            if (actual, catalog, schema) == (spark, "c", "s")
+            else pytest.fail("Delete arguments did not match the deployed binding")
+        ),
+    )
+    monkeypatch.setattr(sys, "argv", _delete_argv())
+
+    entrypoints.uninstall_delete()
+
+    assert json.loads(capsys.readouterr().out) == {
+        "deleted_object_count": 9,
+        "event": "dbtobsb_delete_uninstall_verified",
+        "schema_preserved": True,
+    }
+
+
+def test_delete_uninstall_binding_mismatch_precedes_spark_and_hides_arguments(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    canary = "SENSITIVE_DELETE_TARGET_CANARY"
+    monkeypatch.setattr(
+        entrypoints,
+        "load_deployed_runtime_contract",
+        lambda: SimpleNamespace(seal=SimpleNamespace(evidence_catalog="c", evidence_schema="s")),
+    )
+
+    def forbidden_spark() -> NoReturn:
+        raise AssertionError("Spark must not start for a mismatched delete binding")
+
+    monkeypatch.setattr(entrypoints, "_active_spark", forbidden_spark)
+    monkeypatch.setattr(sys, "argv", _delete_argv(catalog=canary, schema=canary))
+
+    with pytest.raises(SystemExit) as exc_info:
+        entrypoints.uninstall_delete()
+
+    assert exc_info.value.code == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["code"] == "DBTOBSB_DEPLOYMENT_BINDING_INVALID"
+    assert canary not in json.dumps(payload, sort_keys=True)
 
 
 @pytest.mark.parametrize(

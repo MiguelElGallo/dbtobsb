@@ -26,4 +26,5 @@ collector/src/dbtobsb_collector/_generated/deployment-binding-v1.json
 .dbtobsb/
 .dbtobsb-app-bindings.generated.yml
 .dbtobsb-observed.generated.yml
+.dbtobsb-bundle-base/99-*.generated.yml
 dbtobsb_onboarding/

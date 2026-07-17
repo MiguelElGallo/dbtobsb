@@ -14,6 +14,7 @@ def test_bundle_keeps_smoke_app_stopped_and_unbound_by_default() -> None:
     assert bundle["include"] == [
         ".dbtobsb-observed.generated.yml",
         ".dbtobsb-app-bindings.generated.yml",
+        ".dbtobsb-bundle-base/*.yml",
     ]
     overlay = safe_load(
         (repository_root / ".dbtobsb-app-bindings.generated.yml").read_text(encoding="utf-8")

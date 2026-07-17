@@ -1,96 +1,54 @@
 # Stop compute and uninstall
 
-Use this guide after a test or when you no longer need the private v0.3 installation.
+Use the lifecycle launcher from the same private checkout and macOS account that performed installation. It reads the protected installation state, pauses the reconciler, terminates active product Job runs, stops the App, and verifies the requested final state.
 
-The Bundle creates unscheduled Jobs and a stopped App resource. Those objects do not schedule work by themselves. A SQL warehouse used by the dbt task, an active Job run, a cluster, or a running App can incur compute cost.
+## Stop without removing data or configuration
 
-## 1. Prove no Job run is active
+`stop` is the safe default. It preserves all nine Unity Catalog objects, raw archives, Jobs, App bindings, grants, and installer state:
 
-```bash
-databricks jobs list-runs -p '<profile>' --active-only -o json
+```console
+uv run --project installer --no-sync dbtobsb stop
 ```
 
-The result must be an empty JSON list for the Jobs you own. In a shared workspace, filter by the three deployed Job IDs and never cancel an unrelated run.
+A successful stop prints:
 
-If a dbtobsb run is active, cancel that run and wait until it reaches a terminal state before continuing:
-
-```bash
-databricks jobs cancel-run '<run-id>' -p '<profile>'
+```json
+{"app_state":"STOPPED","event":"dbtobsb_stop_verified","reconciler_state":"PAUSED"}
 ```
 
-## 2. Stop the preview App
+The launcher does not stop or delete the selected customer SQL warehouse. Its Databricks auto-stop policy remains authoritative.
 
-The App is stopped by default. Check only the named dbtobsb App first:
+## Retain evidence and remove the product runtime
 
-```bash
-databricks apps get dbtobsb-smoke -p '<profile>' -o json
+Use retain when audit, incident, legal-hold, or customer retention policy requires the normalized evidence or raw archives:
+
+```console
+printf 'RETAIN\n' | uv run --project installer --no-sync dbtobsb uninstall --retain
 ```
 
-If it is `ACTIVE`, starting, or otherwise not terminally stopped, request a stop and read it back:
+This removes the App, all three Jobs, Bundle state, product grants, bindings, and local installer state. It preserves the selected schema and all nine product objects under the existing combined-administrator owner.
 
-```bash
-databricks apps stop dbtobsb-smoke -p '<profile>'
-databricks apps get dbtobsb-smoke -p '<profile>' -o json
+## Delete product evidence
+
+Delete only after an authorized owner confirms retention, legal hold, and required exports. This action removes the exact seven relational objects and two managed Volumes, including raw archives, but preserves the selected schema and unrelated objects:
+
+```console
+printf 'DELETE\nDELETE PRODUCT DATA\n' \
+  | uv run --project installer --no-sync dbtobsb uninstall --delete
 ```
 
-If it is already `STOPPED`, do not issue an unnecessary stop; retain that readback. Otherwise wait for `compute_status.state` to become `STOPPED`. A stop request is not proof of a stopped App.
+Both uninstall modes finish with a machine-readable `dbtobsb_uninstall_verified` receipt. If a command is interrupted, rerun the same mode; switching modes during an unfinished uninstall is rejected.
 
-## 3. Remove only disposable compute you created
+## Verify cost-bearing resources
 
-List warehouses and clusters:
+After stop or uninstall, verify the resources from the receipt rather than changing unrelated workspace state:
 
-```bash
-databricks warehouses list -p '<profile>' -o json
+```console
+databricks jobs list-runs --active-only -p '<profile>' -o json
+databricks warehouses get '<warehouse-id>' -p '<profile>' -o json
 databricks clusters list -p '<profile>' -o json
 ```
 
-Delete a SQL warehouse only if it was created solely for this test and you have verified its ID and ownership:
+For stop, `databricks apps get dbtobsb-smoke` must report `STOPPED`. For uninstall, the App and three product Jobs must be absent. The selected warehouse should be `STOPPED` after its configured auto-stop interval; if it is still running, stop that exact warehouse only when customer policy authorizes it. Serverless Job compute has no persistent cluster to delete.
 
-```bash
-databricks warehouses delete '<test-warehouse-id>' -p '<profile>'
-```
-
-Do not delete a customer's shared warehouse or cluster. Serverless Job compute ends with its run and has no persistent cluster for this Bundle to delete.
-
-## 4. Remove the deployed Jobs and App shell
-
-Destroy the Bundle target after active runs are terminal:
-
-```bash
-databricks bundle destroy -t smoke -p '<profile>' \
-  --var 'warehouse_id=<warehouse-id>,evidence_catalog=<catalog>,evidence_schema=<evidence-schema>,observed_service_principal_name=<application-id>,collector_service_principal_name=<application-id>,job_manager_group_name=<group>'
-```
-
-Review the displayed resources before confirming. This removes Bundle-managed resources. It does not delete the Unity Catalog evidence schema, tables, views, managed Volume, or the raw archives inside it.
-
-## 5. Choose retain or delete for evidence
-
-Retain evidence when audit, incident, legal-hold, or customer retention policy requires it. Revoke runtime write access and preserve the dedicated schema under customer ownership.
-
-Delete evidence only when all of these are true:
-
-- the schema is dedicated to dbtobsb;
-- an authorized owner approved deletion;
-- retention and legal-hold checks are complete;
-- required exports are complete and verified; and
-- the operator understands that deleting the managed Volume deletes the archived bytes.
-
-Delete-uninstall requires separate approval after retention, legal-hold, and export checks. An authorized Unity Catalog owner may use a reviewed, fixed SQL statement such as:
-
-```sql
-DROP SCHEMA `<catalog>`.`<evidence-schema>` CASCADE;
-```
-
-Never drop a shared catalog. If the tutorial used a disposable catalog created solely for this proof, catalog deletion remains a separate customer-owner action after the schema inventory is confirmed empty.
-
-## 6. Retain a sanitized final readback
-
-Record only non-sensitive results:
-
-- no active dbtobsb Job runs;
-- test warehouse deleted or shared warehouse left unchanged;
-- no product classic cluster;
-- App `STOPPED` or Bundle App removed; and
-- evidence retained or deleted under an explicit decision.
-
-Do not retain workspace IDs, user identities, raw Volume paths, or raw dbt content in the ordinary release record.
+Never delete a shared warehouse, catalog, schema, cluster, Job, or App merely to make a broad inventory empty. A failed or ambiguous lifecycle command is a recovery condition, not permission to remove unrelated resources manually.

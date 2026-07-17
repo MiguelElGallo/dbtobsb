@@ -1,0 +1,6 @@
+city,observed_date,temperature_c,precipitation_mm,wind_speed_kph
+Helsinki,2026-07-16,21.4,0.0,14.0
+Espoo,2026-07-16,22.1,0.2,11.5
+Tampere,2026-07-16,18.7,8.4,24.0
+Turku,2026-07-17,24.8,1.1,29.5
+Oulu,2026-07-17,16.3,4.7,33.0

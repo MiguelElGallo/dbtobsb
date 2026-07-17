@@ -2,7 +2,7 @@
 
 Customer-local observability for dbt Core jobs running on Databricks.
 
-This private repository contains the v0.3 release candidate: a private Databricks App and three Lakeflow Jobs deployed through a Databricks Declarative Automation Bundle. Required data, compute, identity, audit, and retention stay inside the customer's Azure Databricks workspace; no external telemetry platform is required. Databricks Marketplace is out of scope for this release.
+This private repository contains the supported v0.3 release: a private Databricks App and three Lakeflow Jobs deployed through a Databricks Declarative Automation Bundle. Required data, compute, identity, audit, and retention stay inside the customer's Azure Databricks workspace; no external telemetry platform is required. Databricks Marketplace is out of scope for this release.
 
 ## What works now
 
@@ -10,17 +10,17 @@ The sealed observed Job runs the pinned dbt Core project without a shell, upload
 
 Object creation is intentionally split from collection. An authorized administrator may run the fixed, versioned `BOOTSTRAP_ALLOWED` entry point against an intentionally selected production catalog; it creates or verifies the product schema objects idempotently. The ordinary `RUNTIME_DML_ONLY` collector entry point performs only fixed writes to those existing objects. It cannot be switched into bootstrap mode with a runtime flag.
 
-Start with [Wire a supported dbt Job](docs/operators/how-to/wire-a-dbt-job.md), then use the [evidence schema reference](docs/operators/reference/evidence-schema.md). The full machine contract and governance boundary are in the [v0.3 supported-release contract](docs/releases/v0.3.0-support-contract.md). The App is read-only and stopped by default; explicitly starting it can incur App compute cost.
+Start with [Install the private v0.3 release](docs/operators/tutorials/install-private-release.md), then read [Wire a supported dbt Job](docs/operators/how-to/wire-a-dbt-job.md) and the [evidence schema reference](docs/operators/reference/evidence-schema.md). The full machine contract and governance boundary are in the [v0.3 supported-release contract](docs/releases/v0.3.0-support-contract.md). The App is read-only and stopped by default; explicitly starting it can incur App compute cost.
 
-The latest sanitized execution proof is [v0.3 live Azure Databricks acceptance](docs/evidence/v0.3.0-live-acceptance-2026-07-16.md).
+The latest sanitized execution proof is [v0.3 final Azure Databricks acceptance](docs/evidence/v0.3.0-live-acceptance-2026-07-17.md).
 
 ## Release status
 
-The current branch is the private `v0.3.0` release candidate. Marketplace distribution is not included. Regulated use requires customer governance approval; dbtobsb is not certified or attested against a regulatory framework.
+The private `v0.3.0` support contract is final for the `0.3.0b1` artifacts. Marketplace distribution is not included. Regulated use requires customer governance approval; dbtobsb is not certified or attested against a regulatory framework.
 
 | Release component | Version |
 | --- | --- |
-| Git release/tag | Not published until the final live gate passes |
+| Git release/tag | `v0.3.0b1` |
 | Evidence object manifest | `dbtobsb.evidence.v1.0.0-rc.11` |
 | Python packages | `0.3.0b1` plus content-addressed final wheel versions |
 | Support contract | `dbtobsb.support.v1` |
@@ -163,4 +163,4 @@ Detailed migration, trust, deployment, controlled-action, and dbt contracts live
 
 ## Current baseline
 
-Planning baseline: **0.20**. Implemented product slice: **private v0.3 release candidate**. Release acceptance uses automated local gates, adversarial contract tests, clean bootstrap, two live Azure Databricks end-to-end attempts, SQL/App result comparison, and a zero-running-compute cleanup audit. The exact working agreement is in [AGENTS.md](AGENTS.md).
+Planning baseline: **0.20**. Implemented product slice: **supported private v0.3 release**. Release acceptance uses automated local gates, adversarial contract tests, clean bootstrap, two live Azure Databricks end-to-end attempts, controlled failure and reconciliation cases, SQL/App result comparison, both uninstall modes, and a zero-running-compute cleanup audit. The exact working agreement is in [AGENTS.md](AGENTS.md).

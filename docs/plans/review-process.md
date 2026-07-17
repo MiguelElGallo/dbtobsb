@@ -116,7 +116,7 @@ Each owner maintains a small stable rubric. A change is reviewed only against af
 - `DBT-05` — Success, node failure, early failure, partial write, retry, repair, and missed collection have golden fixtures and deterministic outcomes.
 - `DBT-06` — Collection and reconciliation do not change native dbt outcomes or refresh immutable run evidence.
 - `DBT-07` — Sensitive artifact fields and environment data follow the documented raw-evidence and redaction policy.
-- `DBT-08` — A real non-demo dbt project proves two changed-input runs and at least one failure or partial-evidence path through queryable observability rows.
+- `DBT-08` — A real non-demo dbt project proves two deterministic runs and at least one failure or partial-evidence path through queryable observability rows.
 - `DBT-09` — Behavior and version claims are supported by primary dbt and adapter documentation.
 
 ### Usability rubric

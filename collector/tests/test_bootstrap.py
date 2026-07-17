@@ -33,6 +33,7 @@ from dbtobsb_collector.bootstrap import (
     STAGE_VOLUME_NAME,
     InstallationBinding,
     bootstrap_objects,
+    delete_installation_objects,
 )
 from dbtobsb_collector.entrypoints import collect
 
@@ -241,6 +242,19 @@ class _Spark:
             else:
                 self.volume = value
             return _Frame([])
+        if upper.startswith("DROP VIEW") or upper.startswith("DROP TABLE"):
+            name = self._identifiers(query)[2]
+            self.relations.pop(name)
+            if name == MANIFEST_TABLE:
+                self.manifest_rows.clear()
+            return _Frame([])
+        if upper.startswith("DROP VOLUME"):
+            name = self._identifiers(query)[2]
+            if name == STAGE_VOLUME_NAME:
+                self.stage_volume = None
+            else:
+                self.volume = None
+            return _Frame([])
         if upper.startswith("INSERT INTO"):
             assert MANIFEST_TABLE in self._identifiers(query)
             assert OBJECT_MANIFEST_VERSION in query
@@ -337,6 +351,25 @@ def test_exact_v1_rerun_is_idempotent_and_ddl_free() -> None:
     assert not any(
         statement.lstrip().upper().startswith("CREATE") for statement in spark.statements
     )
+
+
+def test_delete_uninstall_removes_exact_objects_and_preserves_schema() -> None:
+    spark = _install_exact()
+
+    result = delete_installation_objects(spark, catalog="c", schema="s")
+
+    assert result.deleted_object_count == 9
+    assert result.schema_owner == "installer-owner"
+    assert spark.schema_exists
+    assert spark.relations == {}
+    assert spark.volume is None
+    assert spark.stage_volume is None
+    assert spark.manifest_rows == []
+    mutations = [
+        statement for statement in spark.statements if statement.lstrip().upper().startswith("DROP")
+    ]
+    assert len(mutations) == 9
+    assert mutations[-1].endswith(".`dbtobsb_object_manifest`")
 
 
 def test_exact_rerun_rejects_installation_binding_drift() -> None:
@@ -730,7 +763,7 @@ def test_every_reserved_object_uses_native_show_grants() -> None:
     bootstrap_objects(spark, catalog=spark.catalog, schema=spark.schema_name, binding=_BINDING)
 
     show_grants = [statement for statement in spark.statements if statement.startswith("SHOW")]
-    assert len(show_grants) == 8
+    assert len(show_grants) == 9
     assert any(f"SHOW GRANTS ON TABLE `c`.`s`.`{REGISTRY_TABLE}`" == sql for sql in show_grants)
     assert any(f"SHOW GRANTS ON VIEW `c`.`s`.`{RUN_HEALTH_VIEW}`" == sql for sql in show_grants)
     assert any(f"SHOW GRANTS ON VOLUME `c`.`s`.`{RAW_VOLUME_NAME}`" == sql for sql in show_grants)

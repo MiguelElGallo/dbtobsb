@@ -57,6 +57,14 @@ class BootstrapResult:
 
 
 @dataclass(frozen=True, slots=True)
+class DeleteResult:
+    """Verified destructive uninstall result for exactly the v1 product objects."""
+
+    deleted_object_count: int
+    schema_owner: str
+
+
+@dataclass(frozen=True, slots=True)
 class InstallationBinding:
     """Deployment-time values sealed into the customer-owned manifest row."""
 
@@ -859,6 +867,13 @@ def _verify_no_direct_object_grants(
         object_name=RAW_VOLUME_NAME,
         securable_type="VOLUME",
     )
+    _verify_no_direct_grants_on_object(
+        spark,
+        catalog=catalog,
+        schema=schema,
+        object_name=STAGE_VOLUME_NAME,
+        securable_type="VOLUME",
+    )
 
 
 def _attest_objects(
@@ -1048,3 +1063,41 @@ def bootstrap_objects(
         stage_volume=qualify(catalog, schema, STAGE_VOLUME_NAME),
         object_owner=relation_owner,
     )
+
+
+def delete_installation_objects(
+    spark: SparkBootstrapSession,
+    *,
+    catalog: str,
+    schema: str,
+) -> DeleteResult:
+    """Verify and delete exactly the nine v1 objects while preserving the schema."""
+
+    seal = read_installation_seal(spark, catalog=catalog, schema=schema)
+    binding = InstallationBinding(
+        workspace_id=seal.workspace_id,
+        warehouse_id=seal.warehouse_id,
+        source_contract_sha256=seal.source_contract_sha256,
+        expected_runtime_policy_sha256=seal.expected_runtime_policy_sha256,
+        observed_job_id=seal.observed_job_id,
+        collector_job_id=seal.collector_job_id,
+        reconciler_job_id=seal.reconciler_job_id,
+        observed_service_principal_name=seal.observed_service_principal_name,
+        collector_service_principal_name=seal.collector_service_principal_name,
+        job_manager_group_name=seal.job_manager_group_name,
+        collector_environment_sha256=seal.collector_environment_sha256,
+    )
+    verified = bootstrap_objects(spark, catalog=catalog, schema=schema, binding=binding)
+
+    for spec in reversed(_VIEW_SPECS):
+        spark.sql(f"DROP VIEW {qualify(catalog, schema, spec.name)}")
+    for spec in reversed(_TABLE_SPECS):
+        spark.sql(f"DROP TABLE {qualify(catalog, schema, spec.name)}")
+    spark.sql(f"DROP VOLUME {qualify(catalog, schema, STAGE_VOLUME_NAME)}")
+    spark.sql(f"DROP VOLUME {qualify(catalog, schema, RAW_VOLUME_NAME)}")
+    spark.sql(f"DROP TABLE {qualify(catalog, schema, MANIFEST_TABLE)}")
+
+    relation_names, volumes = _inventory(spark, catalog=catalog, schema=schema)
+    if relation_names or volumes:
+        raise RuntimeError("DBTOBSB_DELETE_UNINSTALL_READBACK_FAILED")
+    return DeleteResult(deleted_object_count=9, schema_owner=verified.object_owner)

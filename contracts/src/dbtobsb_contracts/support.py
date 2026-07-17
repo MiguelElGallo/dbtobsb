@@ -158,7 +158,7 @@ _PACKAGE_VERSIONS = {
     "dbt-protos": "1.0.541",
     "dbt-spark": "1.10.3",
 }
-_EXPECTED_CANONICAL_SHA256 = "2cd0c431d9df992f85cc4bd596518d38fd3f4840571e165e152e442f8d5606b0"
+_EXPECTED_CANONICAL_SHA256 = "a440ab8a9cd6c0b00736e617554fd47d736b2764bdc3b17b71a935befc694401"
 
 
 def _mapping(value: Any, *, name: str, keys: set[str]) -> dict[str, Any]:
@@ -192,7 +192,7 @@ def _deep_freeze(value: Any) -> Any:
 
 @dataclass(frozen=True, slots=True)
 class SupportManifest:
-    """Validated immutable compatibility contract shipped with a release candidate."""
+    """Validated immutable compatibility contract shipped with a supported release."""
 
     contract_version: str
     release_state: str
@@ -236,7 +236,7 @@ def parse_support_manifest(raw: bytes) -> SupportManifest:
 
     expected_scalars = {
         "contract_version": "dbtobsb.support.v1",
-        "release_state": "CANDIDATE",
+        "release_state": "FINAL",
         "cloud": "AZURE_DATABRICKS",
         "bundle_engine": "DIRECT",
         "databricks_cli": "1.7.0",

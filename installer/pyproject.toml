@@ -11,6 +11,7 @@ dependencies = [
     "dbt-core==1.11.12",
     "dbt-protos==1.0.541",
     "dbtobsb-collector==0.3.0b1",
+    "dbtobsb-contracts==0.3.0b1",
     "pyyaml==6.0.3",
 ]
 
@@ -19,6 +20,7 @@ requires = ["hatchling==1.28.0"]
 build-backend = "hatchling.build"
 
 [project.scripts]
+dbtobsb = "dbtobsb_installer.release_cli:main"
 dbtobsb-build-runtime-candidate = "dbtobsb_installer.runtime_seal:main"
 dbtobsb-onboard-dbt-project = "dbtobsb_installer.onboarding:main"
 dbtobsb-render-app-stage = "dbtobsb_installer.app_bindings:main"
@@ -32,6 +34,7 @@ dev = [
 
 [tool.uv.sources]
 dbtobsb-collector = { path = "../collector" }
+dbtobsb-contracts = { path = "../contracts" }
 
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers -q"

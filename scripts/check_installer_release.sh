@@ -19,9 +19,17 @@ if [[ "$wheel_count" != "1" ]]; then
 fi
 
 wheel_path="$(find "$temporary_root" -maxdepth 1 -type f -name '*.whl' -print)"
+dependency_root="$temporary_root/dependencies"
+mkdir -p "$dependency_root"
+uv build --wheel --out-dir "$dependency_root" contracts >/dev/null
+uv build --wheel --out-dir "$dependency_root" capture >/dev/null
+uv build --wheel --out-dir "$dependency_root" collector >/dev/null
 probe_root="$temporary_root/probe"
 mkdir -p "$probe_root"
 unzip -q "$wheel_path" -d "$probe_root"
+uv run --project installer --isolated --no-project --find-links "$dependency_root" \
+  --with "$wheel_path" \
+  dbtobsb --help >/dev/null
 helper_path="$probe_root/dbtobsb_installer/_native/darwin-arm64/dbtobsb-native-bridge"
 DBTOBSB_PROBE_HELPER="$helper_path" uv run --project installer python - <<'PY'
 import json

@@ -41,8 +41,9 @@ UV_LINK_MODE=copy uv pip install --python "$temporary_root/venv/bin/python" \
   "${contracts_wheels[0]}" "${capture_wheels[0]}" "${collector_wheels[0]}"
 "$temporary_root/venv/bin/dbtobsb-collector" \
   | grep -F "fixed Databricks runtime wheel entrypoint"
-if [[ -e "$temporary_root/venv/bin/bootstrap" ]]; then
-  printf '%s\n' "DBTOBSB_RUNTIME_BOOTSTRAP_ENTRYPOINT_PRESENT" >&2
+if [[ ! -x "$temporary_root/venv/bin/bootstrap" \
+  || ! -x "$temporary_root/venv/bin/uninstall-delete" ]]; then
+  printf '%s\n' "DBTOBSB_LIFECYCLE_ENTRYPOINT_MISSING" >&2
   exit 1
 fi
 

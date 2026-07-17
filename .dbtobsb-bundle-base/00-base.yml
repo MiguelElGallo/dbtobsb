@@ -1,0 +1,4 @@
+# This tracked empty fragment keeps the generated Bundle include glob valid.
+# The attended launcher writes temporary resources only in this directory under
+# a 99-*.generated.yml name and removes them after reconciliation.
+resources: {}

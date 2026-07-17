@@ -14,9 +14,11 @@ requires = ["hatchling==1.28.0"]
 build-backend = "hatchling.build"
 
 [project.scripts]
+bootstrap = "dbtobsb_collector.entrypoints:bootstrap"
 collect = "dbtobsb_collector.entrypoints:collect"
 reconcile = "dbtobsb_collector.entrypoints:reconcile"
 run-dbt = "dbtobsb_collector.runner:entrypoint"
+uninstall-delete = "dbtobsb_collector.entrypoints:uninstall_delete"
 dbtobsb-collector = "dbtobsb_collector.entrypoints:main"
 
 [dependency-groups]

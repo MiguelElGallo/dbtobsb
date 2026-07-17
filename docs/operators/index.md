@@ -20,6 +20,7 @@ separation-of-duties claim.
 
 ## Learn by doing
 
+- [Install the private v0.3 release](tutorials/install-private-release.md)
 - [Review the historical v0.2 capture tutorial](tutorials/first-capture.md)
 
 ## Complete a task
@@ -42,5 +43,5 @@ separation-of-duties claim.
 
 ## See real evidence
 
-- [v0.3 live Azure Databricks acceptance from 2026-07-16](../evidence/v0.3.0-live-acceptance-2026-07-16.md)
+- [v0.3 final Azure Databricks acceptance from 2026-07-17](../evidence/v0.3.0-live-acceptance-2026-07-17.md)
 - [Sanitized Azure Databricks capture from 2026-07-16](../evidence/p2-live-capture-2026-07-16.md)

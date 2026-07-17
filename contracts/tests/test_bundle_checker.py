@@ -61,6 +61,15 @@ def _generated_project(bundle_path: Path, document: dict[str, Any]) -> Path:
     return bundle_path / relative
 
 
+def _checked_in_source_relatives() -> tuple[str, ...]:
+    project = _generated_project(ROOT, _document())
+    return tuple(
+        path.relative_to(project).as_posix()
+        for path in sorted(project.rglob("*"))
+        if path.is_file()
+    )
+
+
 def _dbt_wrapper(document: dict[str, Any]) -> dict[str, Any]:
     return _observed_job(document)["tasks"][0]
 
@@ -92,7 +101,7 @@ def test_success_diagnostic_limits_acceptance_to_local_unsealed_preview(
 
     print_diagnostic(diagnostic, output_format="human")
     human = capsys.readouterr().out
-    assert "Accepted for the local private release candidate" in human
+    assert "Accepted for the supported private release" in human
     assert "Installed deployment integrity is not sealed" in human
     assert human.count("Next action:") == 1
 
@@ -419,17 +428,7 @@ def test_exact_selector_definition_is_attested(
         validate_bundle(bundle_path)
 
 
-@pytest.mark.parametrize(
-    "relative",
-    [
-        "dbt_project.yml",
-        "profiles.yml",
-        "selectors.yml",
-        "models/stg_weather.sql",
-        "models/weather_alerts.sql",
-        "seeds/weather_observations.csv",
-    ],
-)
+@pytest.mark.parametrize("relative", _checked_in_source_relatives())
 def test_onboarded_source_byte_mutation_is_rejected(tmp_path: Path, relative: str) -> None:
     document = _document()
     bundle_path = _write_bundle(tmp_path, document)
@@ -453,6 +452,11 @@ def test_extra_or_missing_onboarded_source_file_is_rejected(tmp_path: Path) -> N
 
     macro.unlink()
     macro.parent.rmdir()
-    (project / "models" / "stg_weather.sql").unlink()
+    model = next(
+        relative
+        for relative in _checked_in_source_relatives()
+        if relative.startswith("models/") and relative.endswith(".sql")
+    )
+    (project / model).unlink()
     with pytest.raises(ValueError, match="DBTOBSB_ONBOARDED_SOURCE_FILE_SET_DRIFT"):
         validate_bundle(bundle_path)

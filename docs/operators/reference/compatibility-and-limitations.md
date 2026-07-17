@@ -1,6 +1,6 @@
 # Compatibility and limitations
 
-This page describes the private `v0.3.0` release candidate qualified on Azure Databricks. Marketplace distribution remains out of scope.
+This page describes the private `v0.3.0` release qualified on Azure Databricks. Marketplace distribution remains out of scope.
 
 ## Qualified combination
 
@@ -28,18 +28,18 @@ Exact package pins are a release control. A range-compatible future version is n
 
 ## Qualified dbt command
 
-The live proof used one `dbt build` with the fixed named selector `observability_demo`. Its run-results arguments attested:
+The final live proof used `dbt build` with the fixed named selector `weather_release`. Its run-results arguments attested:
 
 ```text
 which=build
-selector=observability_demo
+selector=weather_release
 select=[]
 exclude=[]
 indirect_selection=eager
 full_refresh=null
 ```
 
-The strict pair validator enforces every value above. The installed demo command is fixed, and arbitrary existing dbt Jobs are outside the support boundary.
+The strict pair validator enforces every value above. The installed customer-project command is sealed, and arbitrary existing dbt Jobs are outside the support boundary until they are onboarded through the supported launcher.
 
 ## Databricks manifest compatibility exception
 
@@ -72,9 +72,9 @@ It does not use SQL `read_files` as the acceptance parser. Permissive file inges
 - The installer retains schema/object-owner authority as an explicit trusted root.
 - Primary artifacts must be exactly the sealed per-attempt `manifest.json` and `run_results.json`; unexpected paths fail closed.
 - Structured dbt logs are bounded and retained, but compiled SQL, catalog artifacts, source freshness results, and query history are not normalized.
-- A failing product-runner dbt build still requires a dedicated live release-capture fixture; partial and invalid states are covered by offline fixtures.
-- Automated raw retention, legal hold, export, purge, restore, and permission-separation tests are not shipped.
-- The release does not include an SBOM, signed installer, Marketplace package, upgrade migration, or rollback automation.
+- The live proof covers an early product-runner failure with no retrievable archive; node-level failure, partial, and invalid states additionally have offline fixtures.
+- Retain- and delete-uninstall are qualified, but automated retention policy, legal hold, export, scheduled purge, and restore are not shipped.
+- The release installer contains a generated SPDX SBOM for its native helper dependencies, but it is not signed and does not include Marketplace packaging, upgrade migration, or rollback automation.
 - Default Storage was proven in a disposable serverless catalog; other managed/external storage topologies are unqualified.
 
 These limitations are release boundaries, not suggested workarounds. Do not bypass them by weakening validation or granting a personal owner broader production access.

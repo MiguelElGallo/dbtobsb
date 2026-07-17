@@ -13,6 +13,7 @@ uv run --project installer pytest -q installer/tests
 node installer/tests/runtime_trust_vectors/verify.mjs
 uv run --project installer ty check installer/src installer/tests collector/src/dbtobsb_collector/deployment.py
 uv run --project installer dbtobsb-render-app-stage >/dev/null
+uv run --project installer dbtobsb --help >/dev/null
 uv run --project installer dbtobsb-build-runtime-candidate --help >/dev/null
 
 if [[ -e collector/src/dbtobsb_collector/_generated/deployment-binding-v1.json ]]; then

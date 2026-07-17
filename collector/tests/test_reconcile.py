@@ -121,18 +121,39 @@ def _resolved_commands(*, task_run_id: int, repair_count: int) -> list[str]:
 
 
 def _dbt_task(*, task_run_id: int, repair_count: int) -> SimpleNamespace:
+    project = (
+        "/Workspace/Users/reviewer@example.com/.bundle/dbtobsb/smoke/files/"
+        f"{_policy().project_directory.removeprefix('./')}"
+    )
+    configured = [
+        "--workspace_id",
+        "{{workspace.id}}",
+        "--observed_job_id",
+        "{{job.id}}",
+        "--observed_job_run_id",
+        "{{job.run_id}}",
+        "--dbt_task_run_id",
+        "{{task.run_id}}",
+        "--repair_count",
+        "{{job.repair_count}}",
+        "--execution_count",
+        "{{task.execution_count}}",
+        "--project_directory",
+        project,
+        "--policy_path",
+        f"{project.rsplit('/project', maxsplit=1)[0]}/dbt-policy-v1.json",
+    ]
+    resolved = configured.copy()
+    resolved[1:12:2] = ["101", "201", "301", str(task_run_id), str(repair_count), "1"]
     return SimpleNamespace(
         task_key=_policy().task_key,
         run_id=task_run_id,
-        dbt_task=SimpleNamespace(),
-        resolved_values=SimpleNamespace(
-            dbt_task=SimpleNamespace(
-                commands=_resolved_commands(
-                    task_run_id=task_run_id,
-                    repair_count=repair_count,
-                )
-            )
+        python_wheel_task=SimpleNamespace(
+            package_name="dbtobsb-collector",
+            entry_point="run-dbt",
+            parameters=configured,
         ),
+        resolved_values=SimpleNamespace(python_wheel_task=SimpleNamespace(parameters=resolved)),
     )
 
 
@@ -143,6 +164,7 @@ class _Jobs:
         self.job_run_as_user_name = "collector-sp"
         self.parent_count = 1
         self.parent_pages: dict[str | None, SimpleNamespace] | None = None
+        self.nested_task_run_projection = False
 
     @staticmethod
     def _reconcile_task() -> jobs.RunTask:
@@ -238,7 +260,16 @@ class _Jobs:
                 repair_history=[SimpleNamespace(task_run_ids=[411, 412])],
             )
         if run_id == 411:
-            return _dbt_task(task_run_id=411, repair_count=1)
+            task = _dbt_task(task_run_id=411, repair_count=1)
+            if self.nested_task_run_projection:
+                return SimpleNamespace(
+                    run_id=411,
+                    job_id=201,
+                    task_key=None,
+                    resolved_values=None,
+                    tasks=[task],
+                )
+            return task
         if run_id == 412:
             return SimpleNamespace(
                 task_key="collect_dbt_evidence",
@@ -436,6 +467,18 @@ def test_reconciler_rejects_legacy_override_before_discovery() -> None:
 
 def test_reconciler_discovers_original_and_repaired_dbt_attempts() -> None:
     controller, _ = _controller()
+
+    contexts = controller.discover_attempts(now=datetime(2026, 7, 16, 12, tzinfo=UTC))
+
+    assert [(item.dbt_task_run_id, item.repair_count) for item in contexts] == [
+        (401, 0),
+        (411, 1),
+    ]
+
+
+def test_reconciler_unwraps_native_task_run_projection() -> None:
+    controller, client = _controller()
+    client.jobs.nested_task_run_projection = True
 
     contexts = controller.discover_attempts(now=datetime(2026, 7, 16, 12, tzinfo=UTC))
 

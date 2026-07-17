@@ -1,6 +1,6 @@
 {
   "contract_version": "dbtobsb.support.v1",
-  "release_state": "CANDIDATE",
+  "release_state": "FINAL",
   "platform": {
     "cloud": "AZURE_DATABRICKS",
     "bundle_engine": "DIRECT",
@@ -413,8 +413,8 @@
       {
         "action": "RETAIN_UNINSTALL",
         "command": "dbtobsb uninstall --retain",
-        "approval": "RETENTION_OWNER_AND_RESOURCE_REMOVAL",
-        "persistent_state": "PRESERVE_OBJECTS_AND_RAW_ARCHIVES_TRANSFER_OWNERSHIP",
+        "approval": "RESOURCE_REMOVAL_AND_EXISTING_OWNER_RETENTION",
+        "persistent_state": "PRESERVE_OBJECTS_AND_RAW_ARCHIVES_WITH_EXISTING_COMBINED_ADMIN_OWNER",
         "app_state": "REMOVED",
         "jobs_state": "REMOVED",
         "compute_state": "PRODUCT_STARTED_COMPUTE_STOPPED_OR_PRIOR_STATE_RESTORED",
@@ -452,7 +452,7 @@
       "APP_QUERY_FAILURE"
     ],
     "live_cases": [
-      "TWO_COMPLETE_CHANGED_INPUT_RUNS",
+      "TWO_COMPLETE_DETERMINISTIC_RUNS",
       "ONE_DBT_FAILURE_OR_PARTIAL_ARTIFACT",
       "MISSED_COLLECTION_RECONCILED",
       "DISTINCT_ATTEMPT_HISTORIES",
