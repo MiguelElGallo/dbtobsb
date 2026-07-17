@@ -28,6 +28,7 @@ probe_root="$temporary_root/probe"
 mkdir -p "$probe_root"
 unzip -q "$wheel_path" -d "$probe_root"
 uv run --project installer --isolated --no-project --find-links "$dependency_root" \
+  --python "${INSTALLER_PYTHON_VERSION:-3.12.3}" \
   --with "$wheel_path" \
   dbtobsb --help >/dev/null
 helper_path="$probe_root/dbtobsb_installer/_native/darwin-arm64/dbtobsb-native-bridge"
