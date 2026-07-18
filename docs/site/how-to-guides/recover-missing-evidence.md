@@ -6,6 +6,13 @@ Use this guide when an observed dbt run has no published collection or when
 Do not edit artifacts, enter a run ID, widen the scan window, or reset a collection
 row.
 
+## Before you begin
+
+You need a Databricks SQL warehouse you are allowed to use, `SELECT` on
+`dbt_collection_health`, and membership in the installed Job-manager group. Open a
+Databricks SQL editor and replace `<catalog>` and `<evidence-schema>` below with the
+values selected during installation.
+
 ## 1. Check the collection state
 
 ```sql
@@ -15,7 +22,11 @@ SELECT
   collection_issue_code,
   collection_attempt_count,
   last_attempted_at,
-  last_reconciliation_run_id
+  last_reconciliation_run_id,
+  CASE
+    WHEN last_attempted_at IS NULL THEN true
+    ELSE current_timestamp() >= last_attempted_at + INTERVAL 20 MINUTES
+  END AS recovery_lease_ready
 FROM `<catalog>`.`<evidence-schema>`.`dbt_collection_health`
 ORDER BY task_start_time DESC;
 ```
@@ -26,13 +37,20 @@ Use this table:
 | --- | --- |
 | `PUBLISHED` | No collection action is needed. |
 | `DISCOVERED` | Run the fixed reconciler once. |
-| `COLLECTING` | Wait for the 20-minute recovery lease, then run the reconciler once. |
+| `COLLECTING` | Wait until `recovery_lease_ready` is `true`, then run the reconciler once. |
 | `RETRYABLE` | Run the reconciler once. Fewer than three attempts have been used. |
 | `TERMINAL_FAILURE` | Stop retrying and escalate the safe issue code. |
 
-## 2. Run the reconciler
+See [Statuses and issue codes](../reference/statuses-and-issues.md) for the meaning
+of each state and code. Do not run the reconciler while
+`recovery_lease_ready` is `false`.
 
-You must belong to the installed Job-manager group.
+If the query returns no row for a completed observed run from the last 24 hours,
+run the reconciler once. Version `0.3.0` cannot discover a run after that 24-hour
+window. If an older run is absent, preserve only its safe identifiers and escalate;
+do not widen the scan or create a row by hand.
+
+## 2. Run the reconciler
 
 In **Databricks Jobs & Pipelines**:
 
@@ -45,7 +63,7 @@ The reconciler checks at most 100 parent runs from the previous 24 hours, at mos
 500 task runs, and at most 20 eligible collection attempts. It uses serverless
 compute and has a 15-minute task timeout.
 
-A successful output looks like this:
+Open the completed run's **Output** panel. A successful output looks like this:
 
 ```json
 {

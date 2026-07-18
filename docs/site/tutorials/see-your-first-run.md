@@ -9,7 +9,10 @@ The example uses a small synthetic weather project. It does not use customer dat
 
 Ask the dbtobsb administrator to complete the
 [private installation](../how-to-guides/install-private-release.md) with the
-synthetic project. You need:
+[weather qualification project](https://github.com/MiguelElGallo/dbtobsb/tree/main/qualification_dbt).
+The recorded output on this page comes from that exact project: three models, one
+seed, and five tests. Its repository `profiles.yml` supports local qualification
+only; dbtobsb ignores it and generates the installed runtime profile. You need:
 
 - permission to run the installed `dbtobsb-observed` Job;
 - permission to query the three dbtobsb health views; and
