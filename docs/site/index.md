@@ -1,7 +1,24 @@
 # See what happened in every observed dbt run
 
-dbtobsb records dbt Core job results inside your Azure Databricks workspace.
-It gives operators one place to answer three questions:
+## Why dbtobsb exists
+
+When you run dbt Core in Databricks, dbt creates a detailed log and result files.
+They record what happened during that run, including whether each model and test
+succeeded or failed.
+
+Those files are useful when you investigate one job. On their own, however, they
+do not give you an easy history that you can search across many jobs. Answering a
+simple question such as "Which model failed yesterday?" can mean finding and
+reading several separate files.
+
+dbtobsb collects selected details from those files and stores them in Databricks
+tables. It also creates read-only views that make the history safer and easier to
+search. Instead of opening files one at a time, you can use SQL or the dbtobsb App
+to see each run, the result of each model and test, how long it took, and whether
+the record was collected. The original files stay in restricted storage, and
+dbtobsb does not send logs or results to an external monitoring service.
+
+dbtobsb gives operators one place to answer three questions:
 
 1. Did the Databricks task finish?
 2. Did dbt produce usable artifacts?
