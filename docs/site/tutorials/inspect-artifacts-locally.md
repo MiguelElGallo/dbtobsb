@@ -6,7 +6,7 @@ run.
 
 ## Before you start
 
-You need Python `3.12`, `uv`, and a private checkout of this repository. The first
+You need Python `3.12`, `uv`, and a checkout of this repository. The first
 environment setup can download packages from your configured Python package source.
 Use a customer-approved registry or cache in a regulated environment.
 

@@ -21,5 +21,5 @@ The first-run tutorial uses sanitized output captured from a real Azure Databric
 `v0.3.0` installation. The final control-plane check found zero active product Job
 runs, clusters, or SQL warehouses and no remaining dbtobsb App or Jobs.
 
-The site remains local to the private repository. No publication workflow or public
-documentation endpoint was added.
+At the time of this writing review, the site remained local. A later publication
+safety audit added the GitHub Pages workflow before the repository became public.

@@ -1,6 +1,6 @@
 # Commands
 
-Run lifecycle commands from the private release checkout and the macOS account that
+Run lifecycle commands from the release checkout and the macOS account that
 performed installation.
 
 ## Product lifecycle

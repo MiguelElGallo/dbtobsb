@@ -11,7 +11,7 @@ Use a managed Apple-silicon Mac with:
 - Python `3.12`;
 - `uv`;
 - Databricks CLI `1.7.0`;
-- a private checkout of the `v0.3.0` release; and
+- a checkout of the `v0.3.0` release; and
 - a named Azure Databricks OAuth profile. Do not use `DEFAULT`.
 
 The signed-in person must be both an Azure Databricks account administrator and

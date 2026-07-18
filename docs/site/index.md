@@ -13,8 +13,8 @@ and a successful dbt build can still have missing evidence.
 !!! info "Private release"
 
     Version `0.3.0` is a private release. It is not distributed through Databricks
-    Marketplace. The documentation is built locally and is not published from this
-    private repository.
+    Marketplace. The source repository and this documentation are public; customer
+    installation and runtime evidence remain private to the customer's workspace.
 
 ## Choose what you need
 

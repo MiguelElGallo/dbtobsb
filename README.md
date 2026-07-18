@@ -2,7 +2,7 @@
 
 Customer-local observability for dbt Core jobs running on Databricks.
 
-This private repository contains the supported v0.3 release: a private Databricks App and three Lakeflow Jobs deployed through a Databricks Declarative Automation Bundle. Required data, compute, identity, audit, and retention stay inside the customer's Azure Databricks workspace; no external telemetry platform is required. Databricks Marketplace is out of scope for this release.
+This repository contains the supported v0.3 release: a privately installed Databricks App and three Lakeflow Jobs deployed through a Databricks Declarative Automation Bundle. Required data, compute, identity, audit, and retention stay inside the customer's Azure Databricks workspace; no external telemetry platform is required. Databricks Marketplace is out of scope for this release.
 
 ## What works now
 
@@ -54,10 +54,10 @@ P1.1 contract. Follow the
 [artifact tutorial](docs/site/tutorials/inspect-artifacts-locally.md) for the
 valid-failure and invalid-pair examples.
 
-## Build the private documentation locally
+## Build the documentation locally
 
-The reader documentation uses Zensical `0.0.51`. It is intentionally not published
-from this private repository.
+The reader documentation uses Zensical `0.0.51`. The same strict build is published
+to GitHub Pages from `main`.
 
 ```console
 scripts/check_docs.sh

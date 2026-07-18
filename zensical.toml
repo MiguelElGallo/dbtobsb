@@ -1,6 +1,7 @@
 [project]
 site_name = "dbtobsb"
 site_description = "Private observability for dbt Core jobs on Azure Databricks"
+repo_url = "https://github.com/MiguelElGallo/dbtobsb"
 docs_dir = "docs/site"
 site_dir = "site"
 use_directory_urls = false

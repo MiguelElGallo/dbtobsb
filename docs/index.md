@@ -9,7 +9,8 @@ Build it locally with:
 scripts/check_docs.sh
 ```
 
-The private repository does not publish this site.
+The reader site is published to GitHub Pages from `main`. Maintainer records below
+remain outside its navigation and search.
 
 ## Maintainer records
 
