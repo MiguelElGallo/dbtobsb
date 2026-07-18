@@ -1,0 +1,121 @@
+/* dbtobsb documentation theme
+ *
+ * The palette uses local CSS only. It does not load fonts, analytics, or assets
+ * from an external service.
+ */
+
+:root {
+  --dbtobsb-ink: #102a43;
+  --dbtobsb-coral: #d43b23;
+  --dbtobsb-coral-light: #ff725c;
+  --dbtobsb-teal: #087f8c;
+  --dbtobsb-teal-light: #3eb6b5;
+}
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--dbtobsb-ink);
+  --md-primary-fg-color--light: #31506c;
+  --md-primary-fg-color--dark: #071b2e;
+  --md-accent-fg-color: var(--dbtobsb-coral);
+  --md-accent-fg-color--transparent: rgb(226 67 41 / 12%);
+  --md-typeset-a-color: #08717c;
+  --md-code-bg-color: #f3f7fa;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-hue: 211;
+  --md-primary-fg-color: #dce8f2;
+  --md-primary-fg-color--light: #ffffff;
+  --md-primary-fg-color--dark: #a9bfd0;
+  --md-accent-fg-color: var(--dbtobsb-coral-light);
+  --md-accent-fg-color--transparent: rgb(255 114 92 / 14%);
+  --md-typeset-a-color: var(--dbtobsb-teal-light);
+  --md-code-bg-color: #14283a;
+}
+
+.md-header {
+  border-top: 0.2rem solid var(--dbtobsb-coral);
+  box-shadow: 0 0.15rem 0.65rem rgb(16 42 67 / 8%);
+}
+
+.md-header__button.md-logo {
+  color: var(--dbtobsb-coral);
+}
+
+.md-tabs__link--active,
+.md-tabs__link:hover {
+  color: var(--md-accent-fg-color);
+}
+
+.md-source {
+  border: 1px solid rgb(127 146 166 / 28%);
+  border-radius: 0.6rem;
+  padding: 0.18rem 0.45rem;
+  transition:
+    border-color 125ms ease,
+    background-color 125ms ease;
+}
+
+.md-source:hover {
+  background-color: var(--md-accent-fg-color--transparent);
+  border-color: var(--md-accent-fg-color);
+}
+
+.md-typeset h1 {
+  color: var(--md-primary-fg-color);
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+
+.md-typeset h2 {
+  border-bottom: 1px solid rgb(127 146 166 / 22%);
+  padding-bottom: 0.3rem;
+}
+
+.md-typeset .md-button {
+  border-radius: 0.55rem;
+  font-weight: 650;
+}
+
+.md-typeset .md-button--primary {
+  background-color: var(--dbtobsb-coral);
+  border-color: var(--dbtobsb-coral);
+  color: #ffffff;
+}
+
+.md-typeset .md-button--primary:hover,
+.md-typeset .md-button--primary:focus {
+  background-color: #b52f1c;
+  border-color: #b52f1c;
+  color: #ffffff;
+}
+
+.md-typeset code,
+.md-typeset pre > code {
+  border-radius: 0.35rem;
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 0.55rem;
+  box-shadow: 0 0.2rem 0.7rem rgb(16 42 67 / 7%);
+}
+
+@media screen and (max-width: 44.9844em) {
+  .md-source {
+    border: 0;
+    padding: 0;
+  }
+
+  .md-typeset .md-button {
+    display: block;
+    margin-right: 0;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-source {
+    transition: none;
+  }
+}
