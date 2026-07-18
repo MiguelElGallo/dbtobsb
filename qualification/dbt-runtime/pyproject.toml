@@ -1,6 +1,6 @@
 [project]
 name = "dbtobsb-dbt-runtime-qualification"
-version = "0.3.0b1"
+version = "0.3.0"
 description = "Locked dbt runtime used only to qualify generated customer snapshots"
 requires-python = ">=3.12,<3.13"
 dependencies = [

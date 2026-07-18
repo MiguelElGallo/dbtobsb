@@ -44,9 +44,9 @@ WORKSPACE_ID = 1234567890123456
 WORKSPACE_ROOT = "/Workspace/Shared/.bundle/dbtobsb/smoke"
 ARTIFACT_ROOT = f"{WORKSPACE_ROOT}/artifacts/.internal"
 RESOLVED_DEPENDENCIES = (
-    f"{ARTIFACT_ROOT}/dbtobsb_contracts-0.3.0b1-py3-none-any.whl",
-    f"{ARTIFACT_ROOT}/dbtobsb_capture-0.3.0b1-py3-none-any.whl",
-    f"{ARTIFACT_ROOT}/dbtobsb_collector-0.3.0b1-py3-none-any.whl",
+    f"{ARTIFACT_ROOT}/dbtobsb_contracts-0.3.0-py3-none-any.whl",
+    f"{ARTIFACT_ROOT}/dbtobsb_capture-0.3.0-py3-none-any.whl",
+    f"{ARTIFACT_ROOT}/dbtobsb_collector-0.3.0-py3-none-any.whl",
     "databricks-sdk==0.117.0",
 )
 
@@ -849,7 +849,7 @@ def test_real_hatch_build_produces_three_fully_inspected_wheels(tmp_path: Path) 
             next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))
         ).decode()
         assert f"Requires-Dist: dbtobsb-contracts=={version}" in metadata
-        assert "Requires-Dist: dbtobsb-contracts==0.3.0b1\n" not in metadata
+        assert "Requires-Dist: dbtobsb-contracts==0.3.0\n" not in metadata
     with zipfile.ZipFile(collector_wheel) as archive:
         metadata = archive.read(
             next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))
