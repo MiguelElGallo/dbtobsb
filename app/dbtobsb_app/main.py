@@ -41,7 +41,7 @@ from dbtobsb_app.ui import (
 )
 
 SERVICE_NAME = "dbtobsb"
-SERVICE_VERSION = "0.3.0b1"
+SERVICE_VERSION = "0.3.0"
 
 RepositoryFactory = Callable[[ResourceBindings], ObservabilityRepository]
 

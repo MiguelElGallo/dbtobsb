@@ -8,7 +8,7 @@ The repository contains the supported private v0.3 release, its machine-readable
 - [Install the private v0.3 release](operators/tutorials/install-private-release.md)
 - [Wire a supported dbt Job](operators/how-to/wire-a-dbt-job.md)
 - [v0.3 supported-release contract](releases/v0.3.0-support-contract.md)
-- [v0.3 final Azure Databricks acceptance](evidence/v0.3.0-live-acceptance-2026-07-17.md)
+- [v0.3.0 stable Azure Databricks acceptance](evidence/v0.3.0-stable-acceptance-2026-07-18.md)
 - [Sanitized P2 live capture](evidence/p2-live-capture-2026-07-16.md)
 - [Product and delivery plan](plans/product-plan.md)
 - [Review process](plans/review-process.md)

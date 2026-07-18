@@ -1,6 +1,6 @@
 # v0.3.0 contract-freeze evidence packet
 
-> Historical contract-freeze snapshot. Implementation and live qualification later completed; use the [final acceptance ledger](acceptance-ledger.md) and [2026-07-17 Azure acceptance](../../evidence/v0.3.0-live-acceptance-2026-07-17.md) for release status.
+> Historical contract-freeze snapshot. Implementation and live qualification later completed; use the [final acceptance ledger](acceptance-ledger.md) and [2026-07-18 stable Azure acceptance](../../evidence/v0.3.0-stable-acceptance-2026-07-18.md) for release status.
 
 - Evidence state: Contract freeze passed
 - Contract-set digest: `c19ade791e9dcd8a204f5e17a1c3b95e0781910e0fb91721f7e9902e5364ddf8`

@@ -43,5 +43,5 @@ separation-of-duties claim.
 
 ## See real evidence
 
-- [v0.3 final Azure Databricks acceptance from 2026-07-17](../evidence/v0.3.0-live-acceptance-2026-07-17.md)
+- [v0.3.0 stable Azure Databricks acceptance from 2026-07-18](../evidence/v0.3.0-stable-acceptance-2026-07-18.md)
 - [Sanitized Azure Databricks capture from 2026-07-16](../evidence/p2-live-capture-2026-07-16.md)

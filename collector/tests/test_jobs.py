@@ -36,9 +36,9 @@ def _enum(value: str) -> SimpleNamespace:
 
 
 _COLLECTOR_DEPENDENCIES = (
-    "/Workspace/product/artifacts/.internal/dbtobsb_contracts-0.3.0b1-py3-none-any.whl",
-    "/Workspace/product/artifacts/.internal/dbtobsb_capture-0.3.0b1-py3-none-any.whl",
-    "/Workspace/product/artifacts/.internal/dbtobsb_collector-0.3.0b1-py3-none-any.whl",
+    "/Workspace/product/artifacts/.internal/dbtobsb_contracts-0.3.0-py3-none-any.whl",
+    "/Workspace/product/artifacts/.internal/dbtobsb_capture-0.3.0-py3-none-any.whl",
+    "/Workspace/product/artifacts/.internal/dbtobsb_collector-0.3.0-py3-none-any.whl",
     "databricks-sdk==0.117.0",
 )
 _SOURCE_FILES = {

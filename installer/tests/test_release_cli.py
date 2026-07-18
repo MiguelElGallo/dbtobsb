@@ -22,9 +22,9 @@ from dbtobsb_installer.release_cli import (
 
 _DIGEST = "a" * 64
 _FINAL_WHEELS = {
-    "contracts": f"dbtobsb_contracts-0.3.0b1+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
-    "capture": f"dbtobsb_capture-0.3.0b1+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
-    "collector": f"dbtobsb_collector-0.3.0b1+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
+    "contracts": f"dbtobsb_contracts-0.3.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
+    "capture": f"dbtobsb_capture-0.3.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
+    "collector": f"dbtobsb_collector-0.3.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
 }
 
 

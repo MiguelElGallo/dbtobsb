@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   validate:
-    # The private beta packages a sealed darwin-arm64 native bridge. Run the
+    # The private release packages a sealed darwin-arm64 native bridge. Run the
     # complete installer suite on the same supported OS/architecture boundary.
     runs-on: macos-15
     timeout-minutes: 20

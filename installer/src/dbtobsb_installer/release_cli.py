@@ -79,9 +79,9 @@ _WAREHOUSE = re.compile(r"^[0-9a-f]{16}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _WAIT_TIMEOUT = timedelta(minutes=20)
 _BASE_WHEELS = {
-    "contracts": "dbtobsb_contracts-0.3.0b1-py3-none-any.whl",
-    "capture": "dbtobsb_capture-0.3.0b1-py3-none-any.whl",
-    "collector": "dbtobsb_collector-0.3.0b1-py3-none-any.whl",
+    "contracts": "dbtobsb_contracts-0.3.0-py3-none-any.whl",
+    "capture": "dbtobsb_capture-0.3.0-py3-none-any.whl",
+    "collector": "dbtobsb_collector-0.3.0-py3-none-any.whl",
 }
 _STAGES = (
     "CONFIGURED",
