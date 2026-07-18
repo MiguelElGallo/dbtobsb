@@ -12,19 +12,19 @@ Object creation is intentionally split from collection. An authorized administra
 
 Start with [Install the private v0.3 release](docs/operators/tutorials/install-private-release.md), then read [Wire a supported dbt Job](docs/operators/how-to/wire-a-dbt-job.md) and the [evidence schema reference](docs/operators/reference/evidence-schema.md). The full machine contract and governance boundary are in the [v0.3 supported-release contract](docs/releases/v0.3.0-support-contract.md). The App is read-only and stopped by default; explicitly starting it can incur App compute cost.
 
-The latest sanitized execution proof is [v0.3 final Azure Databricks acceptance](docs/evidence/v0.3.0-live-acceptance-2026-07-17.md).
+The latest sanitized execution proof is [v0.3.0 stable Azure Databricks acceptance](docs/evidence/v0.3.0-stable-acceptance-2026-07-18.md). It links the exhaustive beta matrix to the independently rebuilt and exercised stable artifacts.
 
 ## Release status
 
-The private `v0.3.0` support contract is final for the `0.3.0b1` artifacts. Marketplace distribution is not included. Regulated use requires customer governance approval; dbtobsb is not certified or attested against a regulatory framework.
+The private `v0.3.0` support contract is final for the qualified `0.3.0` artifacts. Marketplace distribution is not included. Regulated use requires customer governance approval; dbtobsb is not certified or attested against a regulatory framework.
 
 | Release component | Version |
 | --- | --- |
-| Git release/tag | `v0.3.0b1` |
+| Git release/tag | `v0.3.0` |
 | Evidence object manifest | `dbtobsb.evidence.v1.0.0-rc.11` |
-| Python packages | `0.3.0b1` plus content-addressed final wheel versions |
+| Python packages | `0.3.0` plus content-addressed final wheel versions |
 | Support contract | `dbtobsb.support.v1` |
-| App | `0.3.0b1`, read-only and stopped by default |
+| App | `0.3.0`, read-only and stopped by default |
 
 P1.1 remains available as an offline strict artifact-pair inspector. Its synthetic fixtures make pair validity, native dbt outcome, and capture state visibly separate.
 

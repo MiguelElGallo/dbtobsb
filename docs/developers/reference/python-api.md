@@ -70,7 +70,7 @@ The example reads files before calling the API. The API itself never opens a cal
 
 ## v0.3 collector APIs
 
-These exports support the customer-local v0.3 collector. They are shipped in the content-addressed `0.3.0b1` release wheels and remain governed by `dbtobsb.support.v1`.
+These exports support the customer-local v0.3 collector. They are shipped in the content-addressed `0.3.0` release wheels and remain governed by `dbtobsb.support.v1`.
 
 | Export | Purpose |
 | --- | --- |

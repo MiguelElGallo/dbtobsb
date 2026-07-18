@@ -42,32 +42,32 @@ _LOCK_PATH = _REPO_ROOT / ".dbtobsb" / "runtime-candidate.lock"
 _BINDING_WHEEL_MEMBER = "dbtobsb_collector/_generated/deployment-binding-v1.json"
 _POLICY_WHEEL_MEMBER = "dbtobsb_collector/_generated/dbt-policy-v1.json"
 _SUPPORTED_TARGET = "smoke"
-_BASE_VERSION = "0.3.0b1"
+_BASE_VERSION = "0.3.0"
 _PROFILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 _WAREHOUSE_ID = re.compile(r"^[0-9a-f]{16}$")
-_CONTENT_VERSION = re.compile(r"^0\.3\.0b1\+dbtobsb\.(?:candidate|final)\.[0-9a-f]{64}$")
+_CONTENT_VERSION = re.compile(r"^0\.3\.0\+dbtobsb\.(?:candidate|final)\.[0-9a-f]{64}$")
 _EXPECTED_JOB_NAMES = {
     "dbtobsb_collector": "dbtobsb-collector",
     "dbtobsb_reconciler": "dbtobsb-reconciler",
     "dbtobsb_observed": "dbtobsb-observed",
 }
 _EXPECTED_DECLARED_DEPENDENCIES = (
-    "./contracts/dist/dbtobsb_contracts-0.3.0b1-py3-none-any.whl",
-    "./capture/dist/dbtobsb_capture-0.3.0b1-py3-none-any.whl",
-    "./collector/dist/dbtobsb_collector-0.3.0b1-py3-none-any.whl",
+    "./contracts/dist/dbtobsb_contracts-0.3.0-py3-none-any.whl",
+    "./capture/dist/dbtobsb_capture-0.3.0-py3-none-any.whl",
+    "./collector/dist/dbtobsb_collector-0.3.0-py3-none-any.whl",
     "databricks-sdk==0.117.0",
 )
 _RESOLVED_WHEEL_PATTERNS = (
     re.compile(
-        r"^dbtobsb_contracts-0\.3\.0b1(?:\+dbtobsb\.(?:candidate|final)\."
+        r"^dbtobsb_contracts-0\.3\.0(?:\+dbtobsb\.(?:candidate|final)\."
         r"[0-9a-f]{64})?-py3-none-any\.whl$"
     ),
     re.compile(
-        r"^dbtobsb_capture-0\.3\.0b1(?:\+dbtobsb\.(?:candidate|final)\."
+        r"^dbtobsb_capture-0\.3\.0(?:\+dbtobsb\.(?:candidate|final)\."
         r"[0-9a-f]{64})?-py3-none-any\.whl$"
     ),
     re.compile(
-        r"^dbtobsb_collector-0\.3\.0b1(?:\+dbtobsb\.(?:candidate|final)\."
+        r"^dbtobsb_collector-0\.3\.0(?:\+dbtobsb\.(?:candidate|final)\."
         r"[0-9a-f]{64})?-py3-none-any\.whl$"
     ),
 )

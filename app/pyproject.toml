@@ -1,6 +1,6 @@
 [project]
 name = "dbtobsb-app"
-version = "0.3.0b1"
+version = "0.3.0"
 description = "Customer-local dbt Core observability for Databricks"
 requires-python = ">=3.11,<3.12"
 dependencies = [
