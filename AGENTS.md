@@ -2,6 +2,18 @@
 
 These rules apply to human and AI contributors.
 
+## Repository install-and-run skill
+
+When a user asks an agent to install dbtobsb, run the weather example or another
+dbt project, make a first observed run, or prove that logs were captured, use
+`.agents/skills/install-and-run-dbtobsb/SKILL.md`.
+
+The skill must ask for resource, mutation, cost, project, warehouse-stop, and finish
+choices before changing local or cloud state. It must pause again at the exact
+installer preview before typing `APPROVE`. Do not replace the supported launcher
+with direct dbt commands, caller-selected Job IDs, selectors, SQL, paths, flags, or
+compute overrides.
+
 For the v0.3.0 supported release, the machine-readable support manifest and
 `docs/releases/v0.3.0-support-contract.md` are authoritative about included
 components. The detailed separated-duty, migration-ledger, runtime-trust,

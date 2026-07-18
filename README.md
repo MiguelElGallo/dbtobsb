@@ -19,6 +19,28 @@ cost.
 
 The latest sanitized execution proof is [v0.3.0 stable Azure Databricks acceptance](docs/evidence/v0.3.0-stable-acceptance-2026-07-18.md). It links the exhaustive beta matrix to the independently rebuilt and exercised stable artifacts.
 
+## Ask an agent to install and run it
+
+This repository includes an
+[install-and-run skill](.agents/skills/install-and-run-dbtobsb/SKILL.md) for agents
+that support repository skills. From a fresh clone, ask:
+
+```text
+Use $install-and-run-dbtobsb to install dbtobsb, run the weather example,
+prove that its model result and structured logs were captured, and stop compute.
+```
+
+Before changing anything, the agent lists the available Azure Databricks choices
+and asks you to confirm the profile, project, service principals, group, warehouse,
+catalog, schemas, allowed data-object changes, compute deadline, warehouse stop
+policy, and final retained state. It pauses again at the installer's exact preview.
+
+The successful result is one terminal dbt Job with at least one successful model,
+complete and valid artifact evidence, valid nonempty structured logs, published
+health rows, the App stopped, the reconciler paused, no active product run, and the
+selected warehouse stopped. The agent does not expose raw logs or captured data in
+its receipt.
+
 ## Release status
 
 The private `v0.3.0` support contract is final for the qualified `0.3.0` artifacts. Marketplace distribution is not included. Regulated use requires customer governance approval; dbtobsb is not certified or attested against a regulatory framework.

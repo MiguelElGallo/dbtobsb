@@ -1,0 +1,4 @@
+interface:
+  display_name: "Install and run dbtobsb"
+  short_description: "Install dbtobsb and prove one captured dbt run"
+  default_prompt: "Use $install-and-run-dbtobsb to install dbtobsb, run the weather example, verify its captured logs and model results, and stop compute."

@@ -4,6 +4,21 @@ Use this guide to install dbtobsb `v0.3.0` in one Azure Databricks workspace.
 The installation is attended: one accountable administrator reviews the selected
 resources before any change is made.
 
+## Agent-assisted path
+
+Agents that support repository skills can follow the version-controlled
+[`install-and-run-dbtobsb` skill](https://github.com/MiguelElGallo/dbtobsb/blob/main/.agents/skills/install-and-run-dbtobsb/SKILL.md).
+From a clone of this repository, ask:
+
+```text
+Use $install-and-run-dbtobsb to install dbtobsb, run the weather example,
+prove that its model result and structured logs were captured, and stop compute.
+```
+
+The agent asks for every resource, mutation, cost, project, and finish choice before
+it changes anything. It still pauses at the installation preview and cannot type
+`APPROVE` without your confirmation.
+
 ## Before you begin
 
 Use a managed Apple-silicon Mac with:
