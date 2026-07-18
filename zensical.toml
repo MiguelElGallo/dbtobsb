@@ -1,0 +1,62 @@
+[project]
+site_name = "dbtobsb"
+site_description = "Private observability for dbt Core jobs on Azure Databricks"
+repo_url = "https://github.com/MiguelElGallo/dbtobsb"
+docs_dir = "docs/site"
+site_dir = "site"
+use_directory_urls = false
+nav = [
+  { "Home" = "index.md" },
+  { "Tutorials" = [
+    "tutorials/index.md",
+    { "See your first observed dbt run" = "tutorials/see-your-first-run.md" },
+    { "Inspect dbt artifacts locally" = "tutorials/inspect-artifacts-locally.md" },
+  ] },
+  { "How-to guides" = [
+    "how-to-guides/index.md",
+    { "Install the private release" = "how-to-guides/install-private-release.md" },
+    { "Add a dbt project" = "how-to-guides/add-a-dbt-project.md" },
+    { "Query observability data" = "how-to-guides/query-observability-data.md" },
+    { "Recover missing evidence" = "how-to-guides/recover-missing-evidence.md" },
+    { "Stop or uninstall dbtobsb" = "how-to-guides/stop-or-uninstall.md" },
+  ] },
+  { "Reference" = [
+    "reference/index.md",
+    { "Supported environment" = "reference/supported-environment.md" },
+    { "Commands" = "reference/commands.md" },
+    { "Evidence data" = "reference/evidence-data.md" },
+    { "Statuses and issue codes" = "reference/statuses-and-issues.md" },
+    { "Security and permissions" = "reference/security-and-permissions.md" },
+    { "Glossary" = "reference/glossary.md" },
+  ] },
+  { "Explanation" = [
+    "explanation/index.md",
+    { "How capture works" = "explanation/how-capture-works.md" },
+    { "Why outcomes stay separate" = "explanation/why-outcomes-stay-separate.md" },
+    { "Why collection uses a separate Job" = "explanation/why-collection-uses-a-separate-job.md" },
+    { "Why data stays in Databricks" = "explanation/why-data-stays-in-databricks.md" },
+    { "Compute and cost" = "explanation/compute-and-cost.md" },
+  ] },
+]
+
+[project.theme]
+variant = "modern"
+features = [
+  "navigation.indexes",
+  "navigation.path",
+  "navigation.tabs",
+  "navigation.tabs.sticky",
+  "search.highlight",
+  "toc.follow",
+]
+
+[project.markdown_extensions.admonition]
+
+[project.markdown_extensions.attr_list]
+
+[project.markdown_extensions.pymdownx.details]
+
+[project.markdown_extensions.pymdownx.superfences]
+
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true
