@@ -9,6 +9,15 @@ Complete one attended path from a clean clone to a captured dbt run. Assume the
 user has the required authority, but never assume their workspace, resource, data,
 cost, or retention choices.
 
+## Enforce the platform gate
+
+Run this skill only for an Azure Databricks workspace deployed in the customer's
+Azure subscription and reached through its canonical
+`https://adb-...azuredatabricks.net` per-workspace URL. Stop before local or cloud
+mutation for AWS, GCP, Databricks Free Edition, or the retired Community Edition.
+“Personal Edition” is not a current Databricks product name: Databricks sends
+personal-use users to Free Edition, which dbtobsb does not support.
+
 ## Read the supported contract
 
 Before acting, read these repository files:
@@ -51,8 +60,12 @@ From the repository root:
    unsupported source before any cloud mutation.
 2. Check Python, `uv`, Databricks CLI, and `jq` against the supported-environment
    page.
-3. Run `databricks auth profiles --output json`. Present every valid Azure OAuth
-   profile and its workspace host; never select one automatically.
+3. Run `databricks auth profiles --output json`. Keep only valid Azure OAuth
+   profiles whose canonical host matches
+   `^https://adb-[0-9]{1,20}\.[0-9]{1,20}\.azuredatabricks\.net$`. Present every
+   remaining profile and its workspace host; never select one automatically. If
+   none remain, stop with the supported-platform explanation rather than offering
+   an AWS, GCP, Free Edition, Community Edition, regional, or custom-URL profile.
 4. After the user chooses a profile, verify it with `databricks auth describe` and
    `databricks current-user me` using the explicit `--profile` flag.
 5. Read-only list the candidate active service principals, non-system groups, SQL
@@ -72,7 +85,10 @@ Ask one consolidated question and wait for all answers. Do not run `uv sync`,
 
 Ask the user to choose or confirm:
 
-1. **Azure Databricks profile** — one discovered named profile; never `DEFAULT`.
+1. **Workspace and Azure Databricks profile** — ask the user to confirm that the
+   workspace is not Free Edition and choose one discovered named Azure profile;
+   never `DEFAULT`. If they call it “Personal Edition”, explain that the current
+   official personal-use offering is Free Edition and stop.
 2. **dbt project** — recommend `examples/customer_weather` for one harmless model;
    offer `qualification_dbt` for the documented three-model, one-seed, five-test
    result; or accept another isolated child project that passes the input contract.

@@ -4,6 +4,14 @@ Customer-local observability for dbt Core jobs running on Databricks.
 
 This repository contains the supported v0.3 release: a privately installed Databricks App and three Lakeflow Jobs deployed through a Databricks Declarative Automation Bundle. Required data, compute, identity, audit, and retention stay inside the customer's Azure Databricks workspace; no external telemetry platform is required. Databricks Marketplace is out of scope for this release.
 
+> **Azure Databricks only:** dbtobsb `v0.3.0` installs only in an Azure
+> Databricks workspace deployed in the customer's Azure subscription and reached
+> through its canonical `https://adb-...azuredatabricks.net` workspace URL. It
+> does not support AWS Databricks, GCP Databricks, **Databricks Free Edition**, or
+> the retired Community Edition. “Personal Edition” is not a current Databricks
+> product name; Databricks directs personal-use users to Free Edition, which is
+> not supported by dbtobsb. See the [supported environment](docs/site/reference/supported-environment.md).
+
 ## What works now
 
 The sealed observed Job runs the pinned dbt Core project without a shell, uploads only `manifest.json`, `run_results.json`, and bounded structured logs to a managed staging Volume, and verifies every uploaded byte. The distinct collector service principal builds and preserves a deterministic archive, validates the artifact pair, and publishes allowlisted fields to three evidence tables behind three read-only health views. The exact raw archive remains in a separate managed Volume.
@@ -33,7 +41,8 @@ prove that its model result and structured logs were captured, and stop compute.
 Before changing anything, the agent lists the available Azure Databricks choices
 and asks you to confirm the profile, project, service principals, group, warehouse,
 catalog, schemas, allowed data-object changes, compute deadline, warehouse stop
-policy, and final retained state. It pauses again at the installer's exact preview.
+policy, and final retained state. It rejects Free Edition and non-Azure workspaces,
+then pauses again at the installer's exact preview.
 
 The successful result is one terminal dbt Job with at least one successful model,
 complete and valid artifact evidence, valid nonempty structured logs, published

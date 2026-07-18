@@ -4,11 +4,21 @@ dbtobsb `v0.3.0` is supported only for the combination on this page. A newer
 compatible-looking version is not supported until it passes the same tests and live
 Azure qualification.
 
+!!! danger "Not Databricks Free Edition"
+
+    Install only in an Azure Databricks workspace deployed in the customer's
+    Azure subscription. dbtobsb does not support AWS, GCP, **Databricks Free
+    Edition**, or the retired Community Edition. “Personal Edition” is not a
+    current Databricks product name; the official personal-use offering is Free
+    Edition and is unsupported here.
+
 ## Platform
 
 | Part | Supported value |
 | --- | --- |
-| Cloud | Azure Databricks |
+| Cloud | Azure Databricks only |
+| Workspace offering | Customer Azure Databricks workspace; Free Edition unsupported |
+| Workspace URL | Canonical `https://adb-<workspace-id>.<number>.azuredatabricks.net` URL |
 | Distribution | Private Databricks App and Declarative Automation Bundle |
 | Databricks CLI | `1.7.0` |
 | Bundle engine | Direct, the built-in Bundle deployment engine |
@@ -23,6 +33,24 @@ Azure qualification.
 Environment client `5` is the serverless Jobs environment generation qualified by
 this release. These are fixed compatibility values, not settings to tune during
 installation.
+
+## Why Free Edition is excluded
+
+[Databricks Free Edition](https://learn.microsoft.com/en-us/azure/databricks/getting-started/free-edition)
+is the current official name for the no-cost personal-use product. It replaced
+Community Edition in 2025. Databricks does not document a separate product named
+“Personal Edition.”
+
+Free Edition is a serverless-only, quota-limited, non-commercial offering without
+account-level APIs, compliance enforcement, private networking configuration, a
+support policy, or an SLA. It can expose individual features also used by dbtobsb,
+but the complete dbtobsb installation and governance contract has not been
+qualified there and is explicitly unsupported. See the official
+[Free Edition limitations](https://learn.microsoft.com/en-us/azure/databricks/getting-started/free-edition-limitations).
+
+The installer accepts only the canonical Azure per-workspace URL documented by
+[Azure Databricks](https://learn.microsoft.com/en-us/azure/databricks/workspace/per-workspace-urls).
+AWS and GCP workspace hosts are outside the release contract.
 
 ## dbt packages
 
@@ -48,6 +76,7 @@ sealed during installation.
 
 The release does not include:
 
+- Databricks Free Edition, AWS Databricks, or GCP Databricks support;
 - Databricks Marketplace distribution;
 - independent separation of duties;
 - in-place upgrade or rollback automation;

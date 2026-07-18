@@ -4,7 +4,9 @@
 
 In this tutorial you deploy the private preview, create its fixed evidence objects, run the synthetic weather project, and query the result. The App stays stopped.
 
-The example assumes a personal/test Azure Databricks workspace. Use synthetic data only.
+The example assumes a non-production customer Azure Databricks workspace. It does
+not support Databricks Free Edition, the retired Community Edition, AWS, or GCP.
+Use synthetic data only.
 
 ## Before you start
 

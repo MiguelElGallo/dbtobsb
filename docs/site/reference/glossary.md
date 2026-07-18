@@ -26,6 +26,13 @@ the files, and writes normalized rows.
 The read-only web interface included with dbtobsb. Its serverless compute is
 separate from dbt Job compute and the SQL warehouse used to read evidence.
 
+## Databricks Free Edition
+
+The current official name for Databricks' no-cost personal-use offering. It
+replaced Community Edition in 2025. It is not the customer-subscription Azure
+workspace offering qualified by dbtobsb. Databricks does not document a separate
+current product called “Personal Edition.”
+
 ## Evidence schema
 
 The existing customer-owned Unity Catalog schema chosen for dbtobsb objects.
