@@ -1,7 +1,15 @@
 # Research source register
 
-- Last refreshed: 2026-07-16
+- Last refreshed: 2026-07-18
 - Policy: Prefer current official product documentation and first-party repositories. Re-check time-sensitive feature status before implementing or publishing a claim.
+
+## Documentation baseline
+
+| Source | Decision supported | Current caution |
+|---|---|---|
+| [Zensical repository](https://github.com/zensical/zensical), [project setup](https://zensical.org/docs/setup/basics/), and [navigation](https://zensical.org/docs/setup/navigation/) | Use `zensical.toml`, a dedicated reader-only `docs_dir`, explicit navigation, local search, and a strict offline build | Pin and test the exact Zensical version; this private repository does not publish Pages |
+| [Diátaxis](https://diataxis.fr/), [tutorials](https://diataxis.fr/tutorials/), [how-to guides](https://diataxis.fr/how-to-guides/), [reference](https://diataxis.fr/reference/), and [explanation](https://diataxis.fr/explanation/) | Make the four reader needs the top-level site structure and keep each page focused on one need | Production installation is a task guide, not a choice-free learning tutorial; internal evidence and plans stay outside customer navigation |
+| [FastAPI Python types tutorial](https://fastapi.tiangolo.com/python-types/) | Use short sections, small runnable examples, expected output, progressive disclosure, plain definitions, and direct language | Style is a clarity reference only; dbtobsb does not copy FastAPI product claims or examples |
 
 ## Databricks product baseline
 

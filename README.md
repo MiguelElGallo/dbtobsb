@@ -10,7 +10,12 @@ The sealed observed Job runs the pinned dbt Core project without a shell, upload
 
 Object creation is intentionally split from collection. An authorized administrator may run the fixed, versioned `BOOTSTRAP_ALLOWED` entry point against an intentionally selected production catalog; it creates or verifies the product schema objects idempotently. The ordinary `RUNTIME_DML_ONLY` collector entry point performs only fixed writes to those existing objects. It cannot be switched into bootstrap mode with a runtime flag.
 
-Start with [Install the private v0.3 release](docs/operators/tutorials/install-private-release.md), then read [Wire a supported dbt Job](docs/operators/how-to/wire-a-dbt-job.md) and the [evidence schema reference](docs/operators/reference/evidence-schema.md). The full machine contract and governance boundary are in the [v0.3 supported-release contract](docs/releases/v0.3.0-support-contract.md). The App is read-only and stopped by default; explicitly starting it can incur App compute cost.
+Start with the [plain-language documentation](docs/site/index.md). It separates
+tutorials, how-to guides, reference, and explanation. The full machine contract and
+governance boundary remain in the
+[v0.3 supported-release contract](docs/releases/v0.3.0-support-contract.md). The App
+is read-only and stopped by default; explicitly starting it can incur App compute
+cost.
 
 The latest sanitized execution proof is [v0.3.0 stable Azure Databricks acceptance](docs/evidence/v0.3.0-stable-acceptance-2026-07-18.md). It links the exhaustive beta matrix to the independently rebuilt and exercised stable artifacts.
 
@@ -44,7 +49,22 @@ uv run --project capture --no-sync dbtobsb-capture inspect-artifact-pair \
   --no-color
 ```
 
-The first line is `PAIR_VALID`. That means only that the two files satisfy the pinned P1.1 contract. Follow the [developer tutorial](docs/developers/tutorials/inspect-an-artifact-pair.md) for the valid-failure and invalid-pair examples, or use the [CLI report and exit-code reference](docs/developers/reference/cli-report-and-exit-codes.md) for automation.
+The first line is `PAIR_VALID`. That means only that the two files satisfy the pinned
+P1.1 contract. Follow the
+[artifact tutorial](docs/site/tutorials/inspect-artifacts-locally.md) for the
+valid-failure and invalid-pair examples.
+
+## Build the private documentation locally
+
+The reader documentation uses Zensical `0.0.51`. It is intentionally not published
+from this private repository.
+
+```console
+scripts/check_docs.sh
+```
+
+The command performs a strict local build into the ignored `site/` directory and
+checks every local Markdown link.
 
 ## Run the legacy App-shell development smoke
 
