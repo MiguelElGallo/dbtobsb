@@ -184,3 +184,7 @@ Detailed migration, trust, deployment, controlled-action, and dbt contracts live
 ## Current baseline
 
 Planning baseline: **0.20**. Implemented product slice: **supported private v0.3 release**. Release acceptance uses automated local gates, adversarial contract tests, clean bootstrap, two live Azure Databricks end-to-end attempts, controlled failure and reconciliation cases, SQL/App result comparison, both uninstall modes, and a zero-running-compute cleanup audit. The exact working agreement is in [AGENTS.md](AGENTS.md).
+
+## License
+
+dbtobsb is available under the [MIT License](LICENSE).
