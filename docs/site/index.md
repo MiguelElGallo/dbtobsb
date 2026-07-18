@@ -10,6 +10,9 @@ It gives operators one place to answer three questions:
 These are separate questions. A failed dbt build can still leave complete evidence,
 and a successful dbt build can still have missing evidence.
 
+[Start the tutorial](tutorials/see-your-first-run.md){ .md-button .md-button--primary }
+[View the source on GitHub](https://github.com/MiguelElGallo/dbtobsb){ .md-button }
+
 !!! info "Private release"
 
     Version `0.3.0` is a private release. It is not distributed through Databricks
