@@ -3,6 +3,7 @@
 Reference pages describe the exact `v0.3.0` contract.
 
 - [Supported environment](supported-environment.md)
+- [dbt project input](dbt-project-input.md)
 - [Commands](commands.md)
 - [Evidence data](evidence-data.md)
 - [Statuses and issue codes](statuses-and-issues.md)

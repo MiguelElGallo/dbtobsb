@@ -1,0 +1,6 @@
+selectors:
+  - name: weather_release
+    description: Models observed by dbtobsb.
+    definition:
+      method: path
+      value: models

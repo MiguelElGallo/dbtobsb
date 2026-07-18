@@ -19,8 +19,8 @@ nav = [
   ] },
   { "How-to guides" = [
     "how-to-guides/index.md",
+    { "Prepare a dbt project" = "how-to-guides/add-a-dbt-project.md" },
     { "Install the private release" = "how-to-guides/install-private-release.md" },
-    { "Add a dbt project" = "how-to-guides/add-a-dbt-project.md" },
     { "Query observability data" = "how-to-guides/query-observability-data.md" },
     { "Recover missing evidence" = "how-to-guides/recover-missing-evidence.md" },
     { "Stop or uninstall dbtobsb" = "how-to-guides/stop-or-uninstall.md" },
@@ -28,6 +28,7 @@ nav = [
   { "Reference" = [
     "reference/index.md",
     { "Supported environment" = "reference/supported-environment.md" },
+    { "dbt project input" = "reference/dbt-project-input.md" },
     { "Commands" = "reference/commands.md" },
     { "Evidence data" = "reference/evidence-data.md" },
     { "Statuses and issue codes" = "reference/statuses-and-issues.md" },

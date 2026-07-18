@@ -2,7 +2,7 @@
 
 Run lifecycle commands from the same checkout and macOS account that installed the
 product. The local protected state tells the launcher which resources belong to
-this installation.
+this installation. The verification commands near the end also require `jq`.
 
 ## Stop compute
 
@@ -33,9 +33,10 @@ uv run --project installer --no-sync dbtobsb uninstall --retain
 Read the consequence shown by the installer. Type `RETAIN` only after confirming
 that the nine evidence objects must remain.
 
-This removes the App, all three Jobs, product grants, bindings, Bundle state, and
-local installer state. It keeps all nine product objects in the selected schema
-under the existing administrator's ownership.
+This removes the App, all three Jobs, product access grants, App resource
+connections, deployed Bundle files, and local installer state. It keeps all nine
+product objects in the selected schema under the existing administrator's
+ownership.
 
 ## Delete product evidence
 
@@ -53,9 +54,20 @@ Read each prompt when it appears. Type `DELETE`, review the retention, legal-hol
 and export warning, and only then type `DELETE PRODUCT DATA`. Do not pipe or prequeue
 these acknowledgements.
 
-Both uninstall modes print a `dbtobsb_uninstall_verified` receipt. If the command
-is interrupted, rerun the same mode. Do not switch between retain and delete during
-an unfinished uninstall.
+Retain ends with:
+
+```json
+{"app_state":"REMOVED","event":"dbtobsb_uninstall_verified","mode":"RETAIN","product_objects":"RETAINED","schema_preserved":true}
+```
+
+Delete ends with:
+
+```json
+{"app_state":"REMOVED","event":"dbtobsb_uninstall_verified","mode":"DELETE","product_objects":"REMOVED","schema_preserved":true}
+```
+
+If the command is interrupted, rerun the same mode. Do not switch between retain
+and delete during an unfinished uninstall.
 
 ## Verify the final state
 
@@ -103,9 +115,28 @@ for name in dbtobsb-observed dbtobsb-collector dbtobsb-reconciler; do
 done
 ```
 
-If you used `--delete`, an evidence-schema owner must also confirm that the nine
-dbtobsb tables, views, and Volumes are absent. If you used `--retain`, those nine
-objects must remain under the existing administrator's ownership.
+An evidence-schema owner can check the exact nine
+[product objects](../reference/evidence-data.md) in a Databricks SQL editor:
+
+```sql
+SELECT table_name AS object_name, table_type AS object_type
+FROM `<catalog>`.information_schema.tables
+WHERE table_schema = '<evidence-schema>'
+  AND table_name IN (
+    'dbtobsb_object_manifest', 'dbt_artifact_registry', 'dbt_invocations',
+    'dbt_node_results', 'dbt_run_health', 'dbt_node_health',
+    'dbt_collection_health'
+  )
+UNION ALL
+SELECT volume_name AS object_name, 'VOLUME' AS object_type
+FROM `<catalog>`.information_schema.volumes
+WHERE volume_schema = '<evidence-schema>'
+  AND volume_name IN ('dbtobsb_raw', 'dbtobsb_stage')
+ORDER BY object_name;
+```
+
+After `--delete`, the query must return zero rows. After `--retain`, it must return
+all nine names. The selected schema and unrelated objects remain in both modes.
 
 Stop only the exact customer warehouse when policy authorizes it. Never delete or
 change unrelated Jobs, clusters, warehouses, catalogs, or schemas to make a broad

@@ -1,0 +1,5 @@
+name: customer_weather
+version: "1.0"
+config-version: 2
+profile: customer_weather
+model-paths: [models]

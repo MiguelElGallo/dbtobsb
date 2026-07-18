@@ -11,14 +11,33 @@ Use a managed Apple-silicon Mac with:
 - Python `3.12`;
 - `uv`;
 - Databricks CLI `1.7.0`;
+- `jq` for the optional final-state checks;
 - a checkout of the `v0.3.0` release; and
 - a named Azure Databricks OAuth profile. Do not use `DEFAULT`.
+
+Check the local tools, release, and authenticated profile before continuing:
+
+```console
+python3 --version
+uv --version
+databricks version
+jq --version
+git describe --tags --exact-match
+databricks auth describe --profile '<profile>'
+databricks current-user me --profile '<profile>' --output json
+```
+
+The versions must match the [supported environment](../reference/supported-environment.md),
+the Git command must print `v0.3.0`, and both Databricks commands must succeed for
+the same named profile and Azure workspace.
 
 The signed-in person must be both an Azure Databricks account administrator and
 workspace administrator. The same person must own the existing evidence schema.
 This release does not provide independent separation of duties.
 
-Prepare these customer-owned resources:
+## Resources that must already exist
+
+dbtobsb does not create these customer-owned resources:
 
 - one existing Unity Catalog catalog;
 - one empty, dedicated evidence schema;
@@ -26,12 +45,18 @@ Prepare these customer-owned resources:
 - separate active service principals for the observed and collector Jobs;
 - one group that may manage the Jobs and use the App;
 - one existing SQL warehouse that the observed principal can use; and
-- one dbt project under the repository root.
+- one [prepared dbt project](add-a-dbt-project.md) in its own child directory below
+  the repository root.
 
-The dbt project must contain `dbt_project.yml`, `selectors.yml`, and exactly one
-supported named selector. A source `profiles.yml` is not required and is not copied;
-the installer generates the runtime profile from approved resources. Keep
-credentials out of the project.
+The source project contains two required YAML files: `dbt_project.yml` and
+`selectors.yml`. The preparation guide provides copy-paste examples and links to a
+complete working project. Do not create a source profile for dbtobsb: the installer
+generates the runtime `profiles.yml` from the resources you approve. The exact
+rules are in the [dbt project input reference](../reference/dbt-project-input.md).
+
+If you cannot identify each resource and its owner, stop and ask the Azure
+Databricks administrator. The exact runtime access is listed in
+[Security and permissions](../reference/security-and-permissions.md).
 
 !!! warning "Installation can change production data objects"
 
@@ -62,9 +87,10 @@ warehouse, catalog, schemas, and dbt project. Review the full summary. Type
 
 The installer then:
 
-1. copies and seals the approved dbt project;
+1. copies the approved dbt project and prevents unreviewed runtime changes;
 2. deploys the observed, collector, and paused reconciler Jobs;
-3. creates and verifies the nine fixed Unity Catalog objects;
+3. creates and verifies the nine fixed
+   [Unity Catalog objects](../reference/evidence-data.md);
 4. applies the exact product permissions;
 5. starts and stops the read-only App during two bounded deployment checks; and
 6. leaves the App stopped.
@@ -104,4 +130,7 @@ The App remains stopped and the reconciler schedule remains paused. Continue wit
 
 If the installer reports a stable code instead of success, preserve that code and
 the local state file. Do not edit Jobs, grants, App bindings, or evidence objects by
-hand.
+hand. Project-preparation errors start with `DBTOBSB_ONBOARDING_`; use the checks in
+[Prepare a dbt project](add-a-dbt-project.md) before running the same bootstrap
+command again. For any other code, follow the safe action printed by the installer
+or escalate the code without attaching raw logs or the state file.
