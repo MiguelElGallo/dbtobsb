@@ -165,7 +165,7 @@ The evidence describes counts as occurrences and separately reports zero invalid
 
 | Surface | Intended reader need | Result |
 | --- | --- | --- |
-| [Repository README](../../../README.md#inspect-one-artifact-pair-locally), [documentation index](../../index.md), and [capture README](../../../capture/README.md) | Immediate current-capability route | **Pass.** They lead to the tutorial and raw-handling task while retaining synthetic-fixture and current-capability non-claims. |
+| [Current public inspection tutorial](../../site/tutorials/inspect-artifacts-locally.md), [documentation index](../../index.md), and [capture README](../../../capture/README.md) | Immediate current-capability route | **Pass.** They lead to the tutorial and raw-handling task while retaining synthetic-fixture and current-capability non-claims. |
 | [Developer landing](../../developers/index.md) | Developer/integrator routing | **Pass.** Outcome, lookup, and understanding routes are visibly separated, including both halves of the raw-artifact split. |
 | [Artifact-pair tutorial](../../developers/tutorials/inspect-an-artifact-pair.md) | Action plus acquisition | **Pass.** First use, three fixture journeys, exact results, and cross-mode next routes remain coherent. |
 | [Invalid-pair how-to](../../developers/how-to/diagnose-an-invalid-artifact-pair.md) | Action plus application | **Pass.** Recovery stays task-led and verification reaches explanation/reference. |

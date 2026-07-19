@@ -61,7 +61,7 @@ The repository-specific acceptance contract is [Documentation plan](../../plans/
 
 | Surface | Reader need and mode | Assessment |
 | --- | --- | --- |
-| [Repository README](../../../README.md#inspect-one-artifact-pair-locally) | Current capability and immediate first route | **Pass.** P1.1 scope and non-claims precede its command; the much larger P0 procedure follows rather than hiding it. |
+| [Current public inspection tutorial](../../site/tutorials/inspect-artifacts-locally.md) | Current capability and immediate first route | **Pass.** The public route now explains the task without internal milestone language. |
 | [Documentation index](../../index.md) | Transitional planning index plus current execution routes | **Pass for P1.1, with the inherited D0 gate retained.** It explicitly links developer documentation and gives P1.1 its own outcome heading; it does not claim to be the finished product-doc home. |
 | [Capture README](../../../capture/README.md) | Package-local orientation | **Pass.** It states the one operation and its boundaries, then routes first to the tutorial and next to lookup material. |
 | [Developer landing page](../../developers/index.md) | Developer/integrator audience landing | **Pass.** “Start with an outcome”, “Look up a contract”, and “Understand the boundaries” route by need rather than by repository machinery. Four additional empty mode landing pages would add fragmentation to this five-page slice. |
