@@ -1,5 +1,7 @@
 # See what happened in every observed dbt run
 
+![dbt Core observability in Databricks](images/logo.png){ width="320" loading="lazy" }
+
 ## Why dbtobsb exists
 
 When you run dbt Core in Databricks, dbt creates a detailed log and result files.
