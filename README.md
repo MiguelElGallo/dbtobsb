@@ -1,7 +1,7 @@
 # dbtobsb
 
 <p align="center">
-  <img src="docs/site/images/logo.png" alt="dbt Core observability in Databricks" width="320">
+  <img src="docs/site/images/databricks-app-logo.jpg" alt="dbt Core observability in Databricks" width="640">
 </p>
 
 **Documentation:** [miguelelgallo.github.io/dbtobsb](https://miguelelgallo.github.io/dbtobsb/)
