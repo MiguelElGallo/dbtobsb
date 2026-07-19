@@ -1,6 +1,6 @@
 # See what happened in every observed dbt run
 
-![dbt Core observability in Databricks](images/logo.png){ width="320" loading="lazy" }
+![dbt Core observability in Databricks](images/databricks-app-logo.jpg){ width="640" loading="lazy" }
 
 ## Why dbtobsb exists
 
