@@ -130,6 +130,11 @@ A successful installation ends with:
 {"app_state":"STOPPED","event":"dbtobsb_installation_verified","reconciler_state":"PAUSED","stage":"INSTALLED"}
 ```
 
+![The installed dbtobsb App listed with compute stopped](../images/app-installed-stopped.png){ loading="lazy" }
+
+*After installation, the App is present in the workspace and its compute is
+stopped. This is the expected idle state.*
+
 ## 3. Resume an interrupted installation
 
 The local `.dbtobsb/release-installation-v1.json` file records completed stages and

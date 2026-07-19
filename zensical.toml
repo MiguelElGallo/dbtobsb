@@ -47,6 +47,7 @@ nav = [
 
 [project.theme]
 variant = "modern"
+logo = "images/logo.png"
 features = [
   "content.action.view",
   "navigation.indexes",
@@ -75,7 +76,6 @@ toggle.icon = "lucide/sun"
 toggle.name = "Switch to light mode"
 
 [project.theme.icon]
-logo = "lucide/database"
 repo = "fontawesome/brands/github"
 view = "lucide/code-xml"
 

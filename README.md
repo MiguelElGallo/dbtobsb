@@ -1,5 +1,9 @@
 # dbtobsb
 
+<p align="center">
+  <img src="docs/site/images/logo.png" alt="dbt Core observability in Databricks" width="320">
+</p>
+
 **Documentation:** [miguelelgallo.github.io/dbtobsb](https://miguelelgallo.github.io/dbtobsb/)
 
 Customer-local observability for dbt Core jobs running on Azure Databricks.

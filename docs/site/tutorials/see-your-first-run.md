@@ -46,6 +46,11 @@ In **Databricks Jobs & Pipelines**:
 The first task runs the fixed dbt command. The second task collects evidence even
 when dbt fails.
 
+![Timeline for a successful observed dbt run followed by evidence collection](../images/observed-job-timeline.png){ loading="lazy" }
+
+*A real sanitized run: `dbt_build` finishes first, then `collect_dbt_evidence`
+captures and publishes the files left by dbt.*
+
 In the documentation check on 18 July 2026, the first serverless start took about
 five minutes. The task showed **Waiting for cluster** during that time. Startup time
 varies; do not create another run while the first one is still pending.
@@ -154,6 +159,11 @@ printf 'START\n' | uv run --project installer --no-sync dbtobsb start
 Open the App and select **Load observability**. The App shows the same run, node,
 and collection data as the SQL views. Loading data can start the bound SQL
 warehouse.
+
+![The dbtobsb App showing published collection health and recent runs](../images/app-observability-dashboard.png){ loading="lazy" }
+
+*The read-only App after loading data. The cost notice stays visible above the
+collection and run history.*
 
 ## 6. Stop compute
 
