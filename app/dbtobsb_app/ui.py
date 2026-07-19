@@ -50,11 +50,15 @@ def _document(content: str, *, title: str = "dbtobsb observability") -> str:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{escape(title)}</title>
+  <link rel="icon" href="/assets/logo.png" type="image/png">
   <style>
     :root {{ color-scheme: light dark; --accent:#ff5f46; --panel:#18202b; --muted:#9aa8b8; }}
     * {{ box-sizing:border-box; }}
     body {{ margin:0; font:15px/1.5 system-ui,sans-serif; background:#0d1117; color:#f4f7fa; }}
     main {{ width:min(1200px,calc(100% - 2rem)); margin:2rem auto 4rem; }}
+    .brand-link {{ display:inline-flex; margin-bottom:1.25rem; border-radius:16px; }}
+    .brand-logo {{ display:block; width:112px; height:112px; object-fit:contain;
+      border-radius:16px; background:#fff; }}
     header {{ display:flex; justify-content:space-between; gap:1rem; align-items:end; }}
     h1,h2 {{ line-height:1.15; }} h1 {{ margin:.25rem 0; }} h2 {{ margin-top:2rem; }}
     .eyebrow {{ color:var(--accent); font-weight:700; letter-spacing:.08em;
@@ -81,7 +85,9 @@ def _document(content: str, *, title: str = "dbtobsb observability") -> str:
     }}
   </style>
 </head>
-<body><main>{content}</main></body>
+<body><main><a class="brand-link" href="/" aria-label="dbtobsb home">
+  <img class="brand-logo" src="/assets/logo.png" alt="dbtobsb logo" width="112" height="112">
+</a>{content}</main></body>
 </html>"""
 
 

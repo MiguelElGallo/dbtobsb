@@ -8,10 +8,11 @@ import os
 import sys
 import uuid
 from collections.abc import Callable, Mapping
+from pathlib import Path
 from typing import cast
 
 from fastapi import FastAPI, Query, Response
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from dbtobsb_app.configuration import BindingState, ResourceBindings, resolve_bindings
 from dbtobsb_app.models import (
@@ -42,6 +43,7 @@ from dbtobsb_app.ui import (
 
 SERVICE_NAME = "dbtobsb"
 SERVICE_VERSION = "0.3.0"
+LOGO_PATH = Path(__file__).parent / "static" / "logo.png"
 
 RepositoryFactory = Callable[[ResourceBindings], ObservabilityRepository]
 
@@ -163,7 +165,7 @@ def create_app(
     safe_html_headers = {
         "Cache-Control": "no-store",
         "Content-Security-Policy": (
-            "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; "
+            "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; "
             "form-action 'none'; frame-ancestors 'self'"
         ),
         "Referrer-Policy": "no-referrer",
@@ -312,6 +314,18 @@ def create_app(
                 setup_page((), invalid=True), status_code=503, headers=safe_html_headers
             )
         return HTMLResponse(landing_page(), headers=safe_html_headers)
+
+    @app.get("/assets/logo.png", response_class=FileResponse, include_in_schema=False)
+    def logo() -> FileResponse:
+        """Serve the packaged dbtobsb logo without contacting customer data."""
+        return FileResponse(
+            LOGO_PATH,
+            media_type="image/png",
+            headers={
+                "Cache-Control": "public, max-age=86400",
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
 
     @app.get(
         "/operators/how-to/reconcile-collection/",
