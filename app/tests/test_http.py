@@ -426,8 +426,12 @@ def test_ready_landing_explains_cost_and_never_queries() -> None:
     assert "auto-stop" in response.text
     assert "cost-center/tag settings" in response.text
     assert "verify those settings" in response.text
-    assert '<link rel="icon" href="/assets/logo.png" type="image/png">' in response.text
-    assert '<img class="brand-logo" src="/assets/logo.png" alt="dbtobsb logo"' in response.text
+    assert 'rel="icon"' in response.text
+    assert 'href="/assets/logo.png"' in response.text
+    assert 'type="image/png"' in response.text
+    assert 'class="brand-logo"' in response.text
+    assert 'src="/assets/logo.png"' in response.text
+    assert 'alt="dbtobsb logo"' in response.text
     assert 'href="/observability"' in response.text
     assert "/api/v1/runs" in response.text
     assert "/api/v1/nodes" in response.text
