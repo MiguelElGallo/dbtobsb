@@ -1,8 +1,8 @@
 # dbtobsb
 
-Customer-local observability for dbt Core jobs running on Azure Databricks.
-
 **Documentation:** [miguelelgallo.github.io/dbtobsb](https://miguelelgallo.github.io/dbtobsb/)
+
+Customer-local observability for dbt Core jobs running on Azure Databricks.
 
 When dbt Core runs, it leaves detailed result files and logs. Those files are
 useful for investigating one run, but they do not provide an easy history across
