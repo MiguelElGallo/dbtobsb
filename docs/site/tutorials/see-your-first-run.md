@@ -5,6 +5,13 @@ and finish with no product compute running.
 
 The example uses a small synthetic weather project. It does not use customer data.
 
+!!! warning "Supported workspace required"
+
+    This tutorial uses the installed product, so it requires a supported Azure
+    Databricks workspace. It does not work with Databricks Free Edition, the
+    retired Community Edition, AWS, or GCP. “Personal Edition” is not a current
+    Databricks product name; personal-use Databricks means Free Edition.
+
 ## Before you start
 
 Ask the dbtobsb administrator to complete the

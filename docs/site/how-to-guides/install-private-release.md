@@ -4,6 +4,29 @@ Use this guide to install dbtobsb `v0.3.0` in one Azure Databricks workspace.
 The installation is attended: one accountable administrator reviews the selected
 resources before any change is made.
 
+!!! danger "Check the workspace before you start"
+
+    This release installs only in an Azure Databricks workspace deployed in the
+    customer's Azure subscription. Do not continue with AWS, GCP, **Databricks
+    Free Edition**, or the retired Community Edition. “Personal Edition” is not a
+    current product name; a personal-use Databricks signup is Free Edition and is
+    unsupported by dbtobsb.
+
+## Agent-assisted path
+
+Agents that support repository skills can follow the version-controlled
+[`install-and-run-dbtobsb` skill](https://github.com/MiguelElGallo/dbtobsb/blob/main/.agents/skills/install-and-run-dbtobsb/SKILL.md).
+From a clone of this repository, ask:
+
+```text
+Use $install-and-run-dbtobsb to install dbtobsb, run the weather example,
+prove that its model result and structured logs were captured, and stop compute.
+```
+
+The agent asks for every resource, mutation, cost, project, and finish choice before
+it changes anything. It still pauses at the installation preview and cannot type
+`APPROVE` without your confirmation.
+
 ## Before you begin
 
 Use a managed Apple-silicon Mac with:
@@ -13,7 +36,8 @@ Use a managed Apple-silicon Mac with:
 - Databricks CLI `1.7.0`;
 - `jq` for the optional final-state checks;
 - a checkout of the `v0.3.0` release; and
-- a named Azure Databricks OAuth profile. Do not use `DEFAULT`.
+- a named Azure Databricks OAuth profile for the canonical
+  `https://adb-...azuredatabricks.net` workspace URL. Do not use `DEFAULT`.
 
 Check the local tools, release, and authenticated profile before continuing:
 
@@ -29,7 +53,8 @@ databricks current-user me --profile '<profile>' --output json
 
 The versions must match the [supported environment](../reference/supported-environment.md),
 the Git command must print `v0.3.0`, and both Databricks commands must succeed for
-the same named profile and Azure workspace.
+the same named profile and supported Azure workspace. Stop if the profile belongs
+to Free Edition or another cloud.
 
 The signed-in person must be both an Azure Databricks account administrator and
 workspace administrator. The same person must own the existing evidence schema.

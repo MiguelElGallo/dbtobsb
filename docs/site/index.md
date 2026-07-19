@@ -30,6 +30,14 @@ and a successful dbt build can still have missing evidence.
 [Start the tutorial](tutorials/see-your-first-run.md){ .md-button .md-button--primary }
 [View the source on GitHub](https://github.com/MiguelElGallo/dbtobsb){ .md-button }
 
+!!! warning "Azure Databricks only"
+
+    dbtobsb `v0.3.0` does not run on AWS Databricks, GCP Databricks, or
+    **Databricks Free Edition**. Databricks does not use “Personal Edition” as the
+    product name; personal-use signup creates a Free Edition workspace. Install
+    only in a supported Azure Databricks workspace. See
+    [Supported environment](reference/supported-environment.md).
+
 !!! info "Private release"
 
     Version `0.3.0` is a private release. It is not distributed through Databricks
@@ -78,6 +86,6 @@ environment values, or secrets.
 
 ## Supported release
 
-The supported path uses Azure Databricks, dbt Core `1.11.12`,
+The supported path uses Azure Databricks—not Free Edition—dbt Core `1.11.12`,
 dbt-databricks `1.12.2`, Python `3.12`, and Databricks CLI `1.7.0`.
 See [Supported environment](reference/supported-environment.md) before installing.

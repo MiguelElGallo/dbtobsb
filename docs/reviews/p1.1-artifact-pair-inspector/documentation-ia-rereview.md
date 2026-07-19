@@ -102,7 +102,7 @@ The new source satisfies every condition:
 
 | Surface | Intended reader need | Result |
 | --- | --- | --- |
-| [Repository README](../../../README.md#inspect-one-artifact-pair-locally) | Immediate current-capability route | **Pass.** P1.1 scope, sensitive-input boundary, fixture command, and non-claims remain before the much larger P0 path. |
+| [Current public inspection tutorial](../../site/tutorials/inspect-artifacts-locally.md) | Immediate current-capability route | **Pass.** The public route covers scope, sensitive-input handling, the fixture command, and current limitations without internal milestone language. |
 | [Documentation index](../../index.md) | Transitional planning index plus P1.1 route | **Pass with inherited D0 gate.** It points directly to the tutorial and input boundary without claiming to be the finished site. |
 | [Capture README](../../../capture/README.md) | Package-local orientation | **Pass.** It leads with the tutorial, then lookup material, and warns before real-file substitution. |
 | [Developer landing](../../developers/index.md) | Developer/integrator audience route | **Fail for the new custody entry.** Existing tutorial/how-to/reference/explanation grouping remains concise, but “Handle raw dbt artifacts safely” is placed under “Understand the boundaries” despite promising and containing a handling task. |

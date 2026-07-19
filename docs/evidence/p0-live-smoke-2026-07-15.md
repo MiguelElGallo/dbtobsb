@@ -73,4 +73,9 @@ The stopped App object and uploaded Bundle files remain as reproducible evidence
 
 ## Reproduction
 
-Use the [P0 smoke instructions](../../README.md#run-the-legacy-app-shell-development-smoke). Supply a local profile, canonical host, and exact expected user at runtime; do not copy any real values into this repository or a review record.
+This historical run used the
+[legacy smoke wrapper](../../scripts/smoke_databricks_app.sh) and the
+[private run-record template](../templates/p0-smoke-run-record.md). These are
+retained as engineering evidence, not as the current installation route. Supply
+a local profile, canonical host, and exact expected user at runtime; do not copy
+any real values into this repository or a review record.

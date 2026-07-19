@@ -2,11 +2,17 @@
 
 This page describes the private `v0.3.0` release qualified on Azure Databricks. Marketplace distribution remains out of scope.
 
+> **Platform boundary:** This release does not support Databricks Free Edition,
+> the retired Community Edition, AWS Databricks, or GCP Databricks. “Personal
+> Edition” is not a current official name; Databricks directs personal-use users
+> to Free Edition. Use a customer Azure Databricks workspace with its canonical
+> `adb-...azuredatabricks.net` URL.
+
 ## Qualified combination
 
 | Component | Qualified value |
 | --- | --- |
-| Cloud | Azure Databricks |
+| Cloud | Azure Databricks only; Free Edition excluded |
 | Deployment CLI | Databricks CLI `1.7.0` |
 | Bundle engine | Direct |
 | dbt process compute | Serverless Jobs environment client `5` |
@@ -67,6 +73,7 @@ It does not use SQL `read_files` as the acceptance parser. Permissive file inges
 
 ## Known release limitations
 
+- Databricks Free Edition, AWS Databricks, and GCP Databricks are unsupported.
 - Private Bundle release only; Marketplace packaging is not included.
 - The supported topology is the combined-administrator route. Separated duties are not claimed.
 - The installer retains schema/object-owner authority as an explicit trusted root.
