@@ -160,6 +160,21 @@ def test_health_is_stable_and_does_not_create_repository() -> None:
     assert factory_calls == 0
 
 
+def test_packaged_logo_is_served_without_querying_customer_data() -> None:
+    def factory(_bindings):
+        raise AssertionError("logo must not access data")
+
+    response = TestClient(create_app(environment={}, repository_factory=factory)).get(
+        "/assets/logo.png"
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.headers["cache-control"] == "public, max-age=86400"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.content.startswith(b"\x89PNG\r\n\x1a\n")
+
+
 @pytest.mark.parametrize(
     ("path", "heading"),
     [
@@ -411,6 +426,8 @@ def test_ready_landing_explains_cost_and_never_queries() -> None:
     assert "auto-stop" in response.text
     assert "cost-center/tag settings" in response.text
     assert "verify those settings" in response.text
+    assert '<link rel="icon" href="/assets/logo.png" type="image/png">' in response.text
+    assert '<img class="brand-logo" src="/assets/logo.png" alt="dbtobsb logo"' in response.text
     assert 'href="/observability"' in response.text
     assert "/api/v1/runs" in response.text
     assert "/api/v1/nodes" in response.text

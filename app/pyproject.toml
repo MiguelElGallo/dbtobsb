@@ -43,3 +43,6 @@ python-version = "3.11"
 
 [tool.hatch.build.targets.wheel]
 packages = ["dbtobsb_app"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"dbtobsb_app/static/logo.png" = "dbtobsb_app/static/logo.png"
