@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import io
 import json
@@ -22,6 +23,7 @@ from dbtobsb_installer.release_cli import (
     SubprocessRunner,
     _load_state,
     _save_state,
+    _SealedCliCredentials,
     _select,
     _verify_databricks_cli_executable,
     main,
@@ -53,6 +55,7 @@ class _NoCommandRunner:
 
 
 def _state(*, stage: str = "INSTALLED") -> InstallationState:
+    has_direct_state = stage not in {"CONFIGURED", "ONBOARDED"}
     return InstallationState(
         schema="dbtobsb.installer-state.v2",
         release_version="0.4.0",
@@ -88,6 +91,9 @@ def _state(*, stage: str = "INSTALLED") -> InstallationState:
         observed_job_id=11,
         collector_job_id=12,
         reconciler_job_id=13,
+        direct_state_lineage=("12345678-1234-1234-1234-123456789abc" if has_direct_state else None),
+        direct_state_serial=1 if has_direct_state else None,
+        direct_state_sha256=_DIGEST if has_direct_state else None,
     )
 
 
@@ -251,7 +257,9 @@ class _TerraformWorkspace:
 
     def get_status(self, path: str) -> SimpleNamespace:
         self.paths.append(path)
-        if self.outcome == "missing":
+        if self.outcome == "missing" or (
+            self.outcome == "direct" and path.endswith("terraform.tfstate")
+        ):
             raise NotFound("missing")
         if self.outcome == "error":
             raise RuntimeError("untrusted remote failure")
@@ -418,6 +426,43 @@ def test_cli_runner_uses_private_copy_and_rechecks_before_every_execution(tmp_pa
         runner.run(("databricks", "version"), timeout_seconds=1)
 
 
+def test_sdk_credentials_use_only_sealed_runner_and_explicit_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class TokenRunner:
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, ...]] = []
+
+        def run(
+            self,
+            command: tuple[str, ...],
+            *,
+            timeout_seconds: int,
+            stdin: bytes | None = None,
+        ) -> bytes:
+            assert timeout_seconds == 60
+            assert stdin is None
+            self.calls.append(command)
+            return b'{"access_token":"secret-in-memory-only"}\n'
+
+    runner = TokenRunner()
+    monkeypatch.setenv("PATH", "/path/that/must/not/be-used")
+    headers = _SealedCliCredentials(runner, "paid-azure-test")(None)()
+
+    assert headers == {"Authorization": "Bearer secret-in-memory-only"}
+    assert runner.calls == [
+        (
+            "databricks",
+            "auth",
+            "token",
+            "--profile",
+            "paid-azure-test",
+            "--output",
+            "json",
+        )
+    ]
+
+
 def test_selection_is_sorted_and_accepts_only_canonical_number() -> None:
     choices = [{"name": "Zulu"}, {"name": "Alpha"}]
     output = io.StringIO()
@@ -446,19 +491,58 @@ def _preflight(*, warehouse_state: str = "STOPPED") -> BootstrapPreflight:
     return BootstrapPreflight.from_document(
         {
             "app": {
+                "end_user_acl": {"group": "dbtobsb-job-managers", "level": "CAN_USE"},
+                "environment": {"DBTOBSB_WAREHOUSE_ID": "dbtobsb-app-warehouse"},
+                "resource_bindings": [
+                    {
+                        "name": "dbtobsb-app-warehouse",
+                        "sql_warehouse": {
+                            "id": "0123456789abcdef",
+                            "permission": "CAN_USE",
+                        },
+                    }
+                ],
                 "resources": [
                     "dbtobsb-app-warehouse",
                     "dbtobsb-run-health",
                     "dbtobsb-node-health",
                     "dbtobsb-collection-health",
-                ]
+                ],
             },
-            "compute": {"warehouse_auto_stop_mins": 5, "warehouse_state": warehouse_state},
+            "authority": {"named_oauth_profile": "paid-azure-test"},
+            "compute": {
+                "approved_operations": [
+                    "BOUNDED_SERVERLESS_BUNDLE_JOBS",
+                    "TWO_BOUNDED_APP_DEPLOYMENT_CHECKS",
+                ],
+                "warehouse_auto_stop_mins": 5,
+                "warehouse_cluster_size": "2X-Small",
+                "warehouse_state": warehouse_state,
+            },
+            "finish": {
+                "app": "STOPPED",
+                "jobs": "TERMINAL",
+                "reconciler": "PAUSED",
+                "warehouse": "UNCHANGED_BY_PRODUCT_REPORT_OBSERVED_STATE",
+            },
             "planned": {
                 "direct_grants": [{"principal": "COLLECTOR", "privileges": ["SELECT"]}],
                 "jobs": ["dbtobsb-observed", "dbtobsb-collector", "dbtobsb-reconciler"],
                 "objects": [{"kind": "MANAGED_TABLE", "name": "dbt_artifact_registry"}],
+                "principal_bindings": {
+                    "COLLECTOR_SERVICE_PRINCIPAL": "dbtobsb-collector-runtime",
+                    "OBSERVED_SERVICE_PRINCIPAL": "dbtobsb-observed-runtime",
+                },
                 "temporary_jobs": ["dbtobsb-bootstrap", "dbtobsb-delete"],
+                "workspace_acl": {
+                    "collector": "CAN_READ",
+                    "job_manager_group": "CAN_MANAGE",
+                    "observed": "CAN_READ",
+                },
+            },
+            "project": {
+                "commands": ["dbt build --selector qualification"],
+                "selector": "qualification",
             },
         }
     )
@@ -488,6 +572,21 @@ def test_exact_preview_is_digest_bound_and_denial_has_zero_mutation(tmp_path: Pa
     assert "v0.4.0 fresh installation only" in output
     assert "App deployment checks: two bounded checks" in output
     assert "dbtobsb does not manage or stop it" in output
+    for expected in (
+        "Named OAuth profile: paid-azure-test",
+        "Grant role bindings:",
+        "Workspace ACL:",
+        "App bindings:",
+        "App environment:",
+        "App end-user ACL:",
+        "dbt selector: qualification",
+        "Fixed dbt commands:",
+        "Serverless cost scope:",
+        "size 2X-Small",
+        "may auto-start the bound warehouse",
+        "Finish state:",
+    ):
+        assert expected in output
     assert manager.preflight_reads == 0
     assert manager.events == []
 
@@ -523,10 +622,11 @@ def test_app_readback_requires_exact_resource_names_permissions_and_targets(
 def test_cli_1_8_guard_accepts_only_absent_terraform_state(tmp_path: Path) -> None:
     manager = _TerraformStateManager(tmp_path, "missing")
 
-    manager._reject_terraform_state(_state())
+    manager._reject_terraform_state(_state(stage="ONBOARDED"))
 
     assert manager.workspace.paths == [
-        "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/state/terraform.tfstate"
+        "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/state/terraform.tfstate",
+        "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/state/resources.json",
     ]
 
 
@@ -537,20 +637,116 @@ def test_cli_1_8_guard_rejects_local_or_remote_terraform_state(tmp_path: Path) -
     local_manager = _TerraformStateManager(tmp_path, "missing")
 
     with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_TERRAFORM_STATE_UNSUPPORTED"):
-        local_manager._reject_terraform_state(_state())
+        local_manager._reject_terraform_state(_state(stage="ONBOARDED"))
     assert local_manager.workspace.paths == []
 
     local_state.unlink()
+    direct_state = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    direct_state.write_text("{}", encoding="utf-8")
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_FRESH_INSTALL_REQUIRED"):
+        local_manager._reject_terraform_state(_state(stage="ONBOARDED"))
+    assert local_manager.workspace.paths[-1].endswith("state/resources.json")
+
+    direct_state.unlink()
     remote_manager = _TerraformStateManager(tmp_path, "present")
     with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_TERRAFORM_STATE_UNSUPPORTED"):
-        remote_manager._reject_terraform_state(_state())
+        remote_manager._reject_terraform_state(_state(stage="ONBOARDED"))
+
+    remote_direct_manager = _TerraformStateManager(tmp_path, "direct")
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_FRESH_INSTALL_REQUIRED"):
+        remote_direct_manager._reject_terraform_state(_state(stage="ONBOARDED"))
+    assert remote_direct_manager.workspace.paths[-1].endswith("state/resources.json")
 
 
 def test_cli_1_8_guard_fails_closed_when_remote_state_cannot_be_read(tmp_path: Path) -> None:
     manager = _TerraformStateManager(tmp_path, "error")
 
     with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_TERRAFORM_STATE_CHECK_FAILED"):
-        manager._reject_terraform_state(_state())
+        manager._reject_terraform_state(_state(stage="ONBOARDED"))
+
+
+def _direct_state_raw(*, extra_resource: str | None = None) -> bytes:
+    resources = {
+        "resources.apps.dbtobsb_smoke": {},
+        "resources.jobs.dbtobsb_collector": {},
+        "resources.jobs.dbtobsb_observed": {},
+        "resources.jobs.dbtobsb_reconciler": {},
+    }
+    if extra_resource is not None:
+        resources[extra_resource] = {}
+    return (
+        json.dumps(
+            {
+                "cli_version": "1.8.0",
+                "lineage": "12345678-1234-1234-1234-123456789abc",
+                "serial": 7,
+                "state": resources,
+                "state_version": 2,
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode()
+        + b"\n"
+    )
+
+
+def test_resume_requires_identical_local_remote_direct_state_and_bound_identity(
+    tmp_path: Path,
+) -> None:
+    raw = _direct_state_raw()
+    path = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(raw)
+
+    class Workspace:
+        def get_status(self, remote_path: str) -> SimpleNamespace:
+            if remote_path.endswith("terraform.tfstate"):
+                raise NotFound("missing")
+            return SimpleNamespace(path=remote_path)
+
+        def export(self, remote_path: str) -> SimpleNamespace:
+            assert remote_path.endswith("state/resources.json")
+            return SimpleNamespace(content=base64.b64encode(raw).decode())
+
+    manager = _LifecycleManager(tmp_path)
+    cast(dict[str, Any], manager._clients)["paid-azure-test"] = SimpleNamespace(
+        workspace=Workspace()
+    )
+    state = replace(
+        _state(stage="BASE_DEPLOYED"),
+        direct_state_serial=7,
+        direct_state_sha256=hashlib.sha256(raw).hexdigest(),
+    )
+
+    manager._reject_terraform_state(state)
+
+    path.write_bytes(_direct_state_raw(extra_resource="resources.jobs.foreign"))
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_DIRECT_STATE_INVALID"):
+        manager._reject_terraform_state(state)
+
+
+def test_app_deployment_match_requires_exact_snapshot_source_and_environment() -> None:
+    deployment = {
+        "mode": "SNAPSHOT",
+        "source_code_path": "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/files/app",
+        "env_vars": [
+            {"name": "DBTOBSB_WAREHOUSE_ID"},
+            {"name": "DBTOBSB_RUN_HEALTH_VIEW"},
+            {"name": "DBTOBSB_NODE_HEALTH_VIEW"},
+            {"name": "DBTOBSB_COLLECTION_HEALTH_VIEW"},
+        ],
+    }
+
+    assert ReleaseManager._app_deployment_matches(deployment)
+    for field, value in (
+        ("mode", "AUTO_SYNC"),
+        ("source_code_path", "/Workspace/foreign/app"),
+        ("env_vars", deployment["env_vars"][:-1]),
+        ("env_vars", [*deployment["env_vars"], {"name": "EXTRA"}]),
+    ):
+        changed = dict(deployment)
+        changed[field] = value
+        assert not ReleaseManager._app_deployment_matches(changed)
 
 
 def test_bootstrap_resumes_after_final_deploy_without_repeating_completed_stages(

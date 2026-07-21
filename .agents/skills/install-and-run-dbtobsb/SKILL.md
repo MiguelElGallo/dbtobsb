@@ -261,6 +261,30 @@ Require exactly one row with `collector_state = PUBLISHED`, a null issue, and at
 least one collection attempt. These view rows—not raw log output—are the supported
 proof that the model ran and its bounded structured logs were captured.
 
+For v0.4 release qualification, also execute the exact fixed aggregate used by
+the App over the newest approved run count. It must select only `PAIR_VALID` runs,
+order newest-first inside the bounded CTE, join `dbt_run_health` to
+`dbt_node_health` on workspace, observed Job, observed Job run, dbt task run, and
+observed task key, count every `error` or `fail` node, count every model status,
+group by the complete common attempt axes, and return oldest-first chart points.
+Require one bounded point per selected accepted attempt, zero counts for an
+accepted run with no matching nodes, and the expected failure/model totals for
+each qualification run. Do not substitute caller-written SQL.
+
+Then prove SQL/API/App parity under the already approved cost boundary:
+
+1. Run `dbtobsb start` and type `START` only after showing its App-compute cost
+   acknowledgement.
+2. Open the installed App in the authenticated browser. Confirm the landing page
+   performs no query, then click **Load observability** once. This may auto-start
+   the bound SQL warehouse and incur warehouse cost.
+3. Read `/api/v1/trends` with the same fixed limit and the accessible chart table.
+   Require identical oldest-first timestamps, failed-node counts, and model counts
+   across the fixed SQL result, API response, SVG labels, and table cells. Do not
+   expose operational IDs or raw customer values in the final receipt.
+4. Capture the required browser accessibility/keyboard evidence, then immediately
+   continue to the stop gate below. Closing the browser does not stop compute.
+
 ## 7. Stop and verify the finish state
 
 Run:
@@ -295,6 +319,7 @@ Report only:
 - each approved observed run terminal, with the expected success or intentional
   qualification failure classification;
 - model/seed/test counts;
+- dashboard trend SQL/API/SVG/table parity state;
 - capture, pair, structured-log, and publication states;
 - whether logs were complete and not truncated;
 - App, reconciler, Job-run, and warehouse final states; and

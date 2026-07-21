@@ -13,7 +13,7 @@ tables, views, Volumes, and evidence.
 uv run --project installer --no-sync dbtobsb stop
 ```
 
-Expected output:
+Example when the selected warehouse is already stopped:
 
 ```json
 {"app_state":"STOPPED","event":"dbtobsb_stop_verified","reconciler_state":"PAUSED","warehouse_auto_stop_mins":5,"warehouse_cost_may_continue":false,"warehouse_managed_by_product":false,"warehouse_next_action":"NONE","warehouse_state":"STOPPED"}
@@ -23,6 +23,15 @@ The command does not manage, stop, delete, or resize a customer warehouse. Its
 configured auto-stop policy remains in effect. The receipt reports the observed
 warehouse state, auto-stop setting, whether cost may continue, and the exact next
 action. An unreadable warehouse state fails closed.
+
+This is also a valid stop receipt when the unrelated warehouse is still running:
+
+```json
+{"app_state":"STOPPED","event":"dbtobsb_stop_verified","reconciler_state":"PAUSED","warehouse_auto_stop_mins":5,"warehouse_cost_may_continue":true,"warehouse_managed_by_product":false,"warehouse_next_action":"WAIT_FOR_AUTO_STOP_OR_USE_SEPARATELY_AUTHORIZED_DIRECT_STOP","warehouse_state":"RUNNING"}
+```
+
+In that case, warehouse cost may continue. Wait for auto-stop or use only the
+separately authorized direct-stop action for that exact dedicated warehouse.
 
 ## Remove the runtime but keep evidence
 

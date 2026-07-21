@@ -37,6 +37,8 @@ from dbtobsb_contracts import (
     DbtRuntimePolicyInputs,
     DbtRuntimePolicySnapshot,
     DbtRuntimeTarget,
+    InstalledDbtPolicy,
+    generate_dbt_commands,
     load_support_manifest,
     render_dbt_runtime_policy,
 )
@@ -191,6 +193,34 @@ class DbtOnboardingPlan:
     job_patch_sha256: str
     file_count: int
     include_deps: bool
+
+
+@dataclass(frozen=True, slots=True)
+class DbtOnboardingPreview:
+    """Read-only exact selector and fixed commands used by a future onboarding plan."""
+
+    selector: str
+    include_deps: bool
+    commands: tuple[str, ...]
+
+
+def preview_onboarding_project(source_project: Path) -> DbtOnboardingPreview:
+    """Validate and preview command policy without writing generated onboarding state."""
+    source = _real_directory(source_project, code="DBTOBSB_ONBOARDING_SOURCE_INVALID")
+    source_files = _read_source_files(source)
+    _project_profile(source_files)
+    selector = _selector(source_files)
+    include_deps, _, _ = _dependency_policy(source, source_files)
+    policy = InstalledDbtPolicy(
+        support_contract_sha256=load_support_manifest().canonical_sha256,
+        approved_selector=selector,
+        include_deps=include_deps,
+    )
+    return DbtOnboardingPreview(
+        selector=selector,
+        include_deps=include_deps,
+        commands=tuple(command.shell_command for command in generate_dbt_commands(policy=policy)),
+    )
 
 
 def target_from_preflight(
