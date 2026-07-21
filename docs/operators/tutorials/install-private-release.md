@@ -14,7 +14,7 @@ Use a managed Apple-silicon Mac with Python 3.12, `uv`, and Databricks CLI `1.8.
 
 Prepare these customer-owned resources first:
 
-- one existing catalog whose name is a simple SQL identifier;
+- one or two existing writable Unity Catalog catalogs whose names are simple SQL identifiers;
 - one empty, dedicated evidence schema owned by the signed-in administrator;
 - one dbt target schema owned by the observed Job service principal;
 - distinct active service principals whose display names contain `observed` and `collector`;

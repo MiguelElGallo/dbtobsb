@@ -72,7 +72,7 @@
     "direct_grants": [
       {
         "principal": "COLLECTOR_SERVICE_PRINCIPAL",
-        "securable": "PARENT_CATALOG",
+        "securable": "EVIDENCE_CATALOG",
         "privileges": [
           "USE CATALOG"
         ],
@@ -140,7 +140,7 @@
       },
       {
         "principal": "OBSERVED_SERVICE_PRINCIPAL",
-        "securable": "PARENT_CATALOG",
+        "securable": "EVIDENCE_CATALOG",
         "privileges": [
           "USE CATALOG"
         ],
@@ -156,6 +156,14 @@
       },
       {
         "principal": "OBSERVED_SERVICE_PRINCIPAL",
+        "securable": "DBT_TARGET_CATALOG",
+        "privileges": [
+          "USE CATALOG"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "OBSERVED_SERVICE_PRINCIPAL",
         "securable": "dbtobsb_stage",
         "privileges": [
           "READ VOLUME",
@@ -165,7 +173,7 @@
       },
       {
         "principal": "APP_SERVICE_PRINCIPAL",
-        "securable": "PARENT_CATALOG",
+        "securable": "EVIDENCE_CATALOG",
         "privileges": [
           "USE CATALOG"
         ],

@@ -19,7 +19,7 @@ def test_packaged_support_manifest_is_exact_and_final() -> None:
     assert manifest.installation["launcher"] == "dbtobsb bootstrap"
     assert manifest.installation["runtime_trust_ledger"] == "NOT_IN_V0_4_SUPPORTED_PATH"
     assert len(manifest.customer_state["objects"]) == 9
-    assert len(manifest.customer_state["direct_grants"]) == 17
+    assert len(manifest.customer_state["direct_grants"]) == 18
     assert manifest.dbt["packages"]["dbt-core"] == "1.11.12"
     assert manifest.dbt["packages"]["dbt-databricks"] == "1.12.2"
     assert manifest.onboarding["policy_contract_version"] == "dbtobsb.dbt-policy.v1"

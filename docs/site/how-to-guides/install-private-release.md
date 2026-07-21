@@ -112,7 +112,9 @@ uv run --project installer --no-sync dbtobsb bootstrap
 ```
 
 The installer asks you to select the named profile, service principals, group,
-warehouse, catalog, schemas, and dbt project. Review the full summary. Type
+warehouse, fully qualified empty evidence schema, fully qualified dbt target
+schema, and dbt project. The two schemas may be in different existing catalogs.
+Review the full summary. Type
 `APPROVE` only when every value is correct.
 
 The installer then:

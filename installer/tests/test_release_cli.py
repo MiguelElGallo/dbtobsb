@@ -28,6 +28,7 @@ from dbtobsb_installer.release_cli import (
     _save_state,
     _SealedCliCredentials,
     _select,
+    _supported_catalogs,
     _verify_databricks_cli_executable,
     main,
 )
@@ -493,6 +494,19 @@ def test_selection_is_sorted_and_accepts_only_canonical_number() -> None:
         )
 
 
+def test_catalog_discovery_allows_only_managed_writable_catalogs() -> None:
+    rows = [
+        {"name": "managed", "catalog_type": "MANAGED_CATALOG"},
+        {"name": "foreign", "catalog_type": "FOREIGN_CATALOG"},
+        {"name": "shared", "catalog_type": "DELTASHARING_CATALOG"},
+        {"name": "online", "catalog_type": "MANAGED_ONLINE_CATALOG"},
+        {"name": "system", "catalog_type": "SYSTEM_CATALOG"},
+        {"name": "internal", "catalog_type": "INTERNAL_CATALOG"},
+    ]
+
+    assert _supported_catalogs(rows) == [{"name": "managed", "catalog_type": "MANAGED_CATALOG"}]
+
+
 def test_schema_discovery_supports_separate_evidence_and_dbt_catalogs(
     tmp_path: Path,
 ) -> None:
@@ -504,6 +518,8 @@ def test_schema_discovery_supports_separate_evidence_and_dbt_catalogs(
                 "evidence_catalog": [
                     {"name": "empty_evidence", "owner": "admin"},
                     {"name": "used_evidence", "owner": "admin"},
+                    {"name": "function_evidence", "owner": "admin"},
+                    {"name": "model_evidence", "owner": "admin"},
                 ],
                 "target_catalog": [
                     {"name": "analytics", "owner": "observed"},
@@ -531,9 +547,24 @@ def test_schema_discovery_supports_separate_evidence_and_dbt_catalogs(
             del catalog_name, schema_name
             return []
 
+    class Functions:
+        def list(self, catalog_name: str, schema_name: str) -> Sequence[SimpleNamespace]:
+            if (catalog_name, schema_name) == ("evidence_catalog", "function_evidence"):
+                return [SimpleNamespace(name="existing_function")]
+            return []
+
+    class RegisteredModels:
+        def list(self, *, catalog_name: str, schema_name: str) -> Sequence[SimpleNamespace]:
+            if (catalog_name, schema_name) == ("evidence_catalog", "model_evidence"):
+                return [SimpleNamespace(name="existing_model")]
+            return []
+
     manager = SchemaDiscoveryManager(tmp_path)
     cast(dict[str, Any], manager._clients)["paid-azure-test"] = SimpleNamespace(
-        tables=Tables(), volumes=Volumes()
+        functions=Functions(),
+        registered_models=RegisteredModels(),
+        tables=Tables(),
+        volumes=Volumes(),
     )
 
     evidence, target = manager._discover_schema_choices(
@@ -557,6 +588,48 @@ def test_schema_discovery_supports_separate_evidence_and_dbt_catalogs(
             "schema_name": "analytics",
         }
     ]
+
+
+def test_product_grants_add_and_revoke_target_catalog_use(tmp_path: Path) -> None:
+    class Grants:
+        def __init__(self) -> None:
+            self.values: dict[tuple[str, str, str], set[str]] = {}
+
+        def get(self, securable_type: str, full_name: str) -> SimpleNamespace:
+            assignments = [
+                {"principal": principal, "privileges": sorted(privileges)}
+                for (kind, name, principal), privileges in self.values.items()
+                if kind == securable_type and name == full_name and privileges
+            ]
+            return SimpleNamespace(as_dict=lambda: {"privilege_assignments": assignments})
+
+        def update(
+            self,
+            securable_type: str,
+            full_name: str,
+            *,
+            changes: Sequence[Any],
+        ) -> None:
+            for change in changes:
+                key = (securable_type, full_name, change.principal)
+                values = self.values.setdefault(key, set())
+                if change.add:
+                    values.update(item.value for item in change.add)
+                if change.remove:
+                    values.difference_update(item.value for item in change.remove)
+
+    manager = _LifecycleManager(tmp_path)
+    grants = Grants()
+    cast(dict[str, Any], manager._clients)["paid-azure-test"] = SimpleNamespace(grants=grants)
+    state = _state(stage="CONFIGURED")
+
+    ReleaseManager._update_product_grants(manager, state, add=True)
+
+    assert grants.values[("catalog", "analytics", "observed-application-id")] == {"USE_CATALOG"}
+
+    ReleaseManager._update_product_grants(manager, state, add=False)
+
+    assert grants.values[("catalog", "analytics", "observed-application-id")] == set()
 
 
 def _preflight(*, warehouse_state: str = "STOPPED") -> BootstrapPreflight:
@@ -592,10 +665,11 @@ def _preflight(*, warehouse_state: str = "STOPPED") -> BootstrapPreflight:
                 "warehouse_state": warehouse_state,
             },
             "customer_state": {
-                "catalog_direct_grants": {"privilege_assignments": []},
+                "evidence_catalog_direct_grants": {"privilege_assignments": []},
                 "existing_evidence_objects": [],
                 "existing_product_jobs": [],
                 "schema_direct_grants": {"privilege_assignments": []},
+                "target_catalog_direct_grants": {"privilege_assignments": []},
                 "bundle_state": "TERRAFORM_AND_DIRECT_ABSENT_FRESH",
             },
             "finish": {

@@ -136,6 +136,7 @@ _PRODUCT_TABLES = frozenset(
     }
 )
 _PRODUCT_VOLUMES = frozenset({RAW_VOLUME_NAME, STAGE_VOLUME_NAME})
+_WRITABLE_CATALOG_TYPES = frozenset({"MANAGED_CATALOG"})
 _PRODUCT_JOB_NAMES = (
     "dbtobsb-observed",
     "dbtobsb-collector",
@@ -423,6 +424,25 @@ def _file_sha256(path: Path) -> str:
             return hashlib.file_digest(stream, "sha256").hexdigest()
     except OSError:
         raise ReleaseCliError("DBTOBSB_INSTALLER_CLI_SEAL_INVALID") from None
+
+
+def _supported_catalogs(rows: object) -> list[dict[str, Any]]:
+    """Return only writable Unity Catalog catalogs accepted by the v0.4 installer."""
+    if not isinstance(rows, list):
+        raise ReleaseCliError("DBTOBSB_INSTALLER_CATALOG_DISCOVERY_INVALID")
+    result: list[dict[str, Any]] = []
+    for raw in rows:
+        if not isinstance(raw, dict):
+            continue
+        item = cast(dict[str, Any], raw)
+        name = item.get("name")
+        if (
+            isinstance(name, str)
+            and _SIMPLE_IDENTIFIER.fullmatch(name) is not None
+            and item.get("catalog_type") in _WRITABLE_CATALOG_TYPES
+        ):
+            result.append(item)
+    return result
 
 
 def _verify_databricks_cli_executable(
@@ -830,7 +850,14 @@ class ReleaseManager:
                         )
                     )
                     volumes = tuple(client.volumes.list(catalog_name, schema_name))
-                    if not tables and not volumes:
+                    functions = tuple(client.functions.list(catalog_name, schema_name))
+                    registered_models = tuple(
+                        client.registered_models.list(
+                            catalog_name=catalog_name,
+                            schema_name=schema_name,
+                        )
+                    )
+                    if not tables and not volumes and not functions and not registered_models:
                         evidence_choices.append(choice)
         except Exception:
             raise ReleaseCliError("DBTOBSB_INSTALLER_SCHEMA_DISCOVERY_INVALID") from None
@@ -1000,16 +1027,7 @@ class ReleaseManager:
         catalog_rows = self._run_json(
             ("databricks", "catalogs", "list", "--profile", profile_name, "--output", "json")
         )
-        if not isinstance(catalog_rows, list):
-            raise ReleaseCliError("DBTOBSB_INSTALLER_CATALOG_DISCOVERY_INVALID")
-        catalogs = [
-            item
-            for item in catalog_rows
-            if isinstance(item, dict)
-            and isinstance(item.get("name"), str)
-            and _SIMPLE_IDENTIFIER.fullmatch(item["name"]) is not None
-            and item.get("catalog_type") != "SYSTEM_CATALOG"
-        ]
+        catalogs = _supported_catalogs(catalog_rows)
         evidence_choices, target_choices = self._discover_schema_choices(
             profile=profile_name,
             catalogs=catalogs,
@@ -1115,6 +1133,8 @@ class ReleaseManager:
                 )
             )
             warehouse = client.warehouses.get(state.warehouse_id).as_dict()
+            evidence_catalog = client.catalogs.get(state.evidence_catalog).as_dict()
+            target_catalog = client.catalogs.get(state.dbt_catalog).as_dict()
             evidence_schema = client.schemas.get(
                 f"{state.evidence_catalog}.{state.evidence_schema}"
             ).as_dict()
@@ -1122,7 +1142,8 @@ class ReleaseManager:
             schema_grants = client.grants.get(
                 "schema", f"{state.evidence_catalog}.{state.evidence_schema}"
             ).as_dict()
-            catalog_grants = client.grants.get("catalog", state.evidence_catalog).as_dict()
+            evidence_catalog_grants = client.grants.get("catalog", state.evidence_catalog).as_dict()
+            target_catalog_grants = client.grants.get("catalog", state.dbt_catalog).as_dict()
             app_inventory = tuple(client.apps.list())
             tables = tuple(
                 client.tables.list(
@@ -1133,6 +1154,13 @@ class ReleaseManager:
                 )
             )
             volumes = tuple(client.volumes.list(state.evidence_catalog, state.evidence_schema))
+            functions = tuple(client.functions.list(state.evidence_catalog, state.evidence_schema))
+            registered_models = tuple(
+                client.registered_models.list(
+                    catalog_name=state.evidence_catalog,
+                    schema_name=state.evidence_schema,
+                )
+            )
             jobs = tuple(
                 job
                 for name in _PRODUCT_JOB_NAMES
@@ -1184,10 +1212,15 @@ class ReleaseManager:
         )
         if not observed_can_use:
             raise ReleaseCliError("DBTOBSB_INSTALLER_OBSERVED_WAREHOUSE_ACCESS_REQUIRED")
+        if (
+            evidence_catalog.get("catalog_type") not in _WRITABLE_CATALOG_TYPES
+            or target_catalog.get("catalog_type") not in _WRITABLE_CATALOG_TYPES
+        ):
+            raise ReleaseCliError("DBTOBSB_INSTALLER_CATALOG_TYPE_CHANGED")
         existing_apps = [
             item.as_dict() for item in app_inventory if item.as_dict().get("name") == state.app_name
         ]
-        if existing_apps or jobs or tables or volumes:
+        if existing_apps or jobs or tables or volumes or functions or registered_models:
             raise ReleaseCliError("DBTOBSB_INSTALLER_FRESH_INSTALL_REQUIRED")
         if (
             evidence_schema.get("owner") != state.actor
@@ -1196,13 +1229,18 @@ class ReleaseManager:
             raise ReleaseCliError("DBTOBSB_INSTALLER_PREFLIGHT_OWNERSHIP_CHANGED")
         selected_privilege_limits = (
             (
-                catalog_grants,
+                evidence_catalog_grants,
                 state.observed_service_principal_name,
                 {Privilege.USE_CATALOG.value},
             ),
             (
-                catalog_grants,
+                evidence_catalog_grants,
                 state.collector_service_principal_name,
+                {Privilege.USE_CATALOG.value},
+            ),
+            (
+                target_catalog_grants,
+                state.observed_service_principal_name,
                 {Privilege.USE_CATALOG.value},
             ),
             (
@@ -1297,8 +1335,9 @@ class ReleaseManager:
             "customer_state": {
                 "existing_evidence_objects": [],
                 "existing_product_jobs": [],
-                "catalog_direct_grants": _plain_json(catalog_grants),
+                "evidence_catalog_direct_grants": _plain_json(evidence_catalog_grants),
                 "schema_direct_grants": _plain_json(schema_grants),
+                "target_catalog_direct_grants": _plain_json(target_catalog_grants),
                 "bundle_state": "TERRAFORM_AND_DIRECT_ABSENT_FRESH",
             },
             "finish": {
@@ -2120,6 +2159,8 @@ class ReleaseManager:
                 [Privilege.READ_VOLUME, Privilege.WRITE_VOLUME],
             ),
         ]
+        if state.dbt_catalog != state.evidence_catalog:
+            updates.append(("catalog", state.dbt_catalog, observed, [Privilege.USE_CATALOG]))
         try:
             for securable_type, full_name, principal, privileges in updates:
                 expected = {privilege.value for privilege in privileges}
