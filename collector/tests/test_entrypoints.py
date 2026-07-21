@@ -399,6 +399,21 @@ def test_delete_uninstall_binding_mismatch_precedes_spark_and_hides_arguments(
             "fresh-install object creation",
             "Run the documented evidence-object reconciliation workflow.",
         ),
+        (
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED",
+            "table creation authorization",
+            "Open /operators/how-to/reconcile-installation/ and follow the matching code.",
+        ),
+        (
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE",
+            "managed storage connectivity",
+            "Open /operators/how-to/reconcile-installation/ and follow the matching code.",
+        ),
+        (
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_SQL_INCOMPATIBLE",
+            "Databricks DDL compatibility",
+            "Open /operators/how-to/reconcile-installation/ and follow the matching code.",
+        ),
     ],
 )
 def test_bootstrap_prints_one_safe_recovery_workflow(

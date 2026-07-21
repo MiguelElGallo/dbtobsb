@@ -61,7 +61,13 @@ _BOOTSTRAP_CODES = frozenset(
         "DBTOBSB_BOOTSTRAP_SCHEMA_METADATA_READ_FAILED",
         "DBTOBSB_BOOTSTRAP_SESSION_USER_READ_FAILED",
         "DBTOBSB_BOOTSTRAP_SPARK_SESSION_UNAVAILABLE",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED",
         "DBTOBSB_BOOTSTRAP_TABLE_CREATE_FAILED",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_INTERNAL_ERROR",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_OBJECT_CONFLICT",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_PLATFORM_UNSUPPORTED",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_SQL_INCOMPATIBLE",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE",
         "DBTOBSB_BOOTSTRAP_TARGET_SCHEMA_NOT_FOUND",
         "DBTOBSB_BOOTSTRAP_UNSUPPORTED_SCHEMA_STATE",
         "DBTOBSB_BOOTSTRAP_VIEW_CREATE_FAILED",
@@ -222,6 +228,24 @@ def bootstrap_operator_diagnostic(error: Exception) -> OperatorDiagnostic:
     }:
         component = "fresh-install object creation"
         action = "Run the documented evidence-object reconciliation workflow."
+    elif code == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED":
+        component = "table creation authorization"
+        action = "Open /operators/how-to/reconcile-installation/ and follow the matching code."
+    elif code == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE":
+        component = "managed storage connectivity"
+        action = "Open /operators/how-to/reconcile-installation/ and follow the matching code."
+    elif code == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_OBJECT_CONFLICT":
+        component = "fresh-install table conflict"
+        action = "Open /operators/how-to/reconcile-installation/ and follow the matching code."
+    elif code == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_PLATFORM_UNSUPPORTED":
+        component = "serverless DDL support"
+        action = "Open /operators/how-to/reconcile-installation/ and follow the matching code."
+    elif code == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_SQL_INCOMPATIBLE":
+        component = "Databricks DDL compatibility"
+        action = "Open /operators/how-to/reconcile-installation/ and follow the matching code."
+    elif code == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_INTERNAL_ERROR":
+        component = "Databricks table creation runtime"
+        action = "Open /operators/how-to/reconcile-installation/ and follow the matching code."
     elif code in {
         "DBTOBSB_BOOTSTRAP_DBT_POLICY_BINDING_INVALID",
         "DBTOBSB_BOOTSTRAP_JOB_BINDING_INVALID",
