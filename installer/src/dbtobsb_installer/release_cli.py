@@ -2380,14 +2380,21 @@ class ReleaseManager:
     def _direct_app_acl(permission_document: Mapping[str, Any]) -> set[tuple[str, str, str]]:
         entries = permission_document.get("access_control_list")
         direct_acl: set[tuple[str, str, str]] = set()
-        if not isinstance(entries, list):
+        if entries is None:
             return direct_acl
+        if not isinstance(entries, list):
+            raise ValueError
         for item in entries:
             if not isinstance(item, dict):
-                continue
+                raise ValueError
             group = item.get("group_name")
             service_principal = item.get("service_principal_name")
             user = item.get("user_name")
+            if any(
+                principal is not None and (not isinstance(principal, str) or not principal)
+                for principal in (group, service_principal, user)
+            ):
+                raise ValueError
             principals = [
                 (kind, principal)
                 for kind, principal in (
@@ -2398,18 +2405,27 @@ class ReleaseManager:
                 if isinstance(principal, str)
             ]
             if len(principals) != 1:
-                continue
+                raise ValueError
             principal_kind, principal = principals[0]
             permissions = item.get("all_permissions")
             if not isinstance(permissions, list):
-                continue
-            direct_acl.update(
-                (principal_kind, principal, permission["permission_level"])
-                for permission in permissions
-                if isinstance(permission, dict)
-                and permission.get("inherited") is False
-                and isinstance(permission.get("permission_level"), str)
-            )
+                raise ValueError
+            for permission in permissions:
+                if (
+                    not isinstance(permission, dict)
+                    or not isinstance(permission.get("inherited"), bool)
+                    or permission.get("permission_level") not in {"CAN_USE", "CAN_MANAGE"}
+                ):
+                    raise ValueError
+                if permission["inherited"] is False:
+                    assignment = (
+                        principal_kind,
+                        principal,
+                        cast(str, permission["permission_level"]),
+                    )
+                    if assignment in direct_acl:
+                        raise ValueError
+                    direct_acl.add(assignment)
         return direct_acl
 
     def _grant_app_user_access(self, state: InstallationState) -> None:
@@ -2549,9 +2565,9 @@ class ReleaseManager:
             permissions = self._client(state.profile).apps.get_permissions(state.app_name)
             app_document = app.as_dict()
             permission_document = permissions.as_dict()
+            direct_acl = self._direct_app_acl(permission_document)
         except Exception:
             raise ReleaseCliError("DBTOBSB_INSTALLER_APP_READBACK_FAILED") from None
-        direct_acl = self._direct_app_acl(permission_document)
         if (
             app_document.get("compute_status", {}).get("state") != "STOPPED"
             or not self._app_resources_match(state, app_document.get("resources"))

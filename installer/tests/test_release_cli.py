@@ -1402,6 +1402,131 @@ def test_app_deploy_checkpoints_direct_state_before_deployment_readback(
     assert checkpoint.direct_state_sha256 == updated.sha256
 
 
+def test_app_deploy_uses_one_apply_one_deployment_and_one_stopped_acl_update(
+    tmp_path: Path,
+) -> None:
+    state = _state(stage="GRANTS_APPLIED")
+    updated = DirectStateIdentity(
+        lineage=cast(str, state.direct_state_lineage),
+        serial=cast(int, state.direct_state_serial) + 1,
+        sha256="c" * 64,
+    )
+    deployment = {
+        "deployment_id": "deployment",
+        "mode": "SNAPSHOT",
+        "source_code_path": "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/files/app",
+        "env_vars": [
+            {"name": "DBTOBSB_WAREHOUSE_ID"},
+            {"name": "DBTOBSB_RUN_HEALTH_VIEW"},
+            {"name": "DBTOBSB_NODE_HEALTH_VIEW"},
+            {"name": "DBTOBSB_COLLECTION_HEALTH_VIEW"},
+        ],
+        "status": {"state": "SUCCEEDED"},
+    }
+
+    class Runner:
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, ...]] = []
+
+        def run(
+            self,
+            command: tuple[str, ...],
+            *,
+            timeout_seconds: int,
+            stdin: bytes | None = None,
+        ) -> bytes:
+            del timeout_seconds, stdin
+            self.calls.append(command)
+            return b""
+
+    class Apps:
+        def __init__(self, resources: list[Mapping[str, Any]]) -> None:
+            self.compute_state = "ACTIVE"
+            self.direct = False
+            self.permission_updates = 0
+            self.resources = resources
+
+        def get(self, app_name: str) -> SimpleNamespace:
+            assert app_name == state.app_name
+            return SimpleNamespace(
+                as_dict=lambda: {
+                    "compute_status": {"state": self.compute_state},
+                    "resources": self.resources,
+                }
+            )
+
+        def stop(self, app_name: str) -> SimpleNamespace:
+            assert app_name == state.app_name
+            self.compute_state = "STOPPED"
+            return SimpleNamespace(result=lambda timeout: None)
+
+        def get_permissions(self, app_name: str) -> SimpleNamespace:
+            assert app_name == state.app_name
+            entries = []
+            if self.direct:
+                entries.append(
+                    {
+                        "group_name": state.app_user_group_name,
+                        "all_permissions": [{"permission_level": "CAN_USE", "inherited": False}],
+                    }
+                )
+            return SimpleNamespace(as_dict=lambda: {"access_control_list": entries})
+
+        def update_permissions(self, app_name: str, *, access_control_list: object) -> None:
+            assert app_name == state.app_name
+            assert len(cast(list[Any], access_control_list)) == 1
+            assert self.compute_state == "STOPPED"
+            self.permission_updates += 1
+            self.direct = True
+
+    runner = Runner()
+
+    class SuccessfulAppManager(ReleaseManager):
+        def __init__(self) -> None:
+            self.deploy_selections: list[str | None] = []
+            self.deployment_reads = 0
+            super().__init__(
+                root=tmp_path,
+                runner=runner,
+                input_stream=io.StringIO(),
+                output_stream=io.StringIO(),
+            )
+
+        def _deploy(
+            self,
+            state: InstallationState,
+            wheels: Mapping[str, str],
+            *,
+            select: str | None = None,
+        ) -> None:
+            del wheels
+            self.deploy_selections.append(select)
+            self._direct_state_overrides[state.profile] = updated
+
+        def _list_deployments(self, state: InstallationState) -> list[Mapping[str, Any]]:
+            del state
+            self.deployment_reads += 1
+            return [] if self.deployment_reads == 1 else [deployment]
+
+    manager = SuccessfulAppManager()
+    resources = list(manager._expected_app_resources(state).values())
+    apps = Apps(resources)
+    cast(dict[str, Any], manager._clients)[state.profile] = SimpleNamespace(apps=apps)
+
+    returned = manager._deploy_app(state)
+
+    assert manager.deploy_selections == [None]
+    assert len(runner.calls) == 1
+    assert runner.calls[0][:3] == ("databricks", "bundle", "run")
+    assert manager.deployment_reads == 2
+    assert apps.permission_updates == 1
+    assert apps.compute_state == "STOPPED"
+    assert returned.direct_state_serial == updated.serial
+    checkpoint = _required_state(tmp_path)
+    assert checkpoint.stage == "GRANTS_APPLIED"
+    assert checkpoint.direct_state_serial == updated.serial
+
+
 def test_direct_app_acl_keeps_only_non_inherited_assignments() -> None:
     document = {
         "access_control_list": [
@@ -1432,6 +1557,64 @@ def test_direct_app_acl_keeps_only_non_inherited_assignments() -> None:
         ("service_principal", "foreign", "CAN_MANAGE"),
         ("user", "foreign@example.test", "CAN_USE"),
     }
+
+
+@pytest.mark.parametrize(
+    "document",
+    [
+        {"access_control_list": "invalid"},
+        {"access_control_list": ["invalid"]},
+        {
+            "access_control_list": [
+                {
+                    "group_name": "group",
+                    "user_name": "user@example.test",
+                    "all_permissions": [{"permission_level": "CAN_USE", "inherited": False}],
+                }
+            ]
+        },
+        {
+            "access_control_list": [
+                {
+                    "group_name": "group",
+                    "all_permissions": [
+                        {"permission_level": "CAN_USE", "inherited": False},
+                        {"permission_level": "CAN_USE", "inherited": False},
+                    ],
+                }
+            ]
+        },
+        {
+            "access_control_list": [
+                {
+                    "group_name": "group",
+                    "all_permissions": "invalid",
+                }
+            ]
+        },
+        {
+            "access_control_list": [
+                {
+                    "group_name": "group",
+                    "all_permissions": [{"permission_level": "CAN_USE"}],
+                }
+            ]
+        },
+        {
+            "access_control_list": [
+                {
+                    "group_name": "group",
+                    "all_permissions": [{"permission_level": "UNKNOWN", "inherited": False}],
+                }
+            ]
+        },
+    ],
+)
+def test_direct_app_acl_rejects_malformed_or_ambiguous_readback(
+    document: Mapping[str, Any],
+) -> None:
+    with pytest.raises(ValueError):
+        ReleaseManager._direct_app_acl(document)
 
 
 def test_targeted_app_user_access_is_idempotent_and_keeps_app_stopped(tmp_path: Path) -> None:
