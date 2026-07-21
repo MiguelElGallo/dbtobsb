@@ -1,23 +1,29 @@
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import os
+import struct
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from databricks.sdk.errors import NotFound
+from dbtobsb_contracts import load_support_manifest
 
 from dbtobsb_installer.release_cli import (
+    BootstrapPreflight,
     InstallationState,
     ReleaseCliError,
     ReleaseManager,
+    SubprocessRunner,
     _load_state,
     _save_state,
     _select,
+    _verify_databricks_cli_executable,
     main,
 )
 
@@ -27,6 +33,11 @@ _FINAL_WHEELS = {
     "capture": f"dbtobsb_capture-0.4.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
     "collector": f"dbtobsb_collector-0.4.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
 }
+_CANDIDATE_WHEELS = {
+    key: value.replace("+dbtobsb.final.", "+dbtobsb.candidate.")
+    for key, value in _FINAL_WHEELS.items()
+}
+_COMMIT = "b" * 40
 
 
 class _NoCommandRunner:
@@ -43,7 +54,11 @@ class _NoCommandRunner:
 
 def _state(*, stage: str = "INSTALLED") -> InstallationState:
     return InstallationState(
-        schema="dbtobsb.installer-state.v1",
+        schema="dbtobsb.installer-state.v2",
+        release_version="0.4.0",
+        support_contract_sha256=load_support_manifest().canonical_sha256,
+        release_source_commit=_COMMIT,
+        databricks_cli_sha256=("e6107da75e9dfc16c462563e11958c65689ea47d04d54cb4b31d0eb961f40be7"),
         stage=stage,
         profile="paid-azure-test",
         host="https://adb-1234567890123456.10.azuredatabricks.net",
@@ -66,7 +81,7 @@ def _state(*, stage: str = "INSTALLED") -> InstallationState:
         source_contract_sha256=_DIGEST,
         expected_runtime_policy_sha256=_DIGEST,
         candidate_id=_DIGEST,
-        candidate_wheels=_FINAL_WHEELS,
+        candidate_wheels=_CANDIDATE_WHEELS,
         final_wheels=_FINAL_WHEELS,
         final_environment_sha256=_DIGEST,
         installation_id=_DIGEST,
@@ -93,6 +108,9 @@ class _LifecycleManager(ReleaseManager):
             raise ReleaseCliError("DBTOBSB_INSTALLER_TEMPORARY_JOB_FAILED")
         self.events.append(("temporary", kwargs))
 
+    def _release_source_commit(self) -> str:
+        return _COMMIT
+
     def _update_product_grants(self, state: InstallationState, *, add: bool) -> None:
         del state
         self.events.append(("grants", add))
@@ -104,6 +122,16 @@ class _LifecycleManager(ReleaseManager):
     def _stop_state(self, state: InstallationState) -> None:
         del state
         self.events.append(("stop",))
+
+    def _warehouse_cost_receipt(self, state: InstallationState) -> dict[str, Any]:
+        del state
+        return {
+            "warehouse_auto_stop_mins": 5,
+            "warehouse_cost_may_continue": False,
+            "warehouse_managed_by_product": False,
+            "warehouse_next_action": "NONE",
+            "warehouse_state": "STOPPED",
+        }
 
     def _delete_app_if_present(self, state: InstallationState) -> None:
         del state
@@ -181,6 +209,41 @@ class _StopManager(ReleaseManager):
         assert state.reconciler_job_id == 13
 
 
+class _Warehouse:
+    def __init__(self, state: str, auto_stop_mins: int | None = 5) -> None:
+        self._document = {"state": state, "auto_stop_mins": auto_stop_mins}
+
+    def as_dict(self) -> dict[str, Any]:
+        return self._document
+
+
+def test_warehouse_cost_receipt_never_claims_product_management(tmp_path: Path) -> None:
+    manager = _LifecycleManager(tmp_path)
+    cast(dict[str, Any], manager._clients)["paid-azure-test"] = SimpleNamespace(
+        warehouses=SimpleNamespace(get=lambda warehouse_id: _Warehouse("RUNNING", 5))
+    )
+
+    receipt = ReleaseManager._warehouse_cost_receipt(manager, _state())
+
+    assert receipt == {
+        "warehouse_auto_stop_mins": 5,
+        "warehouse_cost_may_continue": True,
+        "warehouse_managed_by_product": False,
+        "warehouse_next_action": "WAIT_FOR_AUTO_STOP_OR_USE_SEPARATELY_AUTHORIZED_DIRECT_STOP",
+        "warehouse_state": "RUNNING",
+    }
+
+
+def test_warehouse_cost_receipt_fails_closed_when_unreadable(tmp_path: Path) -> None:
+    manager = _LifecycleManager(tmp_path)
+    cast(dict[str, Any], manager._clients)["paid-azure-test"] = SimpleNamespace(
+        warehouses=SimpleNamespace(get=lambda warehouse_id: (_ for _ in ()).throw(RuntimeError()))
+    )
+
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_WAREHOUSE_STATE_UNREADABLE"):
+        ReleaseManager._warehouse_cost_receipt(manager, _state())
+
+
 class _TerraformWorkspace:
     def __init__(self, outcome: str) -> None:
         self.outcome = outcome
@@ -238,7 +301,7 @@ def test_state_is_atomic_private_and_strict(tmp_path: Path) -> None:
 
     _save_state(tmp_path, expected)
 
-    path = tmp_path / ".dbtobsb" / "release-installation-v1.json"
+    path = tmp_path / ".dbtobsb" / "release-installation-v2.json"
     assert path.stat().st_mode & 0o777 == 0o600
     assert path.parent.stat().st_mode & 0o777 == 0o700
     assert _load_state(tmp_path) == expected
@@ -252,11 +315,107 @@ def test_state_is_atomic_private_and_strict(tmp_path: Path) -> None:
 
 def test_world_readable_state_is_rejected(tmp_path: Path) -> None:
     _save_state(tmp_path, _state())
-    path = tmp_path / ".dbtobsb" / "release-installation-v1.json"
+    path = tmp_path / ".dbtobsb" / "release-installation-v2.json"
     os.chmod(path, 0o644)
 
     with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_STATE_INVALID"):
         _load_state(tmp_path)
+
+
+def test_v04_rejects_legacy_state_before_lifecycle_or_success(tmp_path: Path) -> None:
+    legacy = tmp_path / ".dbtobsb" / "release-installation-v1.json"
+    legacy.parent.mkdir()
+    legacy.write_text('{"schema":"dbtobsb.installer-state.v1","stage":"INSTALLED"}\n')
+    os.chmod(legacy, 0o600)
+    manager = _LifecycleManager(tmp_path)
+
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_LEGACY_STATE_UNSUPPORTED"):
+        manager.bootstrap()
+
+    assert manager.events == []
+    assert "installation_verified" not in cast(io.StringIO, manager.output).getvalue()
+
+
+@pytest.mark.parametrize(
+    ("changes", "code"),
+    [
+        ({"release_version": "0.3.0"}, "DBTOBSB_INSTALLER_STATE_INVALID"),
+        ({"support_contract_sha256": "c" * 64}, "DBTOBSB_INSTALLER_STATE_INVALID"),
+        ({"databricks_cli_sha256": "c" * 64}, "DBTOBSB_INSTALLER_STATE_INVALID"),
+        (
+            {
+                "final_wheels": {
+                    **_FINAL_WHEELS,
+                    "collector": _FINAL_WHEELS["collector"].replace("0.4.0", "0.3.0"),
+                }
+            },
+            "DBTOBSB_INSTALLER_STATE_INVALID",
+        ),
+    ],
+)
+def test_v04_state_rejects_unknown_or_mixed_release_identity(
+    changes: dict[str, Any], code: str
+) -> None:
+    with pytest.raises(ReleaseCliError, match=code):
+        replace(_state(), **changes)
+
+
+def test_v04_state_rejects_changed_source_before_success(tmp_path: Path) -> None:
+    _save_state(tmp_path, replace(_state(), release_source_commit="c" * 40))
+    manager = _LifecycleManager(tmp_path)
+
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_STATE_RELEASE_MISMATCH"):
+        manager.bootstrap()
+
+    assert manager.events == []
+    assert "installation_verified" not in cast(io.StringIO, manager.output).getvalue()
+
+
+def _fake_macho(path: Path, *, cpu_type: int = 0x0100000C, suffix: bytes = b"official") -> str:
+    path.write_bytes(struct.pack("<II", 0xFEEDFACF, cpu_type) + suffix)
+    path.chmod(0o755)
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def test_cli_seal_rejects_symlink_wrong_arch_and_hash(tmp_path: Path) -> None:
+    executable = tmp_path / "databricks"
+    digest = _fake_macho(executable)
+    _verify_databricks_cli_executable(executable, expected_sha256=digest)
+
+    link = tmp_path / "databricks-link"
+    link.symlink_to(executable)
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_CLI_SEAL_INVALID"):
+        _verify_databricks_cli_executable(link, expected_sha256=digest)
+
+    wrong_arch = tmp_path / "wrong-arch"
+    wrong_arch_digest = _fake_macho(wrong_arch, cpu_type=0x01000007)
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_CLI_SEAL_INVALID"):
+        _verify_databricks_cli_executable(wrong_arch, expected_sha256=wrong_arch_digest)
+
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_CLI_SEAL_INVALID"):
+        _verify_databricks_cli_executable(executable, expected_sha256="f" * 64)
+
+
+def test_cli_runner_uses_private_copy_and_rechecks_before_every_execution(tmp_path: Path) -> None:
+    executable = tmp_path / "databricks"
+    digest = _fake_macho(executable)
+    runner = SubprocessRunner(
+        tmp_path,
+        databricks_cli_source=executable,
+        expected_databricks_cli_sha256=digest,
+    )
+    sealed = runner._databricks_cli
+    assert sealed != executable
+    assert sealed.parent.stat().st_mode & 0o777 == 0o700
+    assert sealed.stat().st_mode & 0o777 == 0o500
+
+    _fake_macho(executable, suffix=b"PATH replacement")
+    assert hashlib.sha256(sealed.read_bytes()).hexdigest() == digest
+
+    sealed.chmod(0o700)
+    sealed.write_bytes(sealed.read_bytes() + b"tampered after verification")
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_CLI_SEAL_INVALID"):
+        runner.run(("databricks", "version"), timeout_seconds=1)
 
 
 def test_selection_is_sorted_and_accepts_only_canonical_number() -> None:
@@ -281,6 +440,84 @@ def test_selection_is_sorted_and_accepts_only_canonical_number() -> None:
             input_stream=io.StringIO("01\n"),
             output_stream=io.StringIO(),
         )
+
+
+def _preflight(*, warehouse_state: str = "STOPPED") -> BootstrapPreflight:
+    return BootstrapPreflight.from_document(
+        {
+            "app": {
+                "resources": [
+                    "dbtobsb-app-warehouse",
+                    "dbtobsb-run-health",
+                    "dbtobsb-node-health",
+                    "dbtobsb-collection-health",
+                ]
+            },
+            "compute": {"warehouse_auto_stop_mins": 5, "warehouse_state": warehouse_state},
+            "planned": {
+                "direct_grants": [{"principal": "COLLECTOR", "privileges": ["SELECT"]}],
+                "jobs": ["dbtobsb-observed", "dbtobsb-collector", "dbtobsb-reconciler"],
+                "objects": [{"kind": "MANAGED_TABLE", "name": "dbt_artifact_registry"}],
+                "temporary_jobs": ["dbtobsb-bootstrap", "dbtobsb-delete"],
+            },
+        }
+    )
+
+
+class _PreviewManager(_LifecycleManager):
+    def __init__(self, root: Path, answers: str, snapshots: list[BootstrapPreflight]) -> None:
+        super().__init__(root, answers)
+        self.snapshots = iter(snapshots)
+        self.preflight_reads = 0
+
+    def _bootstrap_preflight(self, state: InstallationState) -> BootstrapPreflight:
+        del state
+        self.preflight_reads += 1
+        return next(self.snapshots)
+
+
+def test_exact_preview_is_digest_bound_and_denial_has_zero_mutation(tmp_path: Path) -> None:
+    snapshot = _preflight()
+    manager = _PreviewManager(tmp_path, "DENY\n", [snapshot])
+
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_APPROVAL_REQUIRED"):
+        manager._approve_bootstrap(_state(stage="CONFIGURED"), snapshot)
+
+    output = cast(io.StringIO, manager.output).getvalue()
+    assert f"Preview SHA-256: {snapshot.sha256}" in output
+    assert "v0.4.0 fresh installation only" in output
+    assert "App deployment checks: two bounded checks" in output
+    assert "dbtobsb does not manage or stop it" in output
+    assert manager.preflight_reads == 0
+    assert manager.events == []
+
+
+def test_approval_rechecks_immutable_preflight_before_mutation(tmp_path: Path) -> None:
+    approved = _preflight()
+    changed = _preflight(warehouse_state="RUNNING")
+    manager = _PreviewManager(tmp_path, "APPROVE\n", [changed])
+
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_PREFLIGHT_CHANGED"):
+        manager._approve_bootstrap(_state(stage="CONFIGURED"), approved)
+
+    assert manager.preflight_reads == 1
+    assert manager.events == []
+
+
+def test_app_readback_requires_exact_resource_names_permissions_and_targets(
+    tmp_path: Path,
+) -> None:
+    manager = _LifecycleManager(tmp_path)
+    expected = list(manager._expected_app_resources(_state()).values())
+
+    assert manager._app_resources_match(_state(), expected)
+    assert not manager._app_resources_match(_state(), expected[:-1])
+    changed = [dict(item) for item in expected]
+    changed[0] = {
+        "name": "dbtobsb-app-warehouse",
+        "sql_warehouse": {"id": "fedcba9876543210", "permission": "CAN_USE"},
+    }
+    assert not manager._app_resources_match(_state(), changed)
 
 
 def test_cli_1_8_guard_accepts_only_absent_terraform_state(tmp_path: Path) -> None:

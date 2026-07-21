@@ -1,6 +1,6 @@
 ---
 name: install-and-run-dbtobsb
-description: Install or safely resume dbtobsb v0.3.0 in Azure Databricks, run exactly one installed dbt Core weather or customer project, prove that model results and structured logs were captured into the customer-local evidence views, and finish with product compute stopped. Use when a user asks an agent to install dbtobsb, run the demo or qualification project, make a first observed run, test capture end to end, or verify dbt observability after cloning this repository.
+description: Fresh-install or safely resume dbtobsb v0.4.0 in Azure Databricks, run the approved installed dbt Core weather or qualification workload, prove model results, structured logs, collection state, and dashboard trends in customer-local evidence views, and finish with compute stopped. Use when a user asks an agent to install dbtobsb, run the demo or qualification project, make a first observed run, execute the v0.4 live qualification matrix, test capture end to end, or verify dbt observability after cloning this repository.
 ---
 
 # Install and run dbtobsb
@@ -28,11 +28,14 @@ Before acting, read these repository files:
 4. `docs/site/how-to-guides/stop-or-uninstall.md`
 5. `docs/site/reference/dbt-project-input.md`
 
-Treat `docs/releases/v0.3.0-support-contract.md` as authoritative when another
+Treat `docs/releases/v0.4.0-support-contract.md` and the packaged support manifest as authoritative when another
 document is ambiguous. Do not use the legacy App-shell smoke path in `README.md`.
 
 ## Preserve the product boundaries
 
+- v0.4.0 supports a fresh installation or resume of its own v2 state only. It has
+  no upgrade, adoption, or legacy-install migration path. Reject a legacy v1 state,
+  prior App, product Job, product object, or Terraform state before mutation.
 - Use only the attended `dbtobsb bootstrap` installer and the installed
   `dbtobsb-observed` Job. Do not call the internal onboarding entry point.
 - Do not run dbt directly, edit the generated Job, or accept a command, selector,
@@ -52,12 +55,11 @@ document is ambiguous. Do not use the legacy App-shell smoke path in `README.md`
 
 From the repository root:
 
-1. Confirm the worktree is clean. The skill and weather example were added after
-   tag `v0.3.0`, so a current `main` checkout is expected. Require the release
-   runtime to remain unchanged from that tag with
-   `git diff --quiet v0.3.0 -- app capture collector contracts installer native qualification databricks.yml`.
-   If that check fails, state that the runtime is modified and ask whether to test
-   unsupported source before any cloud mutation.
+1. Confirm the tracked worktree is clean. Require `installer/pyproject.toml` and
+   the support manifest to identify v0.4.0, recompute the manifest canonical
+   SHA-256 through `load_support_manifest()`, record the current 40-hex Git commit,
+   and require the sealed official Databricks CLI 1.8.0 executable identity. Do not
+   compare the source to a v0.3 tag or infer v0.4 integrity from a legacy release.
 2. Check Python, `uv`, Databricks CLI, and `jq` against the supported-environment
    page.
 3. Run `databricks auth profiles --output json`. Keep only valid Azure OAuth
@@ -70,9 +72,10 @@ From the repository root:
    `databricks current-user me` using the explicit `--profile` flag.
 5. Read-only list the candidate active service principals, non-system groups, SQL
    warehouses, catalogs, schemas, and dbt projects that the installer can select.
-6. Check for `.dbtobsb/release-installation-v1.json` without printing its contents.
-   Preserve it. An existing file means resume or verify the same lifecycle; never
-   edit or delete it.
+6. Check for `.dbtobsb/release-installation-v2.json` without printing its contents.
+   Preserve it. It may resume only when its release version, support-manifest
+   digest, source commit, wheel identities, and CLI seal all match v0.4.0. Preserve
+   but reject `.dbtobsb/release-installation-v1.json`; do not create an upgrade path.
 
 Treat resource names, identities, the workspace host, and local state as sensitive
 operational information. Show them only in the private attended choice prompt and
@@ -104,14 +107,15 @@ Ask the user to choose or confirm:
    objects in the evidence schema and allow dbt to create the chosen example's
    relations in the target schema.
 8. **Compute approval and deadline** — allow bounded serverless installation Jobs,
-   two bounded App deployment checks, one observed Job run, its collector run, and
-   one SQL verification. Record the user's maximum elapsed compute window.
+   two bounded App deployment checks, the exact approved observed-run workload,
+   collector runs, and fixed SQL verification. Record the user's maximum elapsed
+   and compute-hour windows.
 9. **Finish state** — recommend leaving the installation present with the App
    stopped, reconciler paused, every product run terminal, and evidence retained.
 
 Do not ask whether the user has administrator rights; assume that as requested.
 Still let the installer verify identity, ownership, and access. If a required
-resource is absent, stop and explain that v0.3.0 requires it to exist. Do not
+resource is absent, stop and explain that v0.4.0 requires it to exist. Do not
 provision a substitute or choose a different resource silently.
 
 Summarize the answers without secrets or numeric IDs. Ask the user to confirm the
@@ -145,22 +149,30 @@ uv run --project installer --no-sync dbtobsb bootstrap
 Use a PTY and answer the installer's numbered prompts from the confirmed choices.
 Do not pipe or prequeue answers.
 
-When the installer displays **Installation preview**, pause. Show the user the
-workspace display, evidence destination, dbt target, project, and identity display
-names without exposing numeric IDs or local state. Ask for final approval. Type
-`APPROVE` only after the user approves that exact preview.
+When the installer displays **Installation preview**, pause. It must show one
+canonical preview digest and the exact v0.4 release identity, fresh-state
+classification, nine objects, grants, workspace ACL, three runtime Jobs, temporary
+Jobs, four App resources and environment bindings, end-user ACL, project policy,
+two bounded App deployment checks, warehouse state/size/auto-stop and non-management
+notice, cost boundary, and terminal finish state. Show the user that exact preview
+without exposing numeric IDs or local state. Type `APPROVE` only after the user
+approves that digest. The installer must repeat the full read-only preflight and
+fail if the digest changes before saving state or mutating anything.
 
 If interrupted, run the same bootstrap command and let the installer resume. Never
 delete or edit the state file. App deployment checks can be quiet for several
 minutes. Inspect the live App deployment read-only if needed, but do not interrupt
 or restart a still-running bootstrap merely because the terminal is quiet.
-Continue only after this exact receipt:
+Continue only after the installation receipt identifies `INSTALLED`, App `STOPPED`,
+and reconciler `PAUSED`; reject extra, missing, or mismatched lifecycle state.
 
-```json
-{"app_state":"STOPPED","event":"dbtobsb_installation_verified","reconciler_state":"PAUSED","stage":"INSTALLED"}
-```
+## 5. Run the approved observed Job workload
 
-## 5. Run exactly one observed Job
+For an ordinary first-run request, run exactly one observed Job. For an explicitly
+approved v0.4 release qualification, run only the bounded cases in the v0.4 support
+manifest, including two deterministic complete runs, one failure or partial-artifact
+case, and missed-collection reconciliation. Never turn release qualification into
+an unbounded extra run.
 
 1. List Jobs using the exact name `dbtobsb-observed` and the confirmed profile.
    Require exactly one match.
@@ -280,7 +292,8 @@ Report only:
 
 - installation verified;
 - selected project label;
-- one observed run terminal and successful;
+- each approved observed run terminal, with the expected success or intentional
+  qualification failure classification;
 - model/seed/test counts;
 - capture, pair, structured-log, and publication states;
 - whether logs were complete and not truncated;

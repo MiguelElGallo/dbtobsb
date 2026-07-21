@@ -9,6 +9,7 @@ import json
 import os
 import shutil
 import stat
+import struct
 import subprocess
 import sys
 import tempfile
@@ -22,6 +23,7 @@ INSTALLER_ROOT = REPO_ROOT / "installer"
 NATIVE_ROOT = REPO_ROOT / "native"
 PACKAGE_NAME = "dbtobsb_installer"
 HELPER_NAME = "dbtobsb-native-bridge"
+CLI_NAME = "databricks"
 LAYOUT = Path("_native") / "darwin-arm64"
 MANIFEST_SCHEMA = "dbtobsb.native-helper-release.v1"
 PROTOCOL = "dbtobsb.native-bridge.v1"
@@ -33,6 +35,9 @@ EXPECTED_CLI = {
     "module_sum": "h1:+1aoZobpIBqGPuS1gyveIFeOC1BVK2jn8G6qYaQ/GwM=",
     "version": "v1.8.0",
 }
+EXPECTED_CLI_SHA256 = "e6107da75e9dfc16c462563e11958c65689ea47d04d54cb4b31d0eb961f40be7"
+MACHO_64_MAGIC = 0xFEEDFACF
+CPU_TYPE_ARM64 = 0x0100000C
 EXPECTED_SDK = {
     "module": "github.com/databricks/databricks-sdk-go",
     "module_sum": "h1:Vmif0i0rbu7kgphoEBPRroZNd5uLBOITvjU4dr2lwXY=",
@@ -63,6 +68,26 @@ def _run(command: tuple[str, ...], *, cwd: Path, environment: dict[str, str]) ->
 def _sha256(path: Path) -> str:
     with path.open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def _verified_cli_executable() -> Path:
+    raw = shutil.which(CLI_NAME)
+    if raw is None:
+        raise ReleaseBuildError("DBTOBSB_INSTALLER_CLI_EXECUTABLE_INVALID")
+    try:
+        path = Path(raw).resolve(strict=True)
+        metadata = path.lstat()
+        header = path.read_bytes()[:8]
+    except OSError:
+        raise ReleaseBuildError("DBTOBSB_INSTALLER_CLI_EXECUTABLE_INVALID") from None
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or len(header) != 8
+        or struct.unpack("<II", header) != (MACHO_64_MAGIC, CPU_TYPE_ARM64)
+        or _sha256(path) != EXPECTED_CLI_SHA256
+    ):
+        raise ReleaseBuildError("DBTOBSB_INSTALLER_CLI_EXECUTABLE_INVALID")
+    return path
 
 
 def _canonical_json(document: dict[str, object]) -> bytes:
@@ -345,8 +370,9 @@ def _spdx_sbom(
 def _stage_release(
     project: Path,
     helper: Path,
+    cli_executable: Path,
     components: tuple[dict[str, str], ...],
-) -> tuple[str, int, str]:
+) -> tuple[str, int, int, str]:
     try:
         release_version = tomllib.loads(
             (project / "pyproject.toml").read_text(encoding="utf-8")
@@ -369,6 +395,9 @@ def _stage_release(
     packaged_helper = layout / HELPER_NAME
     shutil.copyfile(helper, packaged_helper)
     packaged_helper.chmod(0o755)
+    packaged_cli = layout / CLI_NAME
+    shutil.copyfile(cli_executable, packaged_cli)
+    packaged_cli.chmod(0o755)
     helper_sha256 = _sha256(packaged_helper)
     helper_size = packaged_helper.stat().st_size
     manifest: dict[str, object] = {
@@ -402,7 +431,12 @@ def _stage_release(
         release_version=release_version,
     )
     (project / "sbom.spdx.json").write_bytes(sbom_raw)
-    return manifest_sha256, helper_size, hashlib.sha256(sbom_raw).hexdigest()
+    return (
+        manifest_sha256,
+        helper_size,
+        packaged_cli.stat().st_size,
+        hashlib.sha256(sbom_raw).hexdigest(),
+    )
 
 
 def _wheel_member(names: tuple[str, ...], suffix: str) -> str:
@@ -416,22 +450,26 @@ def _verify_wheel(
     wheel: Path,
     manifest_sha256: str,
     helper_size: int,
+    cli_size: int,
     sbom_sha256: str,
 ) -> None:
     try:
         with zipfile.ZipFile(wheel) as archive:
             names = tuple(archive.namelist())
             helper_name = _wheel_member(names, f"/{LAYOUT.as_posix()}/{HELPER_NAME}")
+            cli_name = _wheel_member(names, f"/{LAYOUT.as_posix()}/{CLI_NAME}")
             manifest_name = _wheel_member(names, f"/{LAYOUT.as_posix()}/manifest.json")
             seal_name = _wheel_member(names, "/_generated_native_release_seal.py")
             wheel_metadata_name = _wheel_member(names, ".dist-info/WHEEL")
             sbom_name = _wheel_member(names, ".dist-info/sboms/sbom.spdx.json")
             helper = archive.read(helper_name)
+            cli = archive.read(cli_name)
             manifest_raw = archive.read(manifest_name)
             seal_raw = archive.read(seal_name)
             wheel_metadata = archive.read(wheel_metadata_name)
             sbom_raw = archive.read(sbom_name)
             mode = archive.getinfo(helper_name).external_attr >> 16
+            cli_mode = archive.getinfo(cli_name).external_attr >> 16
     except (OSError, KeyError, zipfile.BadZipFile):
         raise ReleaseBuildError("DBTOBSB_INSTALLER_RELEASE_WHEEL_INVALID") from None
     try:
@@ -445,8 +483,12 @@ def _verify_wheel(
         or len(helper) != helper_size
         or hashlib.sha256(helper).hexdigest()
         != manifest.get("helper", {}).get("sha256")
+        or len(cli) != cli_size
+        or hashlib.sha256(cli).hexdigest() != EXPECTED_CLI_SHA256
         or not stat.S_ISREG(mode)
         or stat.S_IMODE(mode) != 0o755
+        or not stat.S_ISREG(cli_mode)
+        or stat.S_IMODE(cli_mode) != 0o755
         or f"Tag: {WHEEL_TAG}\n".encode("ascii") not in wheel_metadata
         or b"Root-Is-Purelib: false\n" not in wheel_metadata
         or hashlib.sha256(sbom_raw).hexdigest() != sbom_sha256
@@ -478,16 +520,19 @@ def build_release(output_directory: Path) -> Path:
         root = Path(temporary)
         helper = _build_helper(root, environment)
         _verify_cli_origin(environment)
+        cli_executable = _verified_cli_executable()
         components = _go_components(helper, environment)
         wheels: list[Path] = []
         manifest_sha256 = ""
         helper_size = 0
+        cli_size = 0
         sbom_sha256 = ""
         for ordinal in (1, 2):
             project = _copy_installer_source(root / f"stage-{ordinal}")
-            manifest_sha256, helper_size, sbom_sha256 = _stage_release(
+            manifest_sha256, helper_size, cli_size, sbom_sha256 = _stage_release(
                 project,
                 helper,
+                cli_executable,
                 components,
             )
             wheel_output = root / f"wheel-{ordinal}"
@@ -512,7 +557,9 @@ def build_release(output_directory: Path) -> Path:
                 raise ReleaseBuildError("DBTOBSB_INSTALLER_RELEASE_WHEEL_INVALID")
             if not candidates[0].name.endswith(f"-{WHEEL_TAG}.whl"):
                 raise ReleaseBuildError("DBTOBSB_INSTALLER_RELEASE_WHEEL_INVALID")
-            _verify_wheel(candidates[0], manifest_sha256, helper_size, sbom_sha256)
+            _verify_wheel(
+                candidates[0], manifest_sha256, helper_size, cli_size, sbom_sha256
+            )
             wheels.append(candidates[0])
         if wheels[0].read_bytes() != wheels[1].read_bytes():
             raise ReleaseBuildError("DBTOBSB_INSTALLER_RELEASE_WHEEL_NOT_REPRODUCIBLE")
@@ -521,7 +568,7 @@ def build_release(output_directory: Path) -> Path:
             raise ReleaseBuildError("DBTOBSB_INSTALLER_RELEASE_OUTPUT_CONFLICT")
         shutil.copyfile(wheels[0], destination)
         destination.chmod(0o644)
-        _verify_wheel(destination, manifest_sha256, helper_size, sbom_sha256)
+        _verify_wheel(destination, manifest_sha256, helper_size, cli_size, sbom_sha256)
         return destination
 
 

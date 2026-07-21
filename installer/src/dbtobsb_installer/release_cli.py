@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import atexit
+import hashlib
 import json
 import os
 import re
 import shutil
 import stat
+import struct
 import subprocess
 import sys
 import tempfile
@@ -36,7 +39,7 @@ from dbtobsb_collector.bootstrap import (
     RUN_HEALTH_VIEW,
     STAGE_VOLUME_NAME,
 )
-from dbtobsb_contracts import parse_dbt_runtime_policy
+from dbtobsb_contracts import load_support_manifest, parse_dbt_runtime_policy
 
 from dbtobsb_installer.app_bindings import (
     AppBindingInputs,
@@ -56,8 +59,10 @@ from dbtobsb_installer.runtime_seal import (
     build_runtime_artifact_candidate,
 )
 
-_STATE_SCHEMA = "dbtobsb.installer-state.v1"
-_STATE_FILE = "release-installation-v1.json"
+_RELEASE_VERSION = "0.4.0"
+_STATE_SCHEMA = "dbtobsb.installer-state.v2"
+_STATE_FILE = "release-installation-v2.json"
+_LEGACY_STATE_FILE = "release-installation-v1.json"
 _TARGET = "smoke"
 _APP_KEY = "dbtobsb_smoke"
 _APP_NAME = "dbtobsb-smoke"
@@ -81,6 +86,10 @@ _SIMPLE_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,127}$")
 _PROFILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 _WAREHOUSE = re.compile(r"^[0-9a-f]{16}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_GIT_COMMIT = re.compile(r"^[0-9a-f]{40}$")
+_SEALED_DATABRICKS_CLI_SHA256 = "e6107da75e9dfc16c462563e11958c65689ea47d04d54cb4b31d0eb961f40be7"
+_MACHO_64_MAGIC = 0xFEEDFACF
+_CPU_TYPE_ARM64 = 0x0100000C
 _WAIT_TIMEOUT = timedelta(minutes=20)
 _BASE_WHEELS = {
     "contracts": "dbtobsb_contracts-0.4.0-py3-none-any.whl",
@@ -119,6 +128,13 @@ _PRODUCT_TABLES = frozenset(
     }
 )
 _PRODUCT_VOLUMES = frozenset({RAW_VOLUME_NAME, STAGE_VOLUME_NAME})
+_PRODUCT_JOB_NAMES = (
+    "dbtobsb-observed",
+    "dbtobsb-collector",
+    "dbtobsb-reconciler",
+    "dbtobsb-bootstrap",
+    "dbtobsb-delete",
+)
 _CREDENTIAL_ENVIRONMENT_PREFIXES = ("DATABRICKS_", "ARM_")
 _CREDENTIAL_ENVIRONMENT_NAMES = frozenset(
     {
@@ -146,6 +162,10 @@ class InstallationState:
     """Private resumable state; it contains identifiers but never credentials or raw artifacts."""
 
     schema: str
+    release_version: str
+    support_contract_sha256: str
+    release_source_commit: str
+    databricks_cli_sha256: str
     stage: str
     profile: str
     host: str
@@ -180,7 +200,14 @@ class InstallationState:
     uninstall_stage: str | None = None
 
     def __post_init__(self) -> None:
-        if self.schema != _STATE_SCHEMA or self.stage not in _STAGES:
+        if (
+            self.schema != _STATE_SCHEMA
+            or self.release_version != _RELEASE_VERSION
+            or self.support_contract_sha256 != load_support_manifest().canonical_sha256
+            or _GIT_COMMIT.fullmatch(self.release_source_commit) is None
+            or self.databricks_cli_sha256 != _SEALED_DATABRICKS_CLI_SHA256
+            or self.stage not in _STAGES
+        ):
             raise ReleaseCliError("DBTOBSB_INSTALLER_STATE_INVALID")
         strings = (
             self.profile,
@@ -233,17 +260,30 @@ class InstallationState:
         ids = (self.observed_job_id, self.collector_job_id, self.reconciler_job_id)
         if any(value is not None and value <= 0 for value in ids):
             raise ReleaseCliError("DBTOBSB_INSTALLER_STATE_INVALID")
-        for wheels in (self.candidate_wheels, self.final_wheels):
-            if wheels is not None and (
-                set(wheels) != set(_BASE_WHEELS)
-                or any(
+        wheel_prefixes = {
+            "contracts": "dbtobsb_contracts",
+            "capture": "dbtobsb_capture",
+            "collector": "dbtobsb_collector",
+        }
+        for wheels, phase in (
+            (self.candidate_wheels, "candidate"),
+            (self.final_wheels, "final"),
+        ):
+            if wheels is None:
+                continue
+            if set(wheels) != set(_BASE_WHEELS):
+                raise ReleaseCliError("DBTOBSB_INSTALLER_STATE_INVALID")
+            for key, value in wheels.items():
+                pattern = re.compile(
+                    rf"^{wheel_prefixes[key]}-{re.escape(_RELEASE_VERSION)}"
+                    rf"\+dbtobsb\.{phase}\.[0-9a-f]{{64}}-py3-none-any\.whl$"
+                )
+                if (
                     not isinstance(value, str)
                     or PurePosixPath(value).name != value
-                    or not value.endswith("-py3-none-any.whl")
-                    for value in wheels.values()
-                )
-            ):
-                raise ReleaseCliError("DBTOBSB_INSTALLER_STATE_INVALID")
+                    or pattern.fullmatch(value) is None
+                ):
+                    raise ReleaseCliError("DBTOBSB_INSTALLER_STATE_INVALID")
         if (self.uninstall_mode is None) != (self.uninstall_stage is None) or (
             self.uninstall_mode is not None
             and (
@@ -262,6 +302,36 @@ class InstallationState:
         return cast(tuple[int, int, int], values)
 
 
+@dataclass(frozen=True, slots=True)
+class BootstrapPreflight:
+    """Canonical read-only snapshot that binds preview, approval, and mutation."""
+
+    canonical_json: bytes
+    sha256: str
+
+    @classmethod
+    def from_document(cls, document: Mapping[str, Any]) -> BootstrapPreflight:
+        try:
+            raw = (
+                json.dumps(
+                    document, ensure_ascii=True, separators=(",", ":"), sort_keys=True
+                ).encode("ascii")
+                + b"\n"
+            )
+        except (TypeError, UnicodeError):
+            raise ReleaseCliError("DBTOBSB_INSTALLER_PREFLIGHT_INVALID") from None
+        return cls(canonical_json=raw, sha256=hashlib.sha256(raw).hexdigest())
+
+    def document(self) -> Mapping[str, Any]:
+        value = _parse_json(
+            self.canonical_json,
+            code="DBTOBSB_INSTALLER_PREFLIGHT_INVALID",
+        )
+        if not isinstance(value, dict):
+            raise ReleaseCliError("DBTOBSB_INSTALLER_PREFLIGHT_INVALID")
+        return cast(Mapping[str, Any], value)
+
+
 class FixedCommandRunner(Protocol):
     def run(
         self,
@@ -272,11 +342,86 @@ class FixedCommandRunner(Protocol):
     ) -> bytes: ...
 
 
+def _file_sha256(path: Path) -> str:
+    try:
+        with path.open("rb") as stream:
+            return hashlib.file_digest(stream, "sha256").hexdigest()
+    except OSError:
+        raise ReleaseCliError("DBTOBSB_INSTALLER_CLI_SEAL_INVALID") from None
+
+
+def _verify_databricks_cli_executable(
+    path: Path,
+    *,
+    expected_sha256: str = _SEALED_DATABRICKS_CLI_SHA256,
+) -> None:
+    try:
+        metadata = path.lstat()
+        with path.open("rb") as stream:
+            header = stream.read(8)
+    except OSError:
+        raise ReleaseCliError("DBTOBSB_INSTALLER_CLI_SEAL_INVALID") from None
+    if (
+        path.is_symlink()
+        or not stat.S_ISREG(metadata.st_mode)
+        or len(header) != 8
+        or struct.unpack("<II", header) != (_MACHO_64_MAGIC, _CPU_TYPE_ARM64)
+        or _SHA256.fullmatch(expected_sha256) is None
+        or _file_sha256(path) != expected_sha256
+    ):
+        raise ReleaseCliError("DBTOBSB_INSTALLER_CLI_SEAL_INVALID")
+
+
+def _packaged_databricks_cli() -> Path | None:
+    path = Path(__file__).resolve().parent / "_native" / "darwin-arm64" / "databricks"
+    return path if path.exists() else None
+
+
+def _resolve_databricks_cli_source() -> Path:
+    packaged = _packaged_databricks_cli()
+    if packaged is not None:
+        return packaged
+    discovered = shutil.which("databricks")
+    if discovered is None:
+        raise ReleaseCliError("DBTOBSB_INSTALLER_CLI_SEAL_INVALID")
+    try:
+        return Path(discovered).resolve(strict=True)
+    except OSError:
+        raise ReleaseCliError("DBTOBSB_INSTALLER_CLI_SEAL_INVALID") from None
+
+
 class SubprocessRunner:
     """Execute only launcher-owned argv and suppress untrusted native diagnostics."""
 
-    def __init__(self, repository_root: Path) -> None:
+    def __init__(
+        self,
+        repository_root: Path,
+        *,
+        databricks_cli_source: Path | None = None,
+        expected_databricks_cli_sha256: str = _SEALED_DATABRICKS_CLI_SHA256,
+    ) -> None:
         self._root = repository_root
+        source = databricks_cli_source or _resolve_databricks_cli_source()
+        _verify_databricks_cli_executable(source, expected_sha256=expected_databricks_cli_sha256)
+        try:
+            directory = Path(tempfile.mkdtemp(prefix="dbtobsb-cli-"))
+            os.chmod(directory, 0o700)
+            sealed = directory / "databricks"
+            shutil.copyfile(source, sealed)
+            os.chmod(sealed, 0o500)
+        except OSError:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_CLI_SEAL_INVALID") from None
+        try:
+            _verify_databricks_cli_executable(
+                sealed,
+                expected_sha256=expected_databricks_cli_sha256,
+            )
+        except Exception:
+            shutil.rmtree(directory, ignore_errors=True)
+            raise
+        self._databricks_cli = sealed
+        self._databricks_cli_sha256 = expected_databricks_cli_sha256
+        atexit.register(shutil.rmtree, directory, ignore_errors=True)
 
     def run(
         self,
@@ -287,6 +432,12 @@ class SubprocessRunner:
     ) -> bytes:
         if not command or any(not isinstance(value, str) or not value for value in command):
             raise ReleaseCliError("DBTOBSB_INSTALLER_COMMAND_INVALID")
+        if command[0] == "databricks":
+            _verify_databricks_cli_executable(
+                self._databricks_cli,
+                expected_sha256=self._databricks_cli_sha256,
+            )
+            command = (str(self._databricks_cli), *command[1:])
         if any(
             value
             and (
@@ -383,6 +534,9 @@ def _save_state(root: Path, state: InstallationState) -> None:
 
 def _load_state(root: Path) -> InstallationState | None:
     path = _state_path(root)
+    legacy = root / ".dbtobsb" / _LEGACY_STATE_FILE
+    if legacy.exists():
+        raise ReleaseCliError("DBTOBSB_INSTALLER_LEGACY_STATE_UNSUPPORTED")
     if not path.exists():
         return None
     try:
@@ -413,6 +567,14 @@ def _value(document: Mapping[str, Any], key: str, expected: type[Any]) -> Any:
     value = document.get(key)
     if not isinstance(value, expected):
         raise ReleaseCliError("DBTOBSB_INSTALLER_DISCOVERY_INVALID")
+    return value
+
+
+def _plain_json(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {str(key): _plain_json(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_plain_json(item) for item in value]
     return value
 
 
@@ -491,6 +653,24 @@ class ReleaseManager:
             self.runner.run(command, timeout_seconds=timeout_seconds),
             code="DBTOBSB_INSTALLER_REMOTE_RESPONSE_INVALID",
         )
+
+    def _release_source_commit(self) -> str:
+        try:
+            dirty = self.runner.run(
+                ("git", "status", "--porcelain", "--untracked-files=no"),
+                timeout_seconds=30,
+            )
+            raw = self.runner.run(("git", "rev-parse", "HEAD"), timeout_seconds=30)
+            commit = raw.decode("ascii").strip()
+        except (ReleaseCliError, UnicodeDecodeError):
+            raise ReleaseCliError("DBTOBSB_INSTALLER_RELEASE_SOURCE_INVALID") from None
+        if dirty or _GIT_COMMIT.fullmatch(commit) is None:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_RELEASE_SOURCE_INVALID")
+        return commit
+
+    def _verify_state_release(self, state: InstallationState) -> None:
+        if state.release_source_commit != self._release_source_commit():
+            raise ReleaseCliError("DBTOBSB_INSTALLER_STATE_RELEASE_MISMATCH")
 
     def _discover(self) -> InstallationState:
         profile_root = self._run_json(("databricks", "auth", "profiles", "--output", "json"))
@@ -717,6 +897,10 @@ class ReleaseManager:
         )
         return InstallationState(
             schema=_STATE_SCHEMA,
+            release_version=_RELEASE_VERSION,
+            support_contract_sha256=load_support_manifest().canonical_sha256,
+            release_source_commit=self._release_source_commit(),
+            databricks_cli_sha256=_SEALED_DATABRICKS_CLI_SHA256,
             stage="CONFIGURED",
             profile=profile_name,
             host=host,
@@ -737,8 +921,225 @@ class ReleaseManager:
             source_project_relative_path=_value(source, "path", str),
         )
 
-    def _approve_bootstrap(self, state: InstallationState) -> None:
+    def _bootstrap_preflight(self, state: InstallationState) -> BootstrapPreflight:
+        """Freeze the complete fresh-install readback before any local or cloud mutation."""
+        self._reject_terraform_state(state)
+        client = self._client(state.profile)
+        try:
+            current = self._run_json(
+                (
+                    "databricks",
+                    "current-user",
+                    "me",
+                    "--profile",
+                    state.profile,
+                    "--output",
+                    "json",
+                )
+            )
+            principal_rows = self._run_json(
+                (
+                    "databricks",
+                    "service-principals",
+                    "list",
+                    "--profile",
+                    state.profile,
+                    "--output",
+                    "json",
+                )
+            )
+            group_rows = self._run_json(
+                (
+                    "databricks",
+                    "groups",
+                    "list",
+                    "--profile",
+                    state.profile,
+                    "--output",
+                    "json",
+                )
+            )
+            warehouse_permissions = self._run_json(
+                (
+                    "databricks",
+                    "permissions",
+                    "get",
+                    "sql/warehouses",
+                    state.warehouse_id,
+                    "--profile",
+                    state.profile,
+                    "--output",
+                    "json",
+                )
+            )
+            warehouse = client.warehouses.get(state.warehouse_id).as_dict()
+            evidence_schema = client.schemas.get(
+                f"{state.evidence_catalog}.{state.evidence_schema}"
+            ).as_dict()
+            target_schema = client.schemas.get(f"{state.dbt_catalog}.{state.dbt_schema}").as_dict()
+            schema_grants = client.grants.get(
+                "schema", f"{state.evidence_catalog}.{state.evidence_schema}"
+            ).as_dict()
+            app_inventory = tuple(client.apps.list())
+            tables = tuple(
+                client.tables.list(
+                    state.evidence_catalog,
+                    state.evidence_schema,
+                    omit_columns=True,
+                    omit_properties=True,
+                )
+            )
+            volumes = tuple(client.volumes.list(state.evidence_catalog, state.evidence_schema))
+            jobs = tuple(
+                job
+                for name in _PRODUCT_JOB_NAMES
+                for job in client.jobs.list(name=name, expand_tasks=True)
+            )
+        except Exception:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_PREFLIGHT_READBACK_FAILED") from None
+        if not isinstance(current, dict) or current.get("userName") != state.actor:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_PREFLIGHT_IDENTITY_CHANGED")
+        groups = current.get("groups")
+        admin_verified = isinstance(groups, list) and any(
+            isinstance(item, dict)
+            and (item.get("display") == "admins" or item.get("value") == "admins")
+            for item in groups
+        )
+        if not admin_verified:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_WORKSPACE_ADMIN_REQUIRED")
+        if not isinstance(principal_rows, list) or not isinstance(group_rows, list):
+            raise ReleaseCliError("DBTOBSB_INSTALLER_PREFLIGHT_READBACK_FAILED")
+        active_principals = {
+            item.get("applicationId")
+            for item in principal_rows
+            if isinstance(item, dict) and item.get("active") is True
+        }
+        available_groups = {
+            item.get("displayName") for item in group_rows if isinstance(item, dict)
+        }
+        if (
+            state.observed_service_principal_name not in active_principals
+            or state.collector_service_principal_name not in active_principals
+            or state.job_manager_group_name not in available_groups
+        ):
+            raise ReleaseCliError("DBTOBSB_INSTALLER_PREFLIGHT_PRINCIPAL_CHANGED")
+        permission_entries = (
+            warehouse_permissions.get("access_control_list")
+            if isinstance(warehouse_permissions, dict)
+            else None
+        )
+        observed_can_use = isinstance(permission_entries, list) and any(
+            isinstance(entry, dict)
+            and entry.get("service_principal_name") == state.observed_service_principal_name
+            and isinstance(entry.get("all_permissions"), list)
+            and any(
+                isinstance(permission, dict)
+                and permission.get("permission_level") in {"CAN_USE", "CAN_MANAGE", "IS_OWNER"}
+                for permission in entry["all_permissions"]
+            )
+            for entry in permission_entries
+        )
+        if not observed_can_use:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_OBSERVED_WAREHOUSE_ACCESS_REQUIRED")
+        existing_apps = [
+            item.as_dict() for item in app_inventory if item.as_dict().get("name") == state.app_name
+        ]
+        if existing_apps or jobs or tables or volumes:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_FRESH_INSTALL_REQUIRED")
+        if (
+            evidence_schema.get("owner") != state.actor
+            or target_schema.get("owner") != state.observed_service_principal_name
+        ):
+            raise ReleaseCliError("DBTOBSB_INSTALLER_PREFLIGHT_OWNERSHIP_CHANGED")
+        project = self.root / state.source_project_relative_path / "dbt_project.yml"
+        if project.is_symlink() or not project.is_file():
+            raise ReleaseCliError("DBTOBSB_INSTALLER_PREFLIGHT_PROJECT_INVALID")
+        manifest = load_support_manifest()
+        document = {
+            "app": {
+                "deployments": [],
+                "end_user_acl": {"group": state.app_user_group_name, "level": "CAN_USE"},
+                "environment": sorted(_APP_ENVIRONMENT_NAMES),
+                "existing": False,
+                "finish_state": "STOPPED",
+                "resources": [
+                    "dbtobsb-app-warehouse",
+                    "dbtobsb-run-health",
+                    "dbtobsb-node-health",
+                    "dbtobsb-collection-health",
+                ],
+            },
+            "authority": {
+                "app_api_access": True,
+                "current_actor_matches": True,
+                "evidence_schema_owner_matches": True,
+                "named_oauth_profile": state.profile,
+                "observed_warehouse_access": True,
+                "target_schema_owner_matches": True,
+                "workspace_admin_group_verified": True,
+            },
+            "compute": {
+                "approved_operations": [
+                    "BOUNDED_SERVERLESS_BUNDLE_JOBS",
+                    "TWO_BOUNDED_APP_DEPLOYMENT_CHECKS",
+                ],
+                "warehouse_auto_stop_mins": warehouse.get("auto_stop_mins"),
+                "warehouse_cluster_size": warehouse.get("cluster_size"),
+                "warehouse_managed_by_product": False,
+                "warehouse_state": warehouse.get("state"),
+            },
+            "customer_state": {
+                "existing_evidence_objects": [],
+                "existing_product_jobs": [],
+                "schema_direct_grants": _plain_json(schema_grants),
+                "terraform": "ABSENT_DIRECT_FRESH",
+            },
+            "finish": {
+                "app": "STOPPED",
+                "jobs": "TERMINAL",
+                "reconciler": "PAUSED",
+                "warehouse": "UNCHANGED_BY_PRODUCT_REPORT_OBSERVED_STATE",
+            },
+            "planned": {
+                "app_query_count_on_landing": 0,
+                "direct_grants": _plain_json(manifest.customer_state["direct_grants"]),
+                "jobs": list(_PRODUCT_JOB_NAMES[:3]),
+                "objects": _plain_json(manifest.customer_state["objects"]),
+                "temporary_jobs": list(_PRODUCT_JOB_NAMES[3:]),
+                "workspace_acl": {
+                    "collector": "CAN_READ",
+                    "job_manager_group": "CAN_MANAGE",
+                    "observed": "CAN_READ",
+                },
+            },
+            "project": {
+                "fixed_command_sequence": _plain_json(manifest.dbt["command_sequence"]),
+                "primary_command": manifest.dbt["primary_command"],
+                "relative_path": state.source_project_relative_path,
+                "selector_contract": manifest.dbt["selector_contract"],
+            },
+            "release": {
+                "databricks_cli_sha256": state.databricks_cli_sha256,
+                "release_source_commit": state.release_source_commit,
+                "support_contract_sha256": state.support_contract_sha256,
+                "version": state.release_version,
+            },
+            "workspace": {
+                "canonical_host": state.host,
+                "cloud": "azure",
+                "free_edition": False,
+            },
+        }
+        return BootstrapPreflight.from_document(document)
+
+    def _approve_bootstrap(self, state: InstallationState, preflight: BootstrapPreflight) -> None:
+        document = preflight.document()
+        planned = cast(Mapping[str, Any], document["planned"])
+        app = cast(Mapping[str, Any], document["app"])
+        compute = cast(Mapping[str, Any], document["compute"])
         print("\nInstallation preview", file=self.output)
+        print(f"  Preview SHA-256: {preflight.sha256}", file=self.output)
+        print("  Release: dbtobsb v0.4.0 fresh installation only", file=self.output)
         print(f"  Workspace: {state.host}", file=self.output)
         print(
             f"  Evidence schema: {state.evidence_catalog}.{state.evidence_schema}",
@@ -750,10 +1151,35 @@ class ReleaseManager:
         print(
             f"  Collector identity: {state.collector_service_principal_display}", file=self.output
         )
-        print("  App starts once for deployment, is verified, then stops.", file=self.output)
+        print(
+            f"  Objects: {json.dumps(planned['objects'], separators=(',', ':'))}", file=self.output
+        )
+        print(
+            f"  Direct grants: {json.dumps(planned['direct_grants'], separators=(',', ':'))}",
+            file=self.output,
+        )
+        print(f"  Runtime Jobs: {', '.join(planned['jobs'])}", file=self.output)
+        print(f"  Temporary Jobs: {', '.join(planned['temporary_jobs'])}", file=self.output)
+        print(f"  App resources: {', '.join(app['resources'])}", file=self.output)
+        print(
+            "  App deployment checks: two bounded checks; final App state STOPPED.",
+            file=self.output,
+        )
+        print(
+            "  Warehouse: dbtobsb does not manage or stop it; current state "
+            f"{compute['warehouse_state']}, auto-stop "
+            f"{compute['warehouse_auto_stop_mins']} minutes.",
+            file=self.output,
+        )
+        print(
+            "  Unsupported state: any prior App, product Job, object, or Terraform state.",
+            file=self.output,
+        )
         print("Type APPROVE to continue: ", end="", flush=True, file=self.output)
         if self.input.readline().strip() != "APPROVE":
             raise ReleaseCliError("DBTOBSB_INSTALLER_APPROVAL_REQUIRED")
+        if self._bootstrap_preflight(state).sha256 != preflight.sha256:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_PREFLIGHT_CHANGED")
 
     def _onboard(self, state: InstallationState) -> InstallationState:
         try:
@@ -1222,6 +1648,21 @@ class ReleaseManager:
                     full_name,
                     changes=[self._permission_change(principal, privileges, add=add)],
                 )
+            for securable_type, full_name, principal, privileges in updates:
+                document = client.grants.get(securable_type, full_name).as_dict()
+                assignments = document.get("privilege_assignments")
+                if not isinstance(assignments, list):
+                    raise ValueError
+                actual = {
+                    privilege
+                    for assignment in assignments
+                    if isinstance(assignment, dict) and assignment.get("principal") == principal
+                    for privilege in assignment.get("privileges", [])
+                    if isinstance(privilege, str)
+                }
+                expected = {privilege.value for privilege in privileges}
+                if (add and not expected.issubset(actual)) or (not add and expected & actual):
+                    raise ValueError
         except Exception:
             code = "DBTOBSB_INSTALLER_GRANT_FAILED" if add else "DBTOBSB_UNINSTALL_REVOKE_FAILED"
             raise ReleaseCliError(code) from None
@@ -1242,6 +1683,47 @@ class ReleaseManager:
         if not isinstance(document, list) or any(not isinstance(item, dict) for item in document):
             raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
         return cast(list[Mapping[str, Any]], document)
+
+    @staticmethod
+    def _expected_app_resources(state: InstallationState) -> dict[str, Mapping[str, Any]]:
+        prefix = f"{state.evidence_catalog}.{state.evidence_schema}"
+        return {
+            "dbtobsb-app-warehouse": {
+                "name": "dbtobsb-app-warehouse",
+                "sql_warehouse": {"id": state.warehouse_id, "permission": "CAN_USE"},
+            },
+            "dbtobsb-run-health": {
+                "name": "dbtobsb-run-health",
+                "uc_securable": {
+                    "permission": "SELECT",
+                    "securable_full_name": f"{prefix}.dbt_run_health",
+                    "securable_type": "TABLE",
+                },
+            },
+            "dbtobsb-node-health": {
+                "name": "dbtobsb-node-health",
+                "uc_securable": {
+                    "permission": "SELECT",
+                    "securable_full_name": f"{prefix}.dbt_node_health",
+                    "securable_type": "TABLE",
+                },
+            },
+            "dbtobsb-collection-health": {
+                "name": "dbtobsb-collection-health",
+                "uc_securable": {
+                    "permission": "SELECT",
+                    "securable_full_name": f"{prefix}.dbt_collection_health",
+                    "securable_type": "TABLE",
+                },
+            },
+        }
+
+    def _app_resources_match(self, state: InstallationState, resources: object) -> bool:
+        if not isinstance(resources, list) or any(not isinstance(item, dict) for item in resources):
+            return False
+        items = cast(list[dict[str, Any]], resources)
+        actual = {item.get("name"): item for item in items}
+        return actual == self._expected_app_resources(state)
 
     def _deploy_app(self, state: InstallationState) -> None:
         if state.final_wheels is None:
@@ -1415,7 +1897,7 @@ class ReleaseManager:
             raise ReleaseCliError("DBTOBSB_INSTALLER_APP_READBACK_FAILED") from None
         if (
             app_document.get("compute_status", {}).get("state") != "STOPPED"
-            or len(app_document.get("resources", [])) != 4
+            or not self._app_resources_match(state, app_document.get("resources"))
             or not any(
                 item.get("group_name") == state.app_user_group_name
                 and any(
@@ -1430,11 +1912,14 @@ class ReleaseManager:
 
     def bootstrap(self) -> None:
         state = _load_state(self.root)
+        if state is not None:
+            self._verify_state_release(state)
         if state is not None and state.uninstall_stage is not None:
             raise ReleaseCliError("DBTOBSB_UNINSTALL_RESUME_REQUIRED")
         if state is None:
             state = self._discover()
-            self._approve_bootstrap(state)
+            preflight = self._bootstrap_preflight(state)
+            self._approve_bootstrap(state, preflight)
             _save_state(self.root, state)
         if not _stage_at_least(state, "ONBOARDED"):
             state = self._onboard(state)
@@ -1561,6 +2046,7 @@ class ReleaseManager:
         state = _load_state(self.root)
         if state is None or state.stage != "INSTALLED":
             raise ReleaseCliError("DBTOBSB_INSTALLER_INSTALLED_STATE_REQUIRED")
+        self._verify_state_release(state)
         if state.uninstall_stage is not None and not allow_uninstall:
             raise ReleaseCliError("DBTOBSB_UNINSTALL_RESUME_REQUIRED")
         return state
@@ -1684,11 +2170,39 @@ class ReleaseManager:
         if active or app.get("compute_status", {}).get("state") != "STOPPED":
             raise ReleaseCliError("DBTOBSB_STOP_READBACK_FAILED")
 
+    def _warehouse_cost_receipt(self, state: InstallationState) -> dict[str, Any]:
+        try:
+            document = self._client(state.profile).warehouses.get(state.warehouse_id).as_dict()
+            warehouse_state = document.get("state")
+            auto_stop_mins = document.get("auto_stop_mins")
+        except Exception:
+            raise ReleaseCliError("DBTOBSB_WAREHOUSE_STATE_UNREADABLE") from None
+        if not isinstance(warehouse_state, str) or not warehouse_state:
+            raise ReleaseCliError("DBTOBSB_WAREHOUSE_STATE_UNREADABLE")
+        cost_may_continue = warehouse_state != "STOPPED"
+        return {
+            "warehouse_auto_stop_mins": auto_stop_mins,
+            "warehouse_cost_may_continue": cost_may_continue,
+            "warehouse_managed_by_product": False,
+            "warehouse_next_action": (
+                "NONE"
+                if not cost_may_continue
+                else "WAIT_FOR_AUTO_STOP_OR_USE_SEPARATELY_AUTHORIZED_DIRECT_STOP"
+            ),
+            "warehouse_state": warehouse_state,
+        }
+
     def stop(self) -> None:
         state = self._installed_state()
         self._stop_state(state)
+        receipt = {
+            "app_state": "STOPPED",
+            "event": "dbtobsb_stop_verified",
+            "reconciler_state": "PAUSED",
+            **self._warehouse_cost_receipt(state),
+        }
         print(
-            '{"app_state":"STOPPED","event":"dbtobsb_stop_verified","reconciler_state":"PAUSED"}',
+            json.dumps(receipt, separators=(",", ":"), sort_keys=True),
             file=self.output,
         )
 
@@ -1890,6 +2404,7 @@ class ReleaseManager:
             state = replace(state, uninstall_stage="BUNDLE_DESTROYED")
             _save_state(self.root, state)
         mode = "DELETE" if delete else "RETAIN"
+        warehouse_receipt = self._warehouse_cost_receipt(state)
         self._clear_local_state()
         print(
             json.dumps(
@@ -1899,6 +2414,7 @@ class ReleaseManager:
                     "mode": mode,
                     "product_objects": "REMOVED" if delete else "RETAINED",
                     "schema_preserved": True,
+                    **warehouse_receipt,
                 },
                 separators=(",", ":"),
                 sort_keys=True,

@@ -12,9 +12,10 @@ from dbtobsb_app.repository import (
     COLLECTION_COLUMNS,
     NODE_COLUMNS,
     RUN_COLUMNS,
-    TREND_COLUMNS,
+    TREND_SOURCE_COLUMNS,
     AppDataAccessError,
     DatabricksSqlRepository,
+    aggregate_trend_rows,
     databricks_repository,
 )
 
@@ -110,9 +111,11 @@ def _collection_values() -> tuple[Any, ...]:
 def _trend_values() -> tuple[Any, ...]:
     return (
         40,
+        20,
         datetime(2026, 7, 16, 10, 0, tzinfo=UTC),
-        2,
-        7,
+        "PAIR_VALID",
+        "model",
+        "error",
     )
 
 
@@ -220,17 +223,15 @@ def test_trend_query_is_fixed_parameterized_and_uses_only_sanitized_views() -> N
 
     rows = repository.recent_trends(12)
 
-    assert rows[0].failed_node_results == 2
-    assert rows[0].model_results == 7
+    assert rows[0].failed_node_results == 1
+    assert rows[0].model_results == 1
     query, parameters = calls[0]
     assert "FROM `customer-catalog`.`obs`.`dbt_run_health`" in query
     assert "LEFT JOIN `customer-catalog`.`obs`.`dbt_node_health`" in query
     assert "`pair_state` = 'PAIR_VALID'" in query
-    assert "n.`status` IN ('error', 'fail')" in query
-    assert "n.`resource_type` = 'model'" in query
     assert "LIMIT :limit" in query
     assert parameters == {"limit": 12}
-    assert all(f"`{column}`" in query for column in TREND_COLUMNS)
+    assert all(f"`{column}`" in query for column in TREND_SOURCE_COLUMNS)
     for forbidden in (
         "raw_archive_locator",
         "archive_sha256",
@@ -240,6 +241,54 @@ def test_trend_query_is_fixed_parameterized_and_uses_only_sanitized_views() -> N
         "message",
     ):
         assert forbidden not in query
+
+
+def test_production_trend_aggregate_handles_mixed_outcomes_and_zero_matches() -> None:
+    old = datetime(2026, 7, 16, 9, 0, tzinfo=UTC)
+    new = datetime(2026, 7, 16, 10, 0, tzinfo=UTC)
+
+    def row(
+        run_id: int,
+        task_id: int,
+        observed_at: datetime,
+        pair_state: str,
+        resource_type: str | None,
+        status: str | None,
+    ) -> dict[str, Any]:
+        return dict(
+            zip(
+                TREND_SOURCE_COLUMNS,
+                (run_id, task_id, observed_at, pair_state, resource_type, status),
+                strict=True,
+            )
+        )
+
+    rows = aggregate_trend_rows(
+        (
+            row(202, 2, new, "PAIR_VALID", "model", "success"),
+            row(202, 2, new, "PAIR_VALID", "model", "error"),
+            row(202, 2, new, "PAIR_VALID", "test", "fail"),
+            row(202, 2, new, "PAIR_VALID", "test", "warn"),
+            row(202, 2, new, "PAIR_VALID", "seed", "error"),
+            row(101, 1, old, "PAIR_VALID", None, None),
+            row(999, 9, new, "PAIR_REJECTED", "model", "error"),
+        )
+    )
+
+    assert rows == (
+        {
+            "observed_job_run_id": 101,
+            "observed_at": old,
+            "failed_node_results": 0,
+            "model_results": 0,
+        },
+        {
+            "observed_job_run_id": 202,
+            "observed_at": new,
+            "failed_node_results": 3,
+            "model_results": 2,
+        },
+    )
 
 
 def test_each_read_uses_and_closes_a_fresh_connection() -> None:

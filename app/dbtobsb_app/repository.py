@@ -90,6 +90,14 @@ TREND_COLUMNS: tuple[str, ...] = (
     "failed_node_results",
     "model_results",
 )
+TREND_SOURCE_COLUMNS: tuple[str, ...] = (
+    "observed_job_run_id",
+    "dbt_task_run_id",
+    "observed_at",
+    "pair_state",
+    "resource_type",
+    "status",
+)
 
 
 class ObservabilityRepository(Protocol):
@@ -169,6 +177,53 @@ def _rows(
     return tuple(rows)
 
 
+def aggregate_trend_rows(rows: Sequence[dict[str, Any]]) -> tuple[dict[str, Any], ...]:
+    """Aggregate the fixed sanitized trend projection used by the live repository."""
+    attempts: dict[tuple[int, int], dict[str, Any]] = {}
+    for row in rows:
+        if set(row) != set(TREND_SOURCE_COLUMNS):
+            raise AppDataAccessError("DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH")
+        if row["pair_state"] != "PAIR_VALID":
+            continue
+        run_id = row["observed_job_run_id"]
+        task_run_id = row["dbt_task_run_id"]
+        if isinstance(run_id, bool) or not isinstance(run_id, int):
+            raise AppDataAccessError("DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH")
+        if isinstance(task_run_id, bool) or not isinstance(task_run_id, int):
+            raise AppDataAccessError("DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH")
+        key = (run_id, task_run_id)
+        current = attempts.setdefault(
+            key,
+            {
+                "observed_job_run_id": run_id,
+                "observed_at": row["observed_at"],
+                "failed_node_results": 0,
+                "model_results": 0,
+            },
+        )
+        if current["observed_at"] != row["observed_at"]:
+            raise AppDataAccessError("DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH")
+        resource_type = row["resource_type"]
+        status = row["status"]
+        if resource_type is None and status is None:
+            continue
+        if not isinstance(resource_type, str) or not isinstance(status, str):
+            raise AppDataAccessError("DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH")
+        if status in {"error", "fail"}:
+            current["failed_node_results"] += 1
+        if resource_type == "model":
+            current["model_results"] += 1
+    try:
+        return tuple(
+            sorted(
+                attempts.values(),
+                key=lambda item: (item["observed_at"], item["observed_job_run_id"]),
+            )
+        )
+    except TypeError:
+        raise AppDataAccessError("DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH") from None
+
+
 class DatabricksSqlRepository:
     """Query only the three installer-bound sanitized evidence views."""
 
@@ -200,7 +255,8 @@ class DatabricksSqlRepository:
   SELECT
     `observed_job_run_id`,
     `dbt_task_run_id`,
-    `generated_at` AS `observed_at`
+    `generated_at` AS `observed_at`,
+    `pair_state`
   FROM {bindings.run_health_view.quoted}
   WHERE `pair_state` = 'PAIR_VALID'
   ORDER BY `generated_at` DESC, `dbt_task_run_id` DESC
@@ -208,17 +264,17 @@ class DatabricksSqlRepository:
 )
 SELECT
   r.`observed_job_run_id`,
+  r.`dbt_task_run_id`,
   r.`observed_at`,
-  CAST(COALESCE(SUM(CASE WHEN n.`status` IN ('error', 'fail') THEN 1 ELSE 0 END), 0)
-    AS BIGINT) AS `failed_node_results`,
-  CAST(COALESCE(SUM(CASE WHEN n.`resource_type` = 'model' THEN 1 ELSE 0 END), 0)
-    AS BIGINT) AS `model_results`
+  r.`pair_state`,
+  n.`resource_type`,
+  n.`status`
 FROM recent_runs AS r
 LEFT JOIN {bindings.node_health_view.quoted} AS n
   ON n.`dbt_task_run_id` = r.`dbt_task_run_id`
  AND n.`observed_job_run_id` = r.`observed_job_run_id`
-GROUP BY r.`observed_job_run_id`, r.`observed_at`
-ORDER BY r.`observed_at` ASC, r.`observed_job_run_id` ASC"""
+ORDER BY r.`observed_at` ASC, r.`observed_job_run_id` ASC,
+  n.`resource_type` ASC, n.`status` ASC"""
 
     def recent_runs(self, limit: int) -> tuple[RunHealth, ...]:
         """Return a bounded newest-first run view projection."""
@@ -271,17 +327,17 @@ ORDER BY r.`observed_at` ASC, r.`observed_job_run_id` ASC"""
     def recent_trends(self, limit: int) -> tuple[TrendPoint, ...]:
         """Return oldest-first aggregates for the newest accepted dbt runs."""
         try:
-            return tuple(
-                TrendPoint.model_validate(row)
-                for row in _rows(
-                    self._connection_factory,
-                    query=self._trends_query,
-                    columns=TREND_COLUMNS,
-                    limit=limit,
-                    contract_error_code="DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH",
-                )
+            source_rows = _rows(
+                self._connection_factory,
+                query=self._trends_query,
+                columns=TREND_SOURCE_COLUMNS,
+                limit=limit,
+                contract_error_code="DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH",
             )
-        except ValidationError:
+            return tuple(
+                TrendPoint.model_validate(row) for row in aggregate_trend_rows(source_rows)
+            )
+        except (AppDataAccessError, ValidationError):
             raise AppDataAccessError("DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH") from None
 
 

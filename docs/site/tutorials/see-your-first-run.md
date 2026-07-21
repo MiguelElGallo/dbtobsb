@@ -184,7 +184,7 @@ uv run --project installer --no-sync dbtobsb stop
 The expected receipt is:
 
 ```json
-{"app_state":"STOPPED","event":"dbtobsb_stop_verified","reconciler_state":"PAUSED"}
+{"app_state":"STOPPED","event":"dbtobsb_stop_verified","reconciler_state":"PAUSED","warehouse_auto_stop_mins":5,"warehouse_cost_may_continue":false,"warehouse_managed_by_product":false,"warehouse_next_action":"NONE","warehouse_state":"STOPPED"}
 ```
 
 Confirm that:

@@ -137,12 +137,16 @@ stopped. This is the expected idle state.*
 
 ## 3. Resume an interrupted installation
 
-The local `.dbtobsb/release-installation-v1.json` file records completed stages and
+The local `.dbtobsb/release-installation-v2.json` file records completed stages and
 uses owner-only permissions. It also contains sensitive operational identifiers,
 including the actor, workspace host, resource IDs, identity and group names, and
 schema names. Keep it on the managed installation workstation; do not commit, copy,
 or attach it to an ordinary support ticket. Do not edit or delete it after an
 interruption.
+
+v0.4.0 has no upgrade or legacy-state adoption path. A v1 state or any prior App,
+product Job, product object, or Terraform state blocks the fresh installer before
+mutation.
 
 Run the same command again:
 

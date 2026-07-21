@@ -45,7 +45,7 @@ Installation may take several minutes while Databricks allocates serverless comp
 
 ## Resume safely
 
-The private `.dbtobsb/release-installation-v1.json` file records the last completed stage and is created with owner-only permissions. If the terminal or network is interrupted, do not delete it and do not edit generated Bundle files. Run the same command again:
+The private `.dbtobsb/release-installation-v2.json` file records the last completed stage and is created with owner-only permissions. If the terminal or network is interrupted, do not delete it and do not edit generated Bundle files. v0.4.0 has no upgrade or legacy-state adoption path; a v1 state or prior product installation blocks before mutation. Run the same command again:
 
 ```console
 uv run --project installer --no-sync dbtobsb bootstrap

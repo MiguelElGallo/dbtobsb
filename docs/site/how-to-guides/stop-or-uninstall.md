@@ -16,11 +16,13 @@ uv run --project installer --no-sync dbtobsb stop
 Expected output:
 
 ```json
-{"app_state":"STOPPED","event":"dbtobsb_stop_verified","reconciler_state":"PAUSED"}
+{"app_state":"STOPPED","event":"dbtobsb_stop_verified","reconciler_state":"PAUSED","warehouse_auto_stop_mins":5,"warehouse_cost_may_continue":false,"warehouse_managed_by_product":false,"warehouse_next_action":"NONE","warehouse_state":"STOPPED"}
 ```
 
-The command does not delete or resize a customer warehouse. Its configured
-auto-stop policy remains in effect.
+The command does not manage, stop, delete, or resize a customer warehouse. Its
+configured auto-stop policy remains in effect. The receipt reports the observed
+warehouse state, auto-stop setting, whether cost may continue, and the exact next
+action. An unreadable warehouse state fails closed.
 
 ## Remove the runtime but keep evidence
 
@@ -57,13 +59,13 @@ these acknowledgements.
 Retain ends with:
 
 ```json
-{"app_state":"REMOVED","event":"dbtobsb_uninstall_verified","mode":"RETAIN","product_objects":"RETAINED","schema_preserved":true}
+{"app_state":"REMOVED","event":"dbtobsb_uninstall_verified","mode":"RETAIN","product_objects":"RETAINED","schema_preserved":true,"warehouse_auto_stop_mins":5,"warehouse_cost_may_continue":false,"warehouse_managed_by_product":false,"warehouse_next_action":"NONE","warehouse_state":"STOPPED"}
 ```
 
 Delete ends with:
 
 ```json
-{"app_state":"REMOVED","event":"dbtobsb_uninstall_verified","mode":"DELETE","product_objects":"REMOVED","schema_preserved":true}
+{"app_state":"REMOVED","event":"dbtobsb_uninstall_verified","mode":"DELETE","product_objects":"REMOVED","schema_preserved":true,"warehouse_auto_stop_mins":5,"warehouse_cost_may_continue":false,"warehouse_managed_by_product":false,"warehouse_next_action":"NONE","warehouse_state":"STOPPED"}
 ```
 
 If the command is interrupted, rerun the same mode. Do not switch between retain
