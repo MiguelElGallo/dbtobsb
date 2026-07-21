@@ -2491,10 +2491,10 @@ class ReleaseManager:
                 app_user_group_name=state.app_user_group_name,
             )
         )
-        self._deploy(state, state.final_wheels)
-        state = self._with_direct_state(state)
-        _save_state(self.root, state)
         try:
+            self._deploy(state, state.final_wheels)
+            state = self._with_direct_state(state)
+            _save_state(self.root, state)
             return self._deploy_stopped_app(state)
         finally:
             self._stop_app_after_deployment_attempt(state)

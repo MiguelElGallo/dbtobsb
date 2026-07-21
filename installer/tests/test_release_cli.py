@@ -1421,6 +1421,130 @@ def test_app_deploy_checkpoints_direct_state_before_deployment_readback(
     assert apps.compute_state == "STOPPED"
 
 
+@pytest.mark.parametrize(
+    ("stop_succeeds", "expected_code"),
+    [
+        (True, "DBTOBSB_INSTALLER_DIRECT_APPLY_FAILED"),
+        (False, "DBTOBSB_INSTALLER_APP_STOP_FAILED"),
+    ],
+)
+def test_app_deploy_stops_after_indeterminate_direct_apply(
+    tmp_path: Path,
+    stop_succeeds: bool,
+    expected_code: str,
+) -> None:
+    state = _state(stage="GRANTS_APPLIED")
+
+    class Apps:
+        def __init__(self) -> None:
+            self.compute_state = "STOPPED"
+
+        def get(self, app_name: str) -> SimpleNamespace:
+            assert app_name == state.app_name
+            return SimpleNamespace(
+                as_dict=lambda: {"compute_status": {"state": self.compute_state}}
+            )
+
+        def stop(self, app_name: str) -> SimpleNamespace:
+            assert app_name == state.app_name
+            if stop_succeeds:
+                self.compute_state = "STOPPED"
+            return SimpleNamespace(result=lambda timeout: None)
+
+    apps = Apps()
+
+    class DirectApplyFailureManager(ReleaseManager):
+        def __init__(self) -> None:
+            super().__init__(
+                root=tmp_path,
+                runner=_NoCommandRunner(),
+                input_stream=io.StringIO(),
+                output_stream=io.StringIO(),
+            )
+
+        def _deploy(
+            self,
+            state: InstallationState,
+            wheels: Mapping[str, str],
+            *,
+            select: str | None = None,
+        ) -> None:
+            del state, wheels, select
+            apps.compute_state = "ACTIVE"
+            raise ReleaseCliError("DBTOBSB_INSTALLER_DIRECT_APPLY_FAILED")
+
+    manager = DirectApplyFailureManager()
+    cast(dict[str, Any], manager._clients)[state.profile] = SimpleNamespace(apps=apps)
+
+    with pytest.raises(ReleaseCliError, match=expected_code):
+        manager._deploy_app(state)
+
+    assert apps.compute_state == ("STOPPED" if stop_succeeds else "ACTIVE")
+
+
+def test_app_deploy_stops_after_direct_checkpoint_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    state = _state(stage="GRANTS_APPLIED")
+    updated = DirectStateIdentity(
+        lineage=cast(str, state.direct_state_lineage),
+        serial=cast(int, state.direct_state_serial) + 1,
+        sha256="c" * 64,
+    )
+
+    class Apps:
+        def __init__(self) -> None:
+            self.compute_state = "STOPPED"
+
+        def get(self, app_name: str) -> SimpleNamespace:
+            assert app_name == state.app_name
+            return SimpleNamespace(
+                as_dict=lambda: {"compute_status": {"state": self.compute_state}}
+            )
+
+        def stop(self, app_name: str) -> SimpleNamespace:
+            assert app_name == state.app_name
+            self.compute_state = "STOPPED"
+            return SimpleNamespace(result=lambda timeout: None)
+
+    apps = Apps()
+
+    class CheckpointFailureManager(ReleaseManager):
+        def __init__(self) -> None:
+            super().__init__(
+                root=tmp_path,
+                runner=_NoCommandRunner(),
+                input_stream=io.StringIO(),
+                output_stream=io.StringIO(),
+            )
+
+        def _deploy(
+            self,
+            state: InstallationState,
+            wheels: Mapping[str, str],
+            *,
+            select: str | None = None,
+        ) -> None:
+            del wheels, select
+            apps.compute_state = "ACTIVE"
+            self._direct_state_overrides[state.profile] = updated
+
+    manager = CheckpointFailureManager()
+    cast(dict[str, Any], manager._clients)[state.profile] = SimpleNamespace(apps=apps)
+
+    def fail_save(root: Path, saved: InstallationState) -> None:
+        del root, saved
+        raise ReleaseCliError("DBTOBSB_INSTALLER_STATE_WRITE_FAILED")
+
+    monkeypatch.setattr(release_cli_module, "_save_state", fail_save)
+
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_STATE_WRITE_FAILED"):
+        manager._deploy_app(state)
+
+    assert apps.compute_state == "STOPPED"
+
+
 def test_app_deploy_uses_one_apply_one_deployment_and_one_stopped_acl_update(
     tmp_path: Path,
 ) -> None:
