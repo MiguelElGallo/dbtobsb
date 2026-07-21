@@ -15,6 +15,8 @@ import pytest
 from databricks.sdk.errors import NotFound
 from dbtobsb_contracts import load_support_manifest
 
+import dbtobsb_installer.release_cli as release_cli_module
+from dbtobsb_installer.onboarding import DbtOnboardingPlan, DbtOnboardingPreview
 from dbtobsb_installer.release_cli import (
     BootstrapPreflight,
     InstallationState,
@@ -116,6 +118,9 @@ class _LifecycleManager(ReleaseManager):
 
     def _release_source_commit(self) -> str:
         return _COMMIT
+
+    def _reject_terraform_state(self, state: InstallationState) -> None:
+        del state
 
     def _update_product_grants(self, state: InstallationState, *, add: bool) -> None:
         del state
@@ -519,6 +524,13 @@ def _preflight(*, warehouse_state: str = "STOPPED") -> BootstrapPreflight:
                 "warehouse_cluster_size": "2X-Small",
                 "warehouse_state": warehouse_state,
             },
+            "customer_state": {
+                "catalog_direct_grants": {"privilege_assignments": []},
+                "existing_evidence_objects": [],
+                "existing_product_jobs": [],
+                "schema_direct_grants": {"privilege_assignments": []},
+                "bundle_state": "TERRAFORM_AND_DIRECT_ABSENT_FRESH",
+            },
             "finish": {
                 "app": "STOPPED",
                 "jobs": "TERMINAL",
@@ -542,7 +554,27 @@ def _preflight(*, warehouse_state: str = "STOPPED") -> BootstrapPreflight:
             },
             "project": {
                 "commands": ["dbt build --selector qualification"],
+                "expected_runtime_policy_sha256": _DIGEST,
+                "file_count": 4,
+                "include_deps": False,
+                "job_patch_sha256": _DIGEST,
+                "job_patch_relative_path": "dbtobsb_onboarding/job.yml",
+                "policy_contract_version": "dbtobsb.dbt-runtime-policy.v1",
+                "policy_relative_path": "dbtobsb_onboarding/policy.json",
+                "policy_sha256": _DIGEST,
+                "profiles_relative_path": "dbtobsb_onboarding/project/profiles.yml",
+                "project_relative_path": "dbtobsb_onboarding/project",
+                "relative_path": "customer_weather",
+                "receipt_relative_path": "dbtobsb_onboarding/receipt.json",
                 "selector": "qualification",
+                "source_contract_sha256": _DIGEST,
+                "support_contract_sha256": _DIGEST,
+            },
+            "release": {
+                "databricks_cli_sha256": _DIGEST,
+                "release_source_commit": _COMMIT,
+                "support_contract_sha256": _DIGEST,
+                "version": "0.4.0",
             },
         }
     )
@@ -581,6 +613,9 @@ def test_exact_preview_is_digest_bound_and_denial_has_zero_mutation(tmp_path: Pa
         "App end-user ACL:",
         "dbt selector: qualification",
         "Fixed dbt commands:",
+        "Project contract:",
+        "Release identity:",
+        "Fresh-state readback:",
         "Serverless cost scope:",
         "size 2X-Small",
         "may auto-start the bound warehouse",
@@ -690,14 +725,7 @@ def _direct_state_raw(*, extra_resource: str | None = None) -> bytes:
     )
 
 
-def test_resume_requires_identical_local_remote_direct_state_and_bound_identity(
-    tmp_path: Path,
-) -> None:
-    raw = _direct_state_raw()
-    path = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
-    path.parent.mkdir(parents=True)
-    path.write_bytes(raw)
-
+def _workspace_with_direct_state(raw: bytes) -> SimpleNamespace:
     class Workspace:
         def get_status(self, remote_path: str) -> SimpleNamespace:
             if remote_path.endswith("terraform.tfstate"):
@@ -708,21 +736,128 @@ def test_resume_requires_identical_local_remote_direct_state_and_bound_identity(
             assert remote_path.endswith("state/resources.json")
             return SimpleNamespace(content=base64.b64encode(raw).decode())
 
+    return SimpleNamespace(workspace=Workspace())
+
+
+def test_resume_requires_identical_local_remote_direct_state_and_bound_identity(
+    tmp_path: Path,
+) -> None:
+    raw = _direct_state_raw()
+    path = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(raw)
+
     manager = _LifecycleManager(tmp_path)
-    cast(dict[str, Any], manager._clients)["paid-azure-test"] = SimpleNamespace(
-        workspace=Workspace()
-    )
+    cast(dict[str, Any], manager._clients)["paid-azure-test"] = _workspace_with_direct_state(raw)
     state = replace(
         _state(stage="BASE_DEPLOYED"),
         direct_state_serial=7,
         direct_state_sha256=hashlib.sha256(raw).hexdigest(),
     )
 
-    manager._reject_terraform_state(state)
+    ReleaseManager._reject_terraform_state(manager, state)
 
     path.write_bytes(_direct_state_raw(extra_resource="resources.jobs.foreign"))
     with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_DIRECT_STATE_INVALID"):
-        manager._reject_terraform_state(state)
+        ReleaseManager._reject_terraform_state(manager, state)
+
+
+def test_bootstrap_verifies_direct_state_before_resumed_mutation_or_success(
+    tmp_path: Path,
+) -> None:
+    raw = _direct_state_raw()
+    path = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(raw)
+
+    class GuardedLifecycleManager(_LifecycleManager):
+        def _reject_terraform_state(self, state: InstallationState) -> None:
+            ReleaseManager._reject_terraform_state(self, state)
+
+    for stage in ("OBJECTS_BOOTSTRAPPED", "INSTALLED"):
+        state = replace(
+            _state(stage=stage),
+            direct_state_serial=7,
+            direct_state_sha256=hashlib.sha256(raw).hexdigest(),
+        )
+        _save_state(tmp_path, state)
+        manager = GuardedLifecycleManager(tmp_path)
+        cast(dict[str, Any], manager._clients)["paid-azure-test"] = _workspace_with_direct_state(
+            raw
+        )
+        manager.bootstrap()
+        if stage == "OBJECTS_BOOTSTRAPPED":
+            assert manager.events[0] == ("grants", True)
+        else:
+            assert manager.events == []
+            assert "dbtobsb_installation_verified" in cast(io.StringIO, manager.output).getvalue()
+
+    path.unlink()
+    _save_state(
+        tmp_path,
+        replace(
+            _state(stage="OBJECTS_BOOTSTRAPPED"),
+            direct_state_serial=7,
+            direct_state_sha256=hashlib.sha256(raw).hexdigest(),
+        ),
+    )
+    blocked = GuardedLifecycleManager(tmp_path)
+    cast(dict[str, Any], blocked._clients)["paid-azure-test"] = _workspace_with_direct_state(raw)
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_DIRECT_STATE_INVALID"):
+        blocked.bootstrap()
+    assert blocked.events == []
+
+    path.write_bytes(raw)
+    _save_state(
+        tmp_path,
+        replace(
+            _state(stage="INSTALLED"),
+            direct_state_serial=7,
+            direct_state_sha256="b" * 64,
+        ),
+    )
+    mismatched = GuardedLifecycleManager(tmp_path)
+    cast(dict[str, Any], mismatched._clients)["paid-azure-test"] = _workspace_with_direct_state(raw)
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_DIRECT_STATE_MISMATCH"):
+        mismatched.bootstrap()
+    assert "dbtobsb_installation_verified" not in cast(io.StringIO, mismatched.output).getvalue()
+
+    foreign = _direct_state_raw(extra_resource="resources.jobs.foreign")
+    path.write_bytes(foreign)
+    _save_state(
+        tmp_path,
+        replace(
+            _state(stage="INSTALLED"),
+            direct_state_serial=7,
+            direct_state_sha256=hashlib.sha256(foreign).hexdigest(),
+        ),
+    )
+    unexpected = GuardedLifecycleManager(tmp_path)
+    cast(dict[str, Any], unexpected._clients)["paid-azure-test"] = _workspace_with_direct_state(
+        foreign
+    )
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_DIRECT_STATE_INVALID"):
+        unexpected.bootstrap()
+
+
+def test_direct_state_changed_bytes_require_higher_serial(tmp_path: Path) -> None:
+    original = _direct_state_raw()
+    changed = original.rstrip() + b" \n"
+    path = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(changed)
+    manager = _LifecycleManager(tmp_path)
+    cast(dict[str, Any], manager._clients)["paid-azure-test"] = _workspace_with_direct_state(
+        changed
+    )
+    state = replace(
+        _state(stage="BASE_DEPLOYED"),
+        direct_state_serial=7,
+        direct_state_sha256=hashlib.sha256(original).hexdigest(),
+    )
+
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_DIRECT_STATE_MISMATCH"):
+        ReleaseManager._capture_direct_state(manager, state, allow_temporary=False)
 
 
 def test_app_deployment_match_requires_exact_snapshot_source_and_environment() -> None:
@@ -747,6 +882,90 @@ def test_app_deployment_match_requires_exact_snapshot_source_and_environment() -
         changed = dict(deployment)
         changed[field] = value
         assert not ReleaseManager._app_deployment_matches(changed)
+
+
+def _app_deployment(deployment_id: str, *, state: str = "SUCCEEDED") -> dict[str, Any]:
+    return {
+        "deployment_id": deployment_id,
+        "mode": "SNAPSHOT",
+        "source_code_path": "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/files/app",
+        "env_vars": [
+            {"name": "DBTOBSB_WAREHOUSE_ID"},
+            {"name": "DBTOBSB_RUN_HEALTH_VIEW"},
+            {"name": "DBTOBSB_NODE_HEALTH_VIEW"},
+            {"name": "DBTOBSB_COLLECTION_HEALTH_VIEW"},
+        ],
+        "status": {"state": state},
+    }
+
+
+def test_final_app_deployment_inventory_is_exact() -> None:
+    manager = _LifecycleManager(Path.cwd())
+    baseline = _app_deployment("baseline")
+    final = _app_deployment("final")
+
+    assert manager._final_deployment_baseline([baseline], "baseline") == {"baseline"}
+    assert manager._new_final_deployment([baseline], {"baseline"}) is None
+    assert manager._new_final_deployment([baseline, final], {"baseline"}) == final
+
+    for invalid in (
+        [baseline, _app_deployment("extra")],
+        [_app_deployment("baseline", state="IN_PROGRESS")],
+        [{**baseline, "mode": "AUTO_SYNC"}],
+    ):
+        with pytest.raises(
+            ReleaseCliError, match="DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED"
+        ):
+            manager._final_deployment_baseline(invalid, "baseline")
+
+    for invalid in (
+        [final],
+        [baseline, final, _app_deployment("extra")],
+        [baseline, {**final, "source_code_path": "/Workspace/foreign"}],
+    ):
+        with pytest.raises(
+            ReleaseCliError, match="DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED"
+        ):
+            manager._new_final_deployment(invalid, {"baseline"})
+
+
+def test_onboarding_output_must_match_every_approved_project_field(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manager = _LifecycleManager(tmp_path)
+    state = replace(_state(stage="CONFIGURED"), source_project_relative_path="project")
+    preview = DbtOnboardingPreview(
+        commands=("dbt build --selector qualification",),
+        include_deps=False,
+        selector="qualification",
+    )
+    plan = DbtOnboardingPlan(
+        expected_runtime_policy_sha256=_DIGEST,
+        file_count=4,
+        include_deps=False,
+        job_patch_sha256=_DIGEST,
+        job_patch_relative_path="dbtobsb_onboarding/job.yml",
+        policy_contract_version="dbtobsb.dbt-runtime-policy.v1",
+        policy_relative_path="dbtobsb_onboarding/policy.json",
+        policy_sha256=_DIGEST,
+        profiles_relative_path="dbtobsb_onboarding/project/profiles.yml",
+        project_relative_path="dbtobsb_onboarding/project",
+        receipt_relative_path="dbtobsb_onboarding/receipt.json",
+        source_contract_sha256=_DIGEST,
+        support_contract_sha256=load_support_manifest().canonical_sha256,
+    )
+    approved = manager._project_preflight_document(state, preview, plan)
+    monkeypatch.setattr(release_cli_module, "preview_onboarding_project", lambda path: preview)
+    monkeypatch.setattr(release_cli_module, "build_onboarding_plan", lambda inputs: plan)
+
+    onboarded = manager._onboard(state, approved_project=approved)
+    assert onboarded.stage == "ONBOARDED"
+
+    changed_plan = replace(plan, job_patch_sha256="b" * 64)
+    monkeypatch.setattr(release_cli_module, "build_onboarding_plan", lambda inputs: changed_plan)
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_ONBOARDING_APPROVAL_MISMATCH"):
+        manager._onboard(state, approved_project=approved)
 
 
 def test_bootstrap_resumes_after_final_deploy_without_repeating_completed_stages(

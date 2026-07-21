@@ -51,6 +51,8 @@ from dbtobsb_installer.app_bindings import (
 )
 from dbtobsb_installer.auth import InstallerConnectionInputs, validate_connection
 from dbtobsb_installer.onboarding import (
+    DbtOnboardingPlan,
+    DbtOnboardingPreview,
     OnboardingInputs,
     build_onboarding_plan,
     preview_onboarding_project,
@@ -729,6 +731,31 @@ class ReleaseManager:
             code="DBTOBSB_INSTALLER_REMOTE_RESPONSE_INVALID",
         )
 
+    @staticmethod
+    def _project_preflight_document(
+        state: InstallationState,
+        preview: DbtOnboardingPreview,
+        plan: DbtOnboardingPlan,
+    ) -> dict[str, Any]:
+        return {
+            "commands": list(preview.commands),
+            "expected_runtime_policy_sha256": plan.expected_runtime_policy_sha256,
+            "file_count": plan.file_count,
+            "include_deps": plan.include_deps,
+            "job_patch_sha256": plan.job_patch_sha256,
+            "job_patch_relative_path": plan.job_patch_relative_path,
+            "policy_contract_version": plan.policy_contract_version,
+            "policy_relative_path": plan.policy_relative_path,
+            "policy_sha256": plan.policy_sha256,
+            "profiles_relative_path": plan.profiles_relative_path,
+            "project_relative_path": plan.project_relative_path,
+            "relative_path": state.source_project_relative_path,
+            "receipt_relative_path": plan.receipt_relative_path,
+            "selector": preview.selector,
+            "source_contract_sha256": plan.source_contract_sha256,
+            "support_contract_sha256": plan.support_contract_sha256,
+        }
+
     def _release_source_commit(self) -> str:
         try:
             dirty = self.runner.run(
@@ -1232,7 +1259,7 @@ class ReleaseManager:
                 "existing_product_jobs": [],
                 "catalog_direct_grants": _plain_json(catalog_grants),
                 "schema_direct_grants": _plain_json(schema_grants),
-                "terraform": "ABSENT_DIRECT_FRESH",
+                "bundle_state": "TERRAFORM_AND_DIRECT_ABSENT_FRESH",
             },
             "finish": {
                 "app": "STOPPED",
@@ -1256,15 +1283,11 @@ class ReleaseManager:
                     "observed": "CAN_READ",
                 },
             },
-            "project": {
-                "commands": list(project_preview.commands),
-                "expected_runtime_policy_sha256": (onboarding_plan.expected_runtime_policy_sha256),
-                "include_deps": project_preview.include_deps,
-                "job_patch_sha256": onboarding_plan.job_patch_sha256,
-                "relative_path": state.source_project_relative_path,
-                "selector": project_preview.selector,
-                "source_contract_sha256": onboarding_plan.source_contract_sha256,
-            },
+            "project": self._project_preflight_document(
+                state,
+                project_preview,
+                onboarding_plan,
+            ),
             "release": {
                 "databricks_cli_sha256": state.databricks_cli_sha256,
                 "release_source_commit": state.release_source_commit,
@@ -1287,9 +1310,15 @@ class ReleaseManager:
         compute = cast(Mapping[str, Any], document["compute"])
         finish = cast(Mapping[str, Any], document["finish"])
         project = cast(Mapping[str, Any], document["project"])
+        release = cast(Mapping[str, Any], document["release"])
+        customer_state = cast(Mapping[str, Any], document["customer_state"])
         print("\nInstallation preview", file=self.output)
         print(f"  Preview SHA-256: {preflight.sha256}", file=self.output)
         print("  Release: dbtobsb v0.4.0 fresh installation only", file=self.output)
+        print(
+            f"  Release identity: {json.dumps(release, separators=(',', ':'))}",
+            file=self.output,
+        )
         print(f"  Named OAuth profile: {authority['named_oauth_profile']}", file=self.output)
         print(f"  Workspace: {state.host}", file=self.output)
         print(
@@ -1338,6 +1367,14 @@ class ReleaseManager:
             file=self.output,
         )
         print(
+            f"  Project contract: {json.dumps(project, separators=(',', ':'))}",
+            file=self.output,
+        )
+        print(
+            f"  Fresh-state readback: {json.dumps(customer_state, separators=(',', ':'))}",
+            file=self.output,
+        )
+        print(
             "  Serverless cost scope: "
             f"{json.dumps(compute['approved_operations'], separators=(',', ':'))}",
             file=self.output,
@@ -1359,7 +1396,8 @@ class ReleaseManager:
         )
         print(f"  Finish state: {json.dumps(finish, separators=(',', ':'))}", file=self.output)
         print(
-            "  Unsupported state: any prior App, product Job, object, or Terraform state.",
+            "  Unsupported state: any prior App, product Job, object, Terraform state, "
+            "or Direct Bundle state.",
             file=self.output,
         )
         print("Type APPROVE to continue: ", end="", flush=True, file=self.output)
@@ -1368,7 +1406,12 @@ class ReleaseManager:
         if self._bootstrap_preflight(state).sha256 != preflight.sha256:
             raise ReleaseCliError("DBTOBSB_INSTALLER_PREFLIGHT_CHANGED")
 
-    def _onboard(self, state: InstallationState) -> InstallationState:
+    def _onboard(
+        self,
+        state: InstallationState,
+        *,
+        approved_project: Mapping[str, Any],
+    ) -> InstallationState:
         try:
             connection = validate_connection(
                 InstallerConnectionInputs(
@@ -1393,8 +1436,11 @@ class ReleaseManager:
                     target=target,
                 )
             )
+            preview = preview_onboarding_project(self.root / state.source_project_relative_path)
         except Exception:
             raise ReleaseCliError("DBTOBSB_INSTALLER_ONBOARDING_FAILED") from None
+        if self._project_preflight_document(state, preview, plan) != approved_project:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_ONBOARDING_APPROVAL_MISMATCH")
         return replace(
             state,
             stage="ONBOARDED",
@@ -1577,10 +1623,16 @@ class ReleaseManager:
                 serial=cast(int, state.direct_state_serial),
                 sha256=cast(str, state.direct_state_sha256),
             )
-        if previous is not None and (
-            actual.lineage != previous.lineage or actual.serial < previous.serial
-        ):
-            raise ReleaseCliError("DBTOBSB_INSTALLER_DIRECT_STATE_MISMATCH")
+        if previous is not None:
+            changed_bytes_at_same_serial = (
+                actual.serial == previous.serial and actual.sha256 != previous.sha256
+            )
+            if (
+                actual.lineage != previous.lineage
+                or actual.serial < previous.serial
+                or changed_bytes_at_same_serial
+            ):
+                raise ReleaseCliError("DBTOBSB_INSTALLER_DIRECT_STATE_MISMATCH")
         self._direct_state_overrides[state.profile] = actual
         return actual
 
@@ -2123,6 +2175,48 @@ class ReleaseManager:
             == _APP_ENVIRONMENT_NAMES
         )
 
+    @staticmethod
+    def _deployment_ids(deployments: Sequence[Mapping[str, Any]]) -> set[str]:
+        identifiers = {item.get("deployment_id") for item in deployments}
+        if (
+            None in identifiers
+            or any(not isinstance(item, str) for item in identifiers)
+            or len(identifiers) != len(deployments)
+        ):
+            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
+        return cast(set[str], identifiers)
+
+    def _final_deployment_baseline(
+        self,
+        deployments: Sequence[Mapping[str, Any]],
+        accepted_id: str,
+    ) -> set[str]:
+        identifiers = self._deployment_ids(deployments)
+        if len(deployments) != 1 or identifiers != {accepted_id}:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
+        deployment = deployments[0]
+        status = deployment.get("status")
+        if (
+            not self._app_deployment_matches(deployment)
+            or not isinstance(status, dict)
+            or status.get("state") != "SUCCEEDED"
+        ):
+            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
+        return identifiers
+
+    def _new_final_deployment(
+        self,
+        deployments: Sequence[Mapping[str, Any]],
+        baseline_ids: set[str],
+    ) -> Mapping[str, Any] | None:
+        identifiers = self._deployment_ids(deployments)
+        if not baseline_ids.issubset(identifiers):
+            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
+        new = [item for item in deployments if item.get("deployment_id") not in baseline_ids]
+        if len(new) > 1 or (new and not self._app_deployment_matches(new[0])):
+            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
+        return new[0] if new else None
+
     def _deploy_app(self, state: InstallationState) -> None:
         if state.final_wheels is None:
             raise ReleaseCliError("DBTOBSB_INSTALLER_STATE_INCOMPLETE")
@@ -2227,9 +2321,10 @@ class ReleaseManager:
         )
         self._deploy(state, state.final_wheels, select=f"apps.{_APP_KEY}")
         final_before = self._list_deployments(state)
-        final_before_ids = {item.get("deployment_id") for item in final_before}
-        if None in final_before_ids or len(final_before_ids) != len(final_before):
+        accepted_id = deployment.get("deployment_id")
+        if not isinstance(accepted_id, str):
             raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
+        final_before_ids = self._final_deployment_baseline(final_before, accepted_id)
         # A lost CLI response is resolved only by the independent deployment readback below.
         with suppress(ReleaseCliError):
             self.runner.run(
@@ -2246,23 +2341,24 @@ class ReleaseManager:
                 timeout_seconds=1200,
             )
         final_deployment: Mapping[str, Any] | None = None
+        final_after: list[Mapping[str, Any]] = []
         final_deadline = time.monotonic() + 1200
         while time.monotonic() < final_deadline:
             final_after = self._list_deployments(state)
-            final_new = [
-                item for item in final_after if item.get("deployment_id") not in final_before_ids
-            ]
-            configured_final = [item for item in final_new if configured(item)]
-            if len(final_new) > 1 or (final_new and len(configured_final) != 1):
-                raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
-            if len(configured_final) == 1:
-                final_deployment = configured_final[0]
+            discovered = self._new_final_deployment(final_after, final_before_ids)
+            if discovered is not None:
+                final_deployment = discovered
                 final_status = final_deployment.get("status")
                 final_state = final_status.get("state") if isinstance(final_status, dict) else None
                 if final_state in {"SUCCEEDED", "FAILED", "CANCELLED"}:
                     break
             time.sleep(2)
         if final_deployment is None:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
+        final_id = final_deployment.get("deployment_id")
+        if not isinstance(final_id, str) or self._deployment_ids(
+            final_after
+        ) != final_before_ids | {final_id}:
             raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
         final_status = final_deployment.get("status")
         final_env_names = {
@@ -2324,13 +2420,15 @@ class ReleaseManager:
             self._verify_state_release(state)
         if state is not None and state.uninstall_stage is not None:
             raise ReleaseCliError("DBTOBSB_UNINSTALL_RESUME_REQUIRED")
+        if state is not None:
+            self._reject_terraform_state(state)
         if state is None:
             state = self._discover()
+        if not _stage_at_least(state, "ONBOARDED"):
             preflight = self._bootstrap_preflight(state)
             self._approve_bootstrap(state, preflight)
-            _save_state(self.root, state)
-        if not _stage_at_least(state, "ONBOARDED"):
-            state = self._onboard(state)
+            project = cast(Mapping[str, Any], preflight.document()["project"])
+            state = self._onboard(state, approved_project=project)
             _save_state(self.root, state)
         if not _stage_at_least(state, "BASE_DEPLOYED"):
             write_stage_app_overlay()
@@ -2461,6 +2559,12 @@ class ReleaseManager:
         self._verify_state_release(state)
         if state.uninstall_stage is not None and not allow_uninstall:
             raise ReleaseCliError("DBTOBSB_UNINSTALL_RESUME_REQUIRED")
+        if not (
+            allow_uninstall
+            and state.uninstall_stage is not None
+            and _uninstall_stage_at_least(state, "BUNDLE_DESTROYED")
+        ):
+            self._reject_terraform_state(state)
         return state
 
     def start(self) -> None:
