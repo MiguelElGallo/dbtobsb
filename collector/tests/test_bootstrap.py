@@ -272,6 +272,17 @@ class _Spark:
         return _Table(_Schema([_Field(column, _DataType(kind)) for column, kind in fields]))
 
 
+@dataclass
+class _FailingSpark(_Spark):
+    fail_fragment: str = ""
+    native_error: str = "SENSITIVE_NATIVE_PLATFORM_ERROR"
+
+    def sql(self, query: str) -> _Frame:
+        if self.fail_fragment in query:
+            raise RuntimeError(self.native_error)
+        return super().sql(query)
+
+
 def _install_exact(spark: _Spark | None = None) -> _Spark:
     installed = spark or _Spark()
     bootstrap_objects(
@@ -340,6 +351,48 @@ def test_fresh_bootstrap_creates_only_fixed_attested_objects() -> None:
     assert spark.manifest_rows == [
         _manifest_row(catalog="catalog-with-hyphen", schema="observability")
     ]
+
+
+@pytest.mark.parametrize(
+    ("failure_fragment", "expected_code"),
+    [
+        (
+            "SELECT session_user() AS session_user",
+            "DBTOBSB_BOOTSTRAP_SESSION_USER_READ_FAILED",
+        ),
+        (
+            "SELECT schema_name, schema_owner",
+            "DBTOBSB_BOOTSTRAP_SCHEMA_METADATA_READ_FAILED",
+        ),
+        (
+            "SELECT table_name, table_type",
+            "DBTOBSB_BOOTSTRAP_RELATION_INVENTORY_READ_FAILED",
+        ),
+        (
+            "SELECT volume_name, volume_type",
+            "DBTOBSB_BOOTSTRAP_VOLUME_INVENTORY_READ_FAILED",
+        ),
+        (f"CREATE TABLE `c`.`s`.`{REGISTRY_TABLE}`", "DBTOBSB_BOOTSTRAP_TABLE_CREATE_FAILED"),
+        (f"CREATE VOLUME `c`.`s`.`{RAW_VOLUME_NAME}`", "DBTOBSB_BOOTSTRAP_VOLUME_CREATE_FAILED"),
+        (f"CREATE VIEW `c`.`s`.`{RUN_HEALTH_VIEW}`", "DBTOBSB_BOOTSTRAP_VIEW_CREATE_FAILED"),
+        (
+            f"CREATE TABLE `c`.`s`.`{MANIFEST_TABLE}`",
+            "DBTOBSB_BOOTSTRAP_MANIFEST_CREATE_FAILED",
+        ),
+        (f"INSERT INTO `c`.`s`.`{MANIFEST_TABLE}`", "DBTOBSB_BOOTSTRAP_MANIFEST_WRITE_FAILED"),
+    ],
+)
+def test_bootstrap_sql_boundaries_report_only_safe_stage_codes(
+    failure_fragment: str,
+    expected_code: str,
+) -> None:
+    spark = _FailingSpark(fail_fragment=failure_fragment)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        bootstrap_objects(spark, catalog="c", schema="s", binding=_BINDING)
+
+    assert str(exc_info.value) == expected_code
+    assert spark.native_error not in str(exc_info.value)
 
 
 def test_exact_v1_rerun_is_idempotent_and_ddl_free() -> None:

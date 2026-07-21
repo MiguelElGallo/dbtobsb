@@ -529,8 +529,38 @@ def _mapping_rows(frame: Any) -> list[dict[str, Any]]:
     return [_row_mapping(row) for row in _collect_rows(frame)]
 
 
+def _mapping_sql_rows(
+    spark: SparkBootstrapSession,
+    statement: str,
+    *,
+    failure_code: str,
+) -> list[dict[str, Any]]:
+    """Run one fixed metadata query without exposing native exception text."""
+    try:
+        return _mapping_rows(spark.sql(statement))
+    except Exception:
+        raise RuntimeError(failure_code) from None
+
+
+def _execute_sql(
+    spark: SparkBootstrapSession,
+    statement: str,
+    *,
+    failure_code: str,
+) -> None:
+    """Run one fixed bootstrap mutation with a stage-only failure boundary."""
+    try:
+        spark.sql(statement)
+    except Exception:
+        raise RuntimeError(failure_code) from None
+
+
 def _session_user(spark: SparkBootstrapSession) -> str:
-    rows = _mapping_rows(spark.sql("SELECT session_user() AS session_user"))
+    rows = _mapping_sql_rows(
+        spark,
+        "SELECT session_user() AS session_user",
+        failure_code="DBTOBSB_BOOTSTRAP_SESSION_USER_READ_FAILED",
+    )
     if len(rows) != 1 or set(rows[0]) != {"session_user"}:
         raise RuntimeError("DBTOBSB_BOOTSTRAP_NATIVE_METADATA_UNAVAILABLE")
     actor = rows[0]["session_user"]
@@ -540,12 +570,12 @@ def _session_user(spark: SparkBootstrapSession) -> str:
 
 
 def _schema_owner(spark: SparkBootstrapSession, *, catalog: str, schema: str) -> str:
-    rows = _mapping_rows(
-        spark.sql(
-            f"""SELECT schema_name, schema_owner
+    rows = _mapping_sql_rows(
+        spark,
+        f"""SELECT schema_name, schema_owner
 FROM {qualify(catalog, "information_schema", "schemata")}
-WHERE lower(schema_name) = lower({_sql_literal(schema)})"""
-        )
+WHERE lower(schema_name) = lower({_sql_literal(schema)})""",
+        failure_code="DBTOBSB_BOOTSTRAP_SCHEMA_METADATA_READ_FAILED",
     )
     if len(rows) != 1 or str(rows[0].get("schema_name", "")).casefold() != schema.casefold():
         raise RuntimeError("DBTOBSB_BOOTSTRAP_TARGET_SCHEMA_NOT_FOUND")
@@ -558,12 +588,12 @@ WHERE lower(schema_name) = lower({_sql_literal(schema)})"""
 def _inventory(
     spark: SparkBootstrapSession, *, catalog: str, schema: str
 ) -> tuple[frozenset[str], dict[str, dict[str, Any]]]:
-    relation_rows = _mapping_rows(
-        spark.sql(
-            f"""SELECT table_name, table_type
+    relation_rows = _mapping_sql_rows(
+        spark,
+        f"""SELECT table_name, table_type
 FROM {qualify(catalog, "information_schema", "tables")}
-WHERE lower(table_schema) = lower({_sql_literal(schema)})"""
-        )
+WHERE lower(table_schema) = lower({_sql_literal(schema)})""",
+        failure_code="DBTOBSB_BOOTSTRAP_RELATION_INVENTORY_READ_FAILED",
     )
     relation_names: set[str] = set()
     for row in relation_rows:
@@ -576,12 +606,12 @@ WHERE lower(table_schema) = lower({_sql_literal(schema)})"""
             raise RuntimeError("DBTOBSB_BOOTSTRAP_NATIVE_METADATA_UNAVAILABLE")
         relation_names.add(name.casefold())
 
-    volume_rows = _mapping_rows(
-        spark.sql(
-            f"""SELECT volume_name, volume_type, volume_owner, comment
+    volume_rows = _mapping_sql_rows(
+        spark,
+        f"""SELECT volume_name, volume_type, volume_owner, comment
 FROM {qualify(catalog, "information_schema", "volumes")}
-WHERE lower(volume_schema) = lower({_sql_literal(schema)})"""
-        )
+WHERE lower(volume_schema) = lower({_sql_literal(schema)})""",
+        failure_code="DBTOBSB_BOOTSTRAP_VOLUME_INVENTORY_READ_FAILED",
     )
     volumes: dict[str, dict[str, Any]] = {}
     for row in volume_rows:
@@ -949,55 +979,75 @@ def _create_fresh_objects(
 
     for spec in _TABLE_SPECS:
         name = qualify(catalog, schema, spec.name)
-        spark.sql(
+        _execute_sql(
+            spark,
             f"""CREATE TABLE {name} (
   {_column_sql(spec.fields)}
 ) USING DELTA
 TBLPROPERTIES (
   {_properties_sql(spec.name)}
-)"""
+)""",
+            failure_code="DBTOBSB_BOOTSTRAP_TABLE_CREATE_FAILED",
         )
-    spark.sql(f"CREATE VOLUME {volume} COMMENT {_sql_literal(_volume_comment())}")
-    spark.sql(
-        f"CREATE VOLUME {stage_volume} COMMENT {_sql_literal(_volume_comment('artifact_stage'))}"
+    _execute_sql(
+        spark,
+        f"CREATE VOLUME {volume} COMMENT {_sql_literal(_volume_comment())}",
+        failure_code="DBTOBSB_BOOTSTRAP_VOLUME_CREATE_FAILED",
     )
-    spark.sql(
+    _execute_sql(
+        spark,
+        f"CREATE VOLUME {stage_volume} COMMENT {_sql_literal(_volume_comment('artifact_stage'))}",
+        failure_code="DBTOBSB_BOOTSTRAP_VOLUME_CREATE_FAILED",
+    )
+    _execute_sql(
+        spark,
         f"""CREATE VIEW {run_view}
 TBLPROPERTIES (
   {_properties_sql(RUN_HEALTH_VIEW)}
 )
 AS
-{_run_view_query(registry, invocations)}"""
+{_run_view_query(registry, invocations)}""",
+        failure_code="DBTOBSB_BOOTSTRAP_VIEW_CREATE_FAILED",
     )
-    spark.sql(
+    _execute_sql(
+        spark,
         f"""CREATE VIEW {node_view}
 TBLPROPERTIES (
   {_properties_sql(NODE_HEALTH_VIEW)}
 )
 AS
-{_node_view_query(registry, nodes)}"""
+{_node_view_query(registry, nodes)}""",
+        failure_code="DBTOBSB_BOOTSTRAP_VIEW_CREATE_FAILED",
     )
-    spark.sql(
+    _execute_sql(
+        spark,
         f"""CREATE VIEW {collection_view}
 TBLPROPERTIES (
   {_properties_sql(COLLECTION_HEALTH_VIEW)}
 )
 AS
-{_collection_health_query(registry)}"""
+{_collection_health_query(registry)}""",
+        failure_code="DBTOBSB_BOOTSTRAP_VIEW_CREATE_FAILED",
     )
     manifest = qualify(catalog, schema, MANIFEST_TABLE)
-    spark.sql(
+    _execute_sql(
+        spark,
         f"""CREATE TABLE {manifest} (
   {_column_sql(MANIFEST_FIELDS)}
 ) USING DELTA
 TBLPROPERTIES (
   {_properties_sql("object_manifest")}
-)"""
+)""",
+        failure_code="DBTOBSB_BOOTSTRAP_MANIFEST_CREATE_FAILED",
     )
     expected = _expected_manifest_row(binding, catalog=catalog, schema=schema)
     columns = ", ".join(expected)
     values = ", ".join(_manifest_value_sql(value) for value in expected.values())
-    spark.sql(f"INSERT INTO {manifest} ({columns})\nVALUES ({values})")
+    _execute_sql(
+        spark,
+        f"INSERT INTO {manifest} ({columns})\nVALUES ({values})",
+        failure_code="DBTOBSB_BOOTSTRAP_MANIFEST_WRITE_FAILED",
+    )
 
 
 def bootstrap_objects(

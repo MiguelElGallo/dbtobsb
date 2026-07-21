@@ -55,8 +55,18 @@ _BOOTSTRAP_CODES = frozenset(
         "DBTOBSB_BOOTSTRAP_OBJECT_PROVIDER_MISMATCH",
         "DBTOBSB_BOOTSTRAP_OBJECT_SCHEMA_MISMATCH",
         "DBTOBSB_BOOTSTRAP_PARTIAL_INSTALL",
+        "DBTOBSB_BOOTSTRAP_MANIFEST_CREATE_FAILED",
+        "DBTOBSB_BOOTSTRAP_MANIFEST_WRITE_FAILED",
+        "DBTOBSB_BOOTSTRAP_RELATION_INVENTORY_READ_FAILED",
+        "DBTOBSB_BOOTSTRAP_SCHEMA_METADATA_READ_FAILED",
+        "DBTOBSB_BOOTSTRAP_SESSION_USER_READ_FAILED",
+        "DBTOBSB_BOOTSTRAP_SPARK_SESSION_UNAVAILABLE",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_FAILED",
         "DBTOBSB_BOOTSTRAP_TARGET_SCHEMA_NOT_FOUND",
         "DBTOBSB_BOOTSTRAP_UNSUPPORTED_SCHEMA_STATE",
+        "DBTOBSB_BOOTSTRAP_VIEW_CREATE_FAILED",
+        "DBTOBSB_BOOTSTRAP_VOLUME_CREATE_FAILED",
+        "DBTOBSB_BOOTSTRAP_VOLUME_INVENTORY_READ_FAILED",
         "DBTOBSB_BOOTSTRAP_VIEW_DEFINITION_MISMATCH",
         "DBTOBSB_BOOTSTRAP_WAREHOUSE_BINDING_INVALID",
         "DBTOBSB_BOOTSTRAP_WORKSPACE_BINDING_INVALID",
@@ -192,6 +202,26 @@ def bootstrap_operator_diagnostic(error: Exception) -> OperatorDiagnostic:
     elif code == "DBTOBSB_BOOTSTRAP_NATIVE_METADATA_UNAVAILABLE":
         component = "Databricks metadata compatibility"
         action = "Run the documented bootstrap compatibility reconciliation workflow."
+    elif code == "DBTOBSB_BOOTSTRAP_SPARK_SESSION_UNAVAILABLE":
+        component = "serverless Spark session"
+        action = "Run the documented bootstrap compatibility reconciliation workflow."
+    elif code in {
+        "DBTOBSB_BOOTSTRAP_RELATION_INVENTORY_READ_FAILED",
+        "DBTOBSB_BOOTSTRAP_SCHEMA_METADATA_READ_FAILED",
+        "DBTOBSB_BOOTSTRAP_SESSION_USER_READ_FAILED",
+        "DBTOBSB_BOOTSTRAP_VOLUME_INVENTORY_READ_FAILED",
+    }:
+        component = "serverless bootstrap metadata"
+        action = "Run the documented bootstrap compatibility reconciliation workflow."
+    elif code in {
+        "DBTOBSB_BOOTSTRAP_MANIFEST_CREATE_FAILED",
+        "DBTOBSB_BOOTSTRAP_MANIFEST_WRITE_FAILED",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_FAILED",
+        "DBTOBSB_BOOTSTRAP_VIEW_CREATE_FAILED",
+        "DBTOBSB_BOOTSTRAP_VOLUME_CREATE_FAILED",
+    }:
+        component = "fresh-install object creation"
+        action = "Run the documented evidence-object reconciliation workflow."
     elif code in {
         "DBTOBSB_BOOTSTRAP_DBT_POLICY_BINDING_INVALID",
         "DBTOBSB_BOOTSTRAP_JOB_BINDING_INVALID",
@@ -251,6 +281,14 @@ def _active_spark() -> Any:
     return session
 
 
+def _active_bootstrap_spark() -> Any:
+    """Start Spark behind a bootstrap-specific, non-sensitive failure code."""
+    try:
+        return _active_spark()
+    except Exception:
+        raise RuntimeError("DBTOBSB_BOOTSTRAP_SPARK_SESSION_UNAVAILABLE") from None
+
+
 def _positive_integer(value: str, *, field: str, allow_zero: bool = False) -> int:
     try:
         parsed = int(value)
@@ -297,7 +335,7 @@ def _run_bootstrap(
     ):
         raise RuntimeError("DBTOBSB_DEPLOYMENT_BINDING_INVALID")
     result = bootstrap_objects(
-        _active_spark(),
+        _active_bootstrap_spark(),
         catalog=catalog,
         schema=schema,
         binding=InstallationBinding(
