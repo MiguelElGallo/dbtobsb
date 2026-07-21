@@ -2104,6 +2104,8 @@ class ReleaseManager:
         if not isinstance(document, dict):
             raise ValueError
         assignments = document.get("privilege_assignments")
+        if assignments is None:
+            return set()
         if not isinstance(assignments, list):
             raise ValueError
         result: set[str] = set()

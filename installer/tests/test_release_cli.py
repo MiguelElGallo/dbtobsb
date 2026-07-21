@@ -632,6 +632,16 @@ def test_product_grants_add_and_revoke_target_catalog_use(tmp_path: Path) -> Non
     assert grants.values[("catalog", "analytics", "observed-application-id")] == set()
 
 
+def test_absent_native_privilege_assignments_are_an_empty_direct_grant_set() -> None:
+    assert (
+        ReleaseManager._principal_privileges(
+            {"privilege_assignments": None}, "observed-application-id"
+        )
+        == set()
+    )
+    assert ReleaseManager._principal_privileges({}, "observed-application-id") == set()
+
+
 def _preflight(*, warehouse_state: str = "STOPPED") -> BootstrapPreflight:
     return BootstrapPreflight.from_document(
         {
