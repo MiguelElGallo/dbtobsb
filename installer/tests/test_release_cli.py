@@ -1357,9 +1357,20 @@ def test_app_deployment_match_requires_exact_snapshot_source_and_environment() -
         assert not ReleaseManager._app_deployment_matches(changed)
 
 
+@pytest.fixture
+def isolated_app_deploy_overlay(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        release_cli_module,
+        "write_bound_app_overlay",
+        lambda inputs: None,
+    )
+
+
 def test_app_deploy_checkpoints_direct_state_before_deployment_readback(
     tmp_path: Path,
+    isolated_app_deploy_overlay: None,
 ) -> None:
+    del isolated_app_deploy_overlay
     state = _state(stage="GRANTS_APPLIED")
     updated = DirectStateIdentity(
         lineage=cast(str, state.direct_state_lineage),
@@ -1432,7 +1443,9 @@ def test_app_deploy_stops_after_indeterminate_direct_apply(
     tmp_path: Path,
     stop_succeeds: bool,
     expected_code: str,
+    isolated_app_deploy_overlay: None,
 ) -> None:
+    del isolated_app_deploy_overlay
     state = _state(stage="GRANTS_APPLIED")
 
     class Apps:
@@ -1485,7 +1498,9 @@ def test_app_deploy_stops_after_indeterminate_direct_apply(
 def test_app_deploy_stops_after_direct_checkpoint_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    isolated_app_deploy_overlay: None,
 ) -> None:
+    del isolated_app_deploy_overlay
     state = _state(stage="GRANTS_APPLIED")
     updated = DirectStateIdentity(
         lineage=cast(str, state.direct_state_lineage),
@@ -1547,7 +1562,9 @@ def test_app_deploy_stops_after_direct_checkpoint_failure(
 
 def test_app_deploy_uses_one_apply_one_deployment_and_one_stopped_acl_update(
     tmp_path: Path,
+    isolated_app_deploy_overlay: None,
 ) -> None:
+    del isolated_app_deploy_overlay
     state = _state(stage="GRANTS_APPLIED")
     updated = DirectStateIdentity(
         lineage=cast(str, state.direct_state_lineage),
