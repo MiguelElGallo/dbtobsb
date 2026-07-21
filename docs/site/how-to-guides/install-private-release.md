@@ -128,12 +128,14 @@ The installer then:
 3. creates and verifies the nine fixed
    [Unity Catalog objects](../reference/evidence-data.md);
 4. applies the exact product permissions;
-5. starts and stops the read-only App during two bounded deployment checks; and
-6. leaves the App stopped.
+5. starts and stops the read-only App during one bounded deployment check;
+6. grants the approved viewer group while the App remains stopped; and
+7. leaves the App stopped.
 
-Serverless bootstrap Job compute and the two bounded App deployment checks can run
-for several minutes and incur usage. Bootstrap verifies that the App is stopped
-after each check and before success. It does not start the selected SQL warehouse.
+Serverless bootstrap Job compute and the bounded App deployment check can run for
+several minutes and incur usage. Bootstrap verifies that the App is stopped before
+the targeted viewer ACL is applied and again before success. It does not start the
+selected SQL warehouse.
 
 A successful installation ends with:
 

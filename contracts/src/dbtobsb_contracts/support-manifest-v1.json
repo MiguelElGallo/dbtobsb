@@ -345,6 +345,8 @@
   },
   "app": {
     "initial_state": "STOPPED",
+    "installation_deployment_checks": 1,
+    "end_user_acl_provisioner": "TARGETED_APPS_PERMISSION_API_WHILE_STOPPED",
     "start_command": "dbtobsb start",
     "stop_command": "dbtobsb stop",
     "landing_queries": false,

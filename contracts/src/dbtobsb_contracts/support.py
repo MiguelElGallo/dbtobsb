@@ -108,6 +108,8 @@ _OUTPUT_KEYS = {
 }
 _APP_KEYS = {
     "initial_state",
+    "installation_deployment_checks",
+    "end_user_acl_provisioner",
     "start_command",
     "stop_command",
     "landing_queries",
@@ -160,7 +162,7 @@ _PACKAGE_VERSIONS = {
     "dbt-protos": "1.0.541",
     "dbt-spark": "1.10.3",
 }
-_EXPECTED_CANONICAL_SHA256 = "f10b40c2dfdcbb2656edbf3b743ae5c0757daaae351e0b2f64d20619f41af38f"
+_EXPECTED_CANONICAL_SHA256 = "00cd8d3633474ad8b5e8a9153aa55a44f02e00fc90ef61fbab7a8f302474a5e2"
 
 
 def _mapping(value: Any, *, name: str, keys: set[str]) -> dict[str, Any]:
@@ -459,6 +461,8 @@ def parse_support_manifest(raw: bytes) -> SupportManifest:
         raise ValueError("DBTOBSB_SUPPORT_MANIFEST_ONBOARDING_INVALID")
     if app != {
         "initial_state": "STOPPED",
+        "installation_deployment_checks": 1,
+        "end_user_acl_provisioner": "TARGETED_APPS_PERMISSION_API_WHILE_STOPPED",
         "start_command": "dbtobsb start",
         "stop_command": "dbtobsb stop",
         "landing_queries": False,

@@ -27,6 +27,7 @@ import yaml
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.credentials_provider import CredentialsProvider, CredentialsStrategy
 from databricks.sdk.errors import NotFound
+from databricks.sdk.service.apps import AppAccessControlRequest, AppPermissionLevel
 from databricks.sdk.service.catalog import PermissionsChange, Privilege
 from databricks.sdk.service.iam import AccessControlRequest, PermissionLevel
 from databricks.sdk.service.jobs import CronSchedule, JobSettings, PauseStatus
@@ -46,7 +47,6 @@ from dbtobsb_contracts import load_support_manifest, parse_dbt_runtime_policy
 from dbtobsb_installer.app_bindings import (
     AppBindingInputs,
     write_bound_app_overlay,
-    write_final_app_overlay,
     write_stage_app_overlay,
 )
 from dbtobsb_installer.auth import InstallerConnectionInputs, validate_connection
@@ -1378,7 +1378,7 @@ class ReleaseManager:
             "compute": {
                 "approved_operations": [
                     "BOUNDED_SERVERLESS_BUNDLE_JOBS",
-                    "TWO_BOUNDED_APP_DEPLOYMENT_CHECKS",
+                    "ONE_BOUNDED_APP_DEPLOYMENT_CHECK",
                 ],
                 "warehouse_auto_stop_mins": warehouse.get("auto_stop_mins"),
                 "warehouse_cluster_size": warehouse.get("cluster_size"),
@@ -1513,7 +1513,8 @@ class ReleaseManager:
             file=self.output,
         )
         print(
-            "  App deployment checks: two bounded checks; final App state STOPPED.",
+            "  App deployment: one bounded check, followed by stopped ACL readback; "
+            "final App state STOPPED.",
             file=self.output,
         )
         print(
@@ -2375,38 +2376,78 @@ class ReleaseManager:
             raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
         return cast(set[str], identifiers)
 
-    def _final_deployment_baseline(
-        self,
-        deployments: Sequence[Mapping[str, Any]],
-        accepted_id: str,
-    ) -> set[str]:
-        identifiers = self._deployment_ids(deployments)
-        if len(deployments) != 1 or identifiers != {accepted_id}:
-            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
-        deployment = deployments[0]
-        status = deployment.get("status")
+    @staticmethod
+    def _direct_app_acl(permission_document: Mapping[str, Any]) -> set[tuple[str, str, str]]:
+        entries = permission_document.get("access_control_list")
+        direct_acl: set[tuple[str, str, str]] = set()
+        if not isinstance(entries, list):
+            return direct_acl
+        for item in entries:
+            if not isinstance(item, dict):
+                continue
+            group = item.get("group_name")
+            service_principal = item.get("service_principal_name")
+            user = item.get("user_name")
+            principals = [
+                (kind, principal)
+                for kind, principal in (
+                    ("group", group),
+                    ("service_principal", service_principal),
+                    ("user", user),
+                )
+                if isinstance(principal, str)
+            ]
+            if len(principals) != 1:
+                continue
+            principal_kind, principal = principals[0]
+            permissions = item.get("all_permissions")
+            if not isinstance(permissions, list):
+                continue
+            direct_acl.update(
+                (principal_kind, principal, permission["permission_level"])
+                for permission in permissions
+                if isinstance(permission, dict)
+                and permission.get("inherited") is False
+                and isinstance(permission.get("permission_level"), str)
+            )
+        return direct_acl
+
+    def _grant_app_user_access(self, state: InstallationState) -> None:
+        client = self._client(state.profile)
+        expected = {("group", state.app_user_group_name, "CAN_USE")}
+        try:
+            app_before = client.apps.get(state.app_name).as_dict()
+            permissions_before = client.apps.get_permissions(state.app_name).as_dict()
+            direct_before = self._direct_app_acl(permissions_before)
+            if (
+                app_before.get("compute_status", {}).get("state") != "STOPPED"
+                or not self._app_resources_match(state, app_before.get("resources"))
+                or direct_before - expected
+            ):
+                raise ValueError
+            if direct_before != expected:
+                with suppress(Exception):
+                    client.apps.update_permissions(
+                        state.app_name,
+                        access_control_list=[
+                            AppAccessControlRequest(
+                                group_name=state.app_user_group_name,
+                                permission_level=AppPermissionLevel.CAN_USE,
+                            )
+                        ],
+                    )
+            app_after = client.apps.get(state.app_name).as_dict()
+            permissions_after = client.apps.get_permissions(state.app_name).as_dict()
+        except Exception:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_PERMISSION_FAILED") from None
         if (
-            not self._app_deployment_matches(deployment)
-            or not isinstance(status, dict)
-            or status.get("state") != "SUCCEEDED"
+            app_after.get("compute_status", {}).get("state") != "STOPPED"
+            or not self._app_resources_match(state, app_after.get("resources"))
+            or self._direct_app_acl(permissions_after) != expected
         ):
-            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
-        return identifiers
+            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_PERMISSION_FAILED")
 
-    def _new_final_deployment(
-        self,
-        deployments: Sequence[Mapping[str, Any]],
-        baseline_ids: set[str],
-    ) -> Mapping[str, Any] | None:
-        identifiers = self._deployment_ids(deployments)
-        if not baseline_ids.issubset(identifiers):
-            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
-        new = [item for item in deployments if item.get("deployment_id") not in baseline_ids]
-        if len(new) > 1 or (new and not self._app_deployment_matches(new[0])):
-            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
-        return new[0] if new else None
-
-    def _deploy_app(self, state: InstallationState) -> None:
+    def _deploy_app(self, state: InstallationState) -> InstallationState:
         if state.final_wheels is None:
             raise ReleaseCliError("DBTOBSB_INSTALLER_STATE_INCOMPLETE")
         write_bound_app_overlay(
@@ -2418,6 +2459,8 @@ class ReleaseManager:
             )
         )
         self._deploy(state, state.final_wheels)
+        state = self._with_direct_state(state)
+        _save_state(self.root, state)
         before = self._list_deployments(state)
 
         def configured(deployment: Mapping[str, Any]) -> bool:
@@ -2500,73 +2543,7 @@ class ReleaseManager:
                 "readback succeeded.",
                 file=self.output,
             )
-        write_final_app_overlay(
-            AppBindingInputs(
-                evidence_catalog=state.evidence_catalog,
-                evidence_schema=state.evidence_schema,
-                app_warehouse_id=state.warehouse_id,
-                app_user_group_name=state.app_user_group_name,
-            )
-        )
-        self._deploy(state, state.final_wheels, select=f"apps.{_APP_KEY}")
-        final_before = self._list_deployments(state)
-        accepted_id = deployment.get("deployment_id")
-        if not isinstance(accepted_id, str):
-            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
-        final_before_ids = self._final_deployment_baseline(final_before, accepted_id)
-        # A lost CLI response is resolved only by the independent deployment readback below.
-        with suppress(ReleaseCliError):
-            self.runner.run(
-                (
-                    "databricks",
-                    "bundle",
-                    "run",
-                    _APP_KEY,
-                    "--target",
-                    _TARGET,
-                    "--profile",
-                    state.profile,
-                ),
-                timeout_seconds=1200,
-            )
-        final_deployment: Mapping[str, Any] | None = None
-        final_after: list[Mapping[str, Any]] = []
-        final_deadline = time.monotonic() + 1200
-        while time.monotonic() < final_deadline:
-            final_after = self._list_deployments(state)
-            discovered = self._new_final_deployment(final_after, final_before_ids)
-            if discovered is not None:
-                final_deployment = discovered
-                final_status = final_deployment.get("status")
-                final_state = final_status.get("state") if isinstance(final_status, dict) else None
-                if final_state in {"SUCCEEDED", "FAILED", "CANCELLED"}:
-                    break
-            time.sleep(2)
-        if final_deployment is None:
-            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
-        final_id = final_deployment.get("deployment_id")
-        if not isinstance(final_id, str) or self._deployment_ids(
-            final_after
-        ) != final_before_ids | {final_id}:
-            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
-        final_status = final_deployment.get("status")
-        final_env_names = {
-            item.get("name")
-            for item in final_deployment.get("env_vars", [])
-            if isinstance(item, dict)
-        }
-        if (
-            not isinstance(final_status, dict)
-            or final_status.get("state") != "SUCCEEDED"
-            or final_env_names != _APP_ENVIRONMENT_NAMES
-        ):
-            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
-        try:
-            final_app = self._client(state.profile).apps.get(state.app_name)
-            if final_app.as_dict().get("compute_status", {}).get("state") != "STOPPED":
-                self._client(state.profile).apps.stop(state.app_name).result(timeout=_WAIT_TIMEOUT)
-        except Exception:
-            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_STOP_FAILED") from None
+        self._grant_app_user_access(state)
         try:
             app = self._client(state.profile).apps.get(state.app_name)
             permissions = self._client(state.profile).apps.get_permissions(state.app_name)
@@ -2574,34 +2551,14 @@ class ReleaseManager:
             permission_document = permissions.as_dict()
         except Exception:
             raise ReleaseCliError("DBTOBSB_INSTALLER_APP_READBACK_FAILED") from None
-        permission_entries = permission_document.get("access_control_list")
-        direct_acl: set[tuple[str, str, str]] = set()
-        if isinstance(permission_entries, list):
-            for item in permission_entries:
-                if not isinstance(item, dict):
-                    continue
-                group = item.get("group_name")
-                service_principal = item.get("service_principal_name")
-                principal_kind = "group" if isinstance(group, str) else "service_principal"
-                principal = group if isinstance(group, str) else service_principal
-                if not isinstance(principal, str):
-                    continue
-                permissions = item.get("all_permissions")
-                if not isinstance(permissions, list):
-                    continue
-                direct_acl.update(
-                    (principal_kind, principal, permission["permission_level"])
-                    for permission in permissions
-                    if isinstance(permission, dict)
-                    and permission.get("inherited") is False
-                    and isinstance(permission.get("permission_level"), str)
-                )
+        direct_acl = self._direct_app_acl(permission_document)
         if (
             app_document.get("compute_status", {}).get("state") != "STOPPED"
             or not self._app_resources_match(state, app_document.get("resources"))
             or direct_acl != {("group", state.app_user_group_name, "CAN_USE")}
         ):
             raise ReleaseCliError("DBTOBSB_INSTALLER_APP_READBACK_FAILED")
+        return state
 
     def bootstrap(self) -> None:
         state = _load_state(self.root)
@@ -2721,7 +2678,7 @@ class ReleaseManager:
             state = replace(state, stage="GRANTS_APPLIED")
             _save_state(self.root, state)
         if not _stage_at_least(state, "APP_DEPLOYED"):
-            self._deploy_app(state)
+            state = self._deploy_app(state)
             state = replace(state, stage="APP_DEPLOYED")
             state = self._with_direct_state(state)
             _save_state(self.root, state)

@@ -108,7 +108,7 @@ Ask the user to choose or confirm:
    objects in the evidence schema and allow dbt to create the chosen example's
    relations in the target schema.
 8. **Compute scope and deadline** — allow bounded serverless installation Jobs,
-   two bounded App deployment checks, the exact approved observed-run workload,
+   one bounded App deployment check plus stopped viewer-ACL readback, the exact approved observed-run workload,
    collector runs, and fixed SQL verification. Record the user's maximum elapsed
    and compute-hour windows.
 9. **Finish state** — recommend leaving the installation present with the App
@@ -164,7 +164,7 @@ When the installer displays **Installation preview**, pause. It must show one
 canonical preview digest and the exact v0.4 release identity, fresh-state
 classification, nine objects, grants, workspace ACL, three runtime Jobs, temporary
 Jobs, four App resources and environment bindings, end-user ACL, project policy,
-two bounded App deployment checks, warehouse state/size/auto-stop and non-management
+one bounded App deployment check plus stopped viewer-ACL readback, warehouse state/size/auto-stop and non-management
 notice, cost boundary, and terminal finish state. Show the user that exact preview
 without exposing numeric IDs or local state, then type `APPROVE` without asking
 again when it matches the authorized task. A new digest by itself does not require

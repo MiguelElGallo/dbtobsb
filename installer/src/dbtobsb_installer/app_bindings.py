@@ -1,4 +1,4 @@
-"""Render the three sequential App authority overlays accepted by the attended installer."""
+"""Render the stopped shell and bound App overlays accepted by the installer."""
 
 from __future__ import annotations
 
@@ -57,7 +57,6 @@ class RenderedAppOverlay:
     mode: Literal[
         "STAGE_NO_AUTHORITY",
         "BOUND_READ_ONLY_NO_USER",
-        "FINAL_READ_ONLY_USER_ACCESS",
     ]
     sha256: str
 
@@ -119,7 +118,7 @@ def _validate_final_inputs(inputs: AppBindingInputs) -> None:
         raise AppBindingError("DBTOBSB_APP_BINDING_GROUP_INVALID")
 
 
-def _bound_document(inputs: AppBindingInputs, *, grant_user_access: bool) -> dict[str, Any]:
+def _bound_document(inputs: AppBindingInputs) -> dict[str, Any]:
     _validate_final_inputs(inputs)
     prefix = f"{inputs.evidence_catalog}.{inputs.evidence_schema}"
     resources: list[dict[str, Any]] = [
@@ -142,11 +141,7 @@ def _bound_document(inputs: AppBindingInputs, *, grant_user_access: bool) -> dic
     return _app_document(
         env=[{"name": name, "value_from": resource} for name, resource in _RESOURCE_ENV],
         resources=resources,
-        permissions=(
-            [{"group_name": inputs.app_user_group_name, "level": "CAN_USE"}]
-            if grant_user_access
-            else []
-        ),
+        permissions=[],
     )
 
 
@@ -186,12 +181,7 @@ def render_stage_app_overlay() -> bytes:
 
 def render_bound_app_overlay(inputs: AppBindingInputs) -> bytes:
     """Return read-only resources and deploy-time config with no end-user access."""
-    return _render(_bound_document(inputs, grant_user_access=False))
-
-
-def render_final_app_overlay(inputs: AppBindingInputs) -> bytes:
-    """Return the same read-only deployment config plus the approved user ACL."""
-    return _render(_bound_document(inputs, grant_user_access=True))
+    return _render(_bound_document(inputs))
 
 
 def _write(raw: bytes) -> str:
@@ -229,12 +219,6 @@ def write_bound_app_overlay(inputs: AppBindingInputs) -> RenderedAppOverlay:
     """Place read-only deployment bindings without exposing the App to end users."""
     raw = render_bound_app_overlay(inputs)
     return RenderedAppOverlay(mode="BOUND_READ_ONLY_NO_USER", sha256=_write(raw))
-
-
-def write_final_app_overlay(inputs: AppBindingInputs) -> RenderedAppOverlay:
-    """Place the reviewed post-deployment user-access overlay."""
-    raw = render_final_app_overlay(inputs)
-    return RenderedAppOverlay(mode="FINAL_READ_ONLY_USER_ACCESS", sha256=_write(raw))
 
 
 def main() -> int:

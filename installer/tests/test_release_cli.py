@@ -20,6 +20,7 @@ import dbtobsb_installer.release_cli as release_cli_module
 from dbtobsb_installer.onboarding import DbtOnboardingPlan, DbtOnboardingPreview
 from dbtobsb_installer.release_cli import (
     BootstrapPreflight,
+    DirectStateIdentity,
     InstallationState,
     ReleaseCliError,
     ReleaseManager,
@@ -427,9 +428,9 @@ class _LifecycleManager(ReleaseManager):
         del state
         self.events.append(("grants", add))
 
-    def _deploy_app(self, state: InstallationState) -> None:
-        del state
+    def _deploy_app(self, state: InstallationState) -> InstallationState:
         self.events.append(("app-deploy",))
+        return state
 
     def _stop_state(self, state: InstallationState) -> None:
         del state
@@ -967,7 +968,7 @@ def _preflight(*, warehouse_state: str = "STOPPED") -> BootstrapPreflight:
             "compute": {
                 "approved_operations": [
                     "BOUNDED_SERVERLESS_BUNDLE_JOBS",
-                    "TWO_BOUNDED_APP_DEPLOYMENT_CHECKS",
+                    "ONE_BOUNDED_APP_DEPLOYMENT_CHECK",
                 ],
                 "warehouse_auto_stop_mins": 5,
                 "warehouse_cluster_size": "2X-Small",
@@ -1052,7 +1053,7 @@ def test_exact_preview_is_digest_bound_and_denial_has_zero_mutation(tmp_path: Pa
     output = cast(io.StringIO, manager.output).getvalue()
     assert f"Preview SHA-256: {snapshot.sha256}" in output
     assert "v0.4.0 fresh installation only" in output
-    assert "App deployment checks: two bounded checks" in output
+    assert "App deployment: one bounded check, followed by stopped ACL readback" in output
     assert "dbtobsb does not manage or stop it" in output
     for expected in (
         "Named OAuth profile: paid-azure-test",
@@ -1356,49 +1357,127 @@ def test_app_deployment_match_requires_exact_snapshot_source_and_environment() -
         assert not ReleaseManager._app_deployment_matches(changed)
 
 
-def _app_deployment(deployment_id: str, *, state: str = "SUCCEEDED") -> dict[str, Any]:
-    return {
-        "deployment_id": deployment_id,
-        "mode": "SNAPSHOT",
-        "source_code_path": "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/files/app",
-        "env_vars": [
-            {"name": "DBTOBSB_WAREHOUSE_ID"},
-            {"name": "DBTOBSB_RUN_HEALTH_VIEW"},
-            {"name": "DBTOBSB_NODE_HEALTH_VIEW"},
-            {"name": "DBTOBSB_COLLECTION_HEALTH_VIEW"},
-        ],
-        "status": {"state": state},
+def test_app_deploy_checkpoints_direct_state_before_deployment_readback(
+    tmp_path: Path,
+) -> None:
+    state = _state(stage="GRANTS_APPLIED")
+    updated = DirectStateIdentity(
+        lineage=cast(str, state.direct_state_lineage),
+        serial=cast(int, state.direct_state_serial) + 1,
+        sha256="c" * 64,
+    )
+
+    class InterruptedAppManager(ReleaseManager):
+        def __init__(self) -> None:
+            super().__init__(
+                root=tmp_path,
+                runner=_NoCommandRunner(),
+                input_stream=io.StringIO(),
+                output_stream=io.StringIO(),
+            )
+
+        def _deploy(
+            self,
+            state: InstallationState,
+            wheels: Mapping[str, str],
+            *,
+            select: str | None = None,
+        ) -> None:
+            del wheels, select
+            self._direct_state_overrides[state.profile] = updated
+
+        def _list_deployments(self, state: InstallationState) -> list[Mapping[str, Any]]:
+            del state
+            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
+
+    manager = InterruptedAppManager()
+
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED"):
+        manager._deploy_app(state)
+
+    checkpoint = _required_state(tmp_path)
+    assert checkpoint.stage == "GRANTS_APPLIED"
+    assert checkpoint.direct_state_lineage == updated.lineage
+    assert checkpoint.direct_state_serial == updated.serial
+    assert checkpoint.direct_state_sha256 == updated.sha256
+
+
+def test_direct_app_acl_keeps_only_non_inherited_assignments() -> None:
+    document = {
+        "access_control_list": [
+            {
+                "group_name": "dbtobsb-job-managers",
+                "all_permissions": [
+                    {"permission_level": "CAN_USE", "inherited": False},
+                    {"permission_level": "CAN_MANAGE", "inherited": True},
+                ],
+            },
+            {
+                "service_principal_name": "foreign",
+                "all_permissions": [
+                    {"permission_level": "CAN_MANAGE", "inherited": False},
+                ],
+            },
+            {
+                "user_name": "foreign@example.test",
+                "all_permissions": [
+                    {"permission_level": "CAN_USE", "inherited": False},
+                ],
+            },
+        ]
+    }
+
+    assert ReleaseManager._direct_app_acl(document) == {
+        ("group", "dbtobsb-job-managers", "CAN_USE"),
+        ("service_principal", "foreign", "CAN_MANAGE"),
+        ("user", "foreign@example.test", "CAN_USE"),
     }
 
 
-def test_final_app_deployment_inventory_is_exact() -> None:
-    manager = _LifecycleManager(Path.cwd())
-    baseline = _app_deployment("baseline")
-    final = _app_deployment("final")
+def test_targeted_app_user_access_is_idempotent_and_keeps_app_stopped(tmp_path: Path) -> None:
+    state = _state()
+    manager = _LifecycleManager(tmp_path)
+    resources = list(manager._expected_app_resources(state).values())
 
-    assert manager._final_deployment_baseline([baseline], "baseline") == {"baseline"}
-    assert manager._new_final_deployment([baseline], {"baseline"}) is None
-    assert manager._new_final_deployment([baseline, final], {"baseline"}) == final
+    class Apps:
+        def __init__(self) -> None:
+            self.direct = False
+            self.updates = 0
 
-    for invalid in (
-        [baseline, _app_deployment("extra")],
-        [_app_deployment("baseline", state="IN_PROGRESS")],
-        [{**baseline, "mode": "AUTO_SYNC"}],
-    ):
-        with pytest.raises(
-            ReleaseCliError, match="DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED"
-        ):
-            manager._final_deployment_baseline(invalid, "baseline")
+        def get(self, app_name: str) -> SimpleNamespace:
+            assert app_name == state.app_name
+            return SimpleNamespace(
+                as_dict=lambda: {
+                    "compute_status": {"state": "STOPPED"},
+                    "resources": resources,
+                }
+            )
 
-    for invalid in (
-        [final],
-        [baseline, final, _app_deployment("extra")],
-        [baseline, {**final, "source_code_path": "/Workspace/foreign"}],
-    ):
-        with pytest.raises(
-            ReleaseCliError, match="DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED"
-        ):
-            manager._new_final_deployment(invalid, {"baseline"})
+        def get_permissions(self, app_name: str) -> SimpleNamespace:
+            assert app_name == state.app_name
+            entries = []
+            if self.direct:
+                entries.append(
+                    {
+                        "group_name": state.app_user_group_name,
+                        "all_permissions": [{"permission_level": "CAN_USE", "inherited": False}],
+                    }
+                )
+            return SimpleNamespace(as_dict=lambda: {"access_control_list": entries})
+
+        def update_permissions(self, app_name: str, *, access_control_list: object) -> None:
+            assert app_name == state.app_name
+            assert len(cast(list[Any], access_control_list)) == 1
+            self.updates += 1
+            self.direct = True
+
+    apps = Apps()
+    cast(dict[str, Any], manager._clients)[state.profile] = SimpleNamespace(apps=apps)
+
+    manager._grant_app_user_access(state)
+    manager._grant_app_user_access(state)
+
+    assert apps.updates == 1
 
 
 def test_onboarding_output_must_match_every_approved_project_field(
