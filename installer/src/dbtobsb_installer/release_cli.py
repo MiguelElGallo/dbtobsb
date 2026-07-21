@@ -1656,12 +1656,16 @@ class ReleaseManager:
         lineage = document.get("lineage")
         serial = document.get("serial")
         resources = document.get("state")
-        expected_resources = {
+        required_resources = {
             "resources.apps.dbtobsb_smoke",
             "resources.jobs.dbtobsb_collector",
+            "resources.jobs.dbtobsb_collector.permissions",
             "resources.jobs.dbtobsb_observed",
+            "resources.jobs.dbtobsb_observed.permissions",
             "resources.jobs.dbtobsb_reconciler",
+            "resources.jobs.dbtobsb_reconciler.permissions",
         }
+        expected_resources = required_resources | {"resources.apps.dbtobsb_smoke.permissions"}
         if allow_temporary:
             expected_resources |= {
                 "resources.jobs.dbtobsb_bootstrap",
@@ -1677,12 +1681,7 @@ class ReleaseManager:
             or serial < 1
             or not isinstance(resources, dict)
             or not set(resources).issubset(expected_resources)
-            or not {
-                "resources.apps.dbtobsb_smoke",
-                "resources.jobs.dbtobsb_collector",
-                "resources.jobs.dbtobsb_observed",
-                "resources.jobs.dbtobsb_reconciler",
-            }.issubset(resources)
+            or not required_resources.issubset(resources)
         ):
             raise ReleaseCliError("DBTOBSB_INSTALLER_DIRECT_STATE_INVALID")
         return DirectStateIdentity(

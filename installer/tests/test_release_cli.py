@@ -851,13 +851,20 @@ def test_cli_1_8_guard_fails_closed_when_remote_state_cannot_be_read(tmp_path: P
         manager._reject_terraform_state(_state(stage="ONBOARDED"))
 
 
-def _direct_state_raw(*, extra_resource: str | None = None) -> bytes:
+def _direct_state_raw(
+    *, extra_resource: str | None = None, include_app_permissions: bool = False
+) -> bytes:
     resources = {
         "resources.apps.dbtobsb_smoke": {},
         "resources.jobs.dbtobsb_collector": {},
+        "resources.jobs.dbtobsb_collector.permissions": {},
         "resources.jobs.dbtobsb_observed": {},
+        "resources.jobs.dbtobsb_observed.permissions": {},
         "resources.jobs.dbtobsb_reconciler": {},
+        "resources.jobs.dbtobsb_reconciler.permissions": {},
     }
+    if include_app_permissions:
+        resources["resources.apps.dbtobsb_smoke.permissions"] = {}
     if extra_resource is not None:
         resources[extra_resource] = {}
     return (
@@ -911,6 +918,21 @@ def test_resume_requires_identical_local_remote_direct_state_and_bound_identity(
     path.write_bytes(_direct_state_raw(extra_resource="resources.jobs.foreign"))
     with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_DIRECT_STATE_INVALID"):
         ReleaseManager._reject_terraform_state(manager, state)
+
+
+def test_cli_1_8_direct_state_accepts_exact_permission_subresources(tmp_path: Path) -> None:
+    raw = _direct_state_raw(include_app_permissions=True)
+    path = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(raw)
+    manager = _LifecycleManager(tmp_path)
+    cast(dict[str, Any], manager._clients)["paid-azure-test"] = _workspace_with_direct_state(raw)
+
+    identity = ReleaseManager._read_direct_state(
+        manager, _state(stage="BASE_DEPLOYED"), allow_temporary=False
+    )
+
+    assert identity.serial == 7
 
 
 def test_bootstrap_verifies_direct_state_before_resumed_mutation_or_success(
