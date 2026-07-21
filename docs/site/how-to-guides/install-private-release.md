@@ -64,7 +64,7 @@ This release does not provide independent separation of duties.
 
 dbtobsb does not create these customer-owned resources:
 
-- one existing Unity Catalog catalog;
+- one or two existing Unity Catalog catalogs;
 - one empty, dedicated evidence schema;
 - one dbt target schema owned by the observed Job service principal;
 - separate active service principals for the observed and collector Jobs;
@@ -78,6 +78,11 @@ The source project contains two required YAML files: `dbt_project.yml` and
 complete working project. Do not create a source profile for dbtobsb: the installer
 generates the runtime `profiles.yml` from the resources you approve. The exact
 rules are in the [dbt project input reference](../reference/dbt-project-input.md).
+
+The evidence schema and dbt target schema may be in different catalogs. The
+installer lists only empty administrator-owned evidence schemas and
+observed-principal-owned target schemas, then shows both fully qualified names in
+the approval preview.
 
 If you cannot identify each resource and its owner, stop and ask the Azure
 Databricks administrator. The exact runtime access is listed in

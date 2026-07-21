@@ -6,6 +6,7 @@ import io
 import json
 import os
 import struct
+from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -490,6 +491,72 @@ def test_selection_is_sorted_and_accepts_only_canonical_number() -> None:
             input_stream=io.StringIO("01\n"),
             output_stream=io.StringIO(),
         )
+
+
+def test_schema_discovery_supports_separate_evidence_and_dbt_catalogs(
+    tmp_path: Path,
+) -> None:
+    class SchemaDiscoveryManager(_LifecycleManager):
+        def _run_json(self, command: tuple[str, ...], *, timeout_seconds: int = 60) -> Any:
+            del timeout_seconds
+            assert command[:3] == ("databricks", "schemas", "list")
+            rows = {
+                "evidence_catalog": [
+                    {"name": "empty_evidence", "owner": "admin"},
+                    {"name": "used_evidence", "owner": "admin"},
+                ],
+                "target_catalog": [
+                    {"name": "analytics", "owner": "observed"},
+                ],
+            }
+            return rows[command[3]]
+
+    class Tables:
+        def list(
+            self,
+            catalog_name: str,
+            schema_name: str,
+            *,
+            omit_columns: bool,
+            omit_properties: bool,
+        ) -> Sequence[SimpleNamespace]:
+            assert omit_columns is True
+            assert omit_properties is True
+            if (catalog_name, schema_name) == ("evidence_catalog", "used_evidence"):
+                return [SimpleNamespace(name="existing")]
+            return []
+
+    class Volumes:
+        def list(self, catalog_name: str, schema_name: str) -> Sequence[SimpleNamespace]:
+            del catalog_name, schema_name
+            return []
+
+    manager = SchemaDiscoveryManager(tmp_path)
+    cast(dict[str, Any], manager._clients)["paid-azure-test"] = SimpleNamespace(
+        tables=Tables(), volumes=Volumes()
+    )
+
+    evidence, target = manager._discover_schema_choices(
+        profile="paid-azure-test",
+        catalogs=[{"name": "evidence_catalog"}, {"name": "target_catalog"}],
+        actor="admin",
+        observed_principal="observed",
+    )
+
+    assert evidence == [
+        {
+            "name": "evidence_catalog.empty_evidence",
+            "catalog_name": "evidence_catalog",
+            "schema_name": "empty_evidence",
+        }
+    ]
+    assert target == [
+        {
+            "name": "target_catalog.analytics",
+            "catalog_name": "target_catalog",
+            "schema_name": "analytics",
+        }
+    ]
 
 
 def _preflight(*, warehouse_state: str = "STOPPED") -> BootstrapPreflight:

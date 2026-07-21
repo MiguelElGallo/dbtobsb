@@ -101,8 +101,9 @@ Ask the user to choose or confirm:
 5. **SQL warehouse** — one existing warehouse the observed principal may use; ask
    whether it is dedicated and may be stopped directly or is shared and must use
    its configured auto-stop.
-6. **Catalog, empty evidence schema, and dbt target schema** — the current actor
-   owns the evidence schema; the observed principal owns the target schema.
+6. **Empty evidence schema and dbt target schema** — the current actor owns the
+   evidence schema; the observed principal owns the target schema. Their existing
+   catalogs may differ, and the preview must show both fully qualified targets.
 7. **Mutation approval** — allow the installer to create or verify the nine product
    objects in the evidence schema and allow dbt to create the chosen example's
    relations in the target schema.

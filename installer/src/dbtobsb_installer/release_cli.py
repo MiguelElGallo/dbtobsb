@@ -774,6 +774,70 @@ class ReleaseManager:
         if state.release_source_commit != self._release_source_commit():
             raise ReleaseCliError("DBTOBSB_INSTALLER_STATE_RELEASE_MISMATCH")
 
+    def _discover_schema_choices(
+        self,
+        *,
+        profile: str,
+        catalogs: Sequence[Mapping[str, Any]],
+        actor: str,
+        observed_principal: str,
+    ) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+        """Return only empty evidence schemas and observed-owned dbt targets."""
+        evidence_choices: list[dict[str, str]] = []
+        target_choices: list[dict[str, str]] = []
+        client = self._client(profile)
+        try:
+            for catalog in catalogs:
+                catalog_name = _value(catalog, "name", str)
+                schema_rows = self._run_json(
+                    (
+                        "databricks",
+                        "schemas",
+                        "list",
+                        catalog_name,
+                        "--profile",
+                        profile,
+                        "--output",
+                        "json",
+                    )
+                )
+                if not isinstance(schema_rows, list):
+                    raise ValueError
+                for item in schema_rows:
+                    if (
+                        not isinstance(item, dict)
+                        or not isinstance(item.get("name"), str)
+                        or _SIMPLE_IDENTIFIER.fullmatch(item["name"]) is None
+                        or item["name"] in {"default", "information_schema"}
+                    ):
+                        continue
+                    schema_name = cast(str, item["name"])
+                    choice = {
+                        "name": f"{catalog_name}.{schema_name}",
+                        "catalog_name": catalog_name,
+                        "schema_name": schema_name,
+                    }
+                    if item.get("owner") == observed_principal:
+                        target_choices.append(choice)
+                    if item.get("owner") != actor:
+                        continue
+                    tables = tuple(
+                        client.tables.list(
+                            catalog_name,
+                            schema_name,
+                            omit_columns=True,
+                            omit_properties=True,
+                        )
+                    )
+                    volumes = tuple(client.volumes.list(catalog_name, schema_name))
+                    if not tables and not volumes:
+                        evidence_choices.append(choice)
+        except Exception:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_SCHEMA_DISCOVERY_INVALID") from None
+        if not evidence_choices or not target_choices:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_SCHEMA_DISCOVERY_INVALID")
+        return evidence_choices, target_choices
+
     def _discover(self) -> InstallationState:
         profile_root = self._run_json(("databricks", "auth", "profiles", "--output", "json"))
         if not isinstance(profile_root, dict) or not isinstance(profile_root.get("profiles"), list):
@@ -946,46 +1010,22 @@ class ReleaseManager:
             and _SIMPLE_IDENTIFIER.fullmatch(item["name"]) is not None
             and item.get("catalog_type") != "SYSTEM_CATALOG"
         ]
-        catalog = _select(
-            "Catalog containing the evidence and dbt schemas",
-            catalogs,
-            label_key="name",
-            input_stream=self.input,
-            output_stream=self.output,
+        evidence_choices, target_choices = self._discover_schema_choices(
+            profile=profile_name,
+            catalogs=catalogs,
+            actor=actor,
+            observed_principal=observed_name,
         )
-        catalog_name = _value(catalog, "name", str)
-        schema_rows = self._run_json(
-            (
-                "databricks",
-                "schemas",
-                "list",
-                catalog_name,
-                "--profile",
-                profile_name,
-                "--output",
-                "json",
-            )
-        )
-        if not isinstance(schema_rows, list):
-            raise ReleaseCliError("DBTOBSB_INSTALLER_SCHEMA_DISCOVERY_INVALID")
-        schemas = [
-            item
-            for item in schema_rows
-            if isinstance(item, dict)
-            and isinstance(item.get("name"), str)
-            and _SIMPLE_IDENTIFIER.fullmatch(item["name"]) is not None
-            and item["name"] not in {"default", "information_schema"}
-        ]
         evidence = _select(
-            "Existing dedicated evidence schema owned by the current administrator",
-            [item for item in schemas if item.get("owner") == actor],
+            "Existing empty evidence schema owned by the current administrator",
+            evidence_choices,
             label_key="name",
             input_stream=self.input,
             output_stream=self.output,
         )
         dbt_schema = _select(
             "Existing dbt target schema owned by the observed service principal",
-            [item for item in schemas if item.get("owner") == observed_name],
+            target_choices,
             label_key="name",
             input_stream=self.input,
             output_stream=self.output,
@@ -1008,10 +1048,10 @@ class ReleaseManager:
             host=host,
             workspace_id=workspace_id,
             actor=actor,
-            evidence_catalog=catalog_name,
-            evidence_schema=_value(evidence, "name", str),
-            dbt_catalog=catalog_name,
-            dbt_schema=_value(dbt_schema, "name", str),
+            evidence_catalog=_value(evidence, "catalog_name", str),
+            evidence_schema=_value(evidence, "schema_name", str),
+            dbt_catalog=_value(dbt_schema, "catalog_name", str),
+            dbt_schema=_value(dbt_schema, "schema_name", str),
             warehouse_id=warehouse_id,
             warehouse_http_path=f"/sql/1.0/warehouses/{warehouse_id}",
             observed_service_principal_name=observed_name,
