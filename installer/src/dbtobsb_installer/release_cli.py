@@ -2496,9 +2496,8 @@ class ReleaseManager:
         _save_state(self.root, state)
         try:
             return self._deploy_stopped_app(state)
-        except Exception:
+        finally:
             self._stop_app_after_deployment_attempt(state)
-            raise
 
     def _deploy_stopped_app(self, state: InstallationState) -> InstallationState:
         before = self._list_deployments(state)
