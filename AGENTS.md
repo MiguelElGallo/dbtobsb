@@ -8,11 +8,17 @@ When a user asks an agent to install dbtobsb, run the weather example or another
 dbt project, make a first observed run, or prove that logs were captured, use
 `.agents/skills/install-and-run-dbtobsb/SKILL.md`.
 
-The skill must ask for resource, mutation, cost, project, warehouse-stop, and finish
-choices before changing local or cloud state. It must pause again at the exact
-installer preview before typing `APPROVE`. Do not replace the supported launcher
-with direct dbt commands, caller-selected Job IDs, selectors, SQL, paths, flags, or
-compute overrides.
+The skill must establish resource, mutation, cost, project, warehouse-stop, and
+finish choices before changing local or cloud state. Honor choices and approvals
+the user already supplied; do not ask them to repeat an answer. An explicit
+standing approval such as "approve this and the next ones" authorizes the agent to
+type `APPROVE` at later installer previews in the same task when they remain within
+that agreed scope. Show each exact preview and digest, but pause again only if no
+standing approval exists or the preview materially expands the authorized
+resources, mutations, workload, cost ceiling, or finish state. A retry or digest
+change alone does not cancel standing approval. Do not replace the supported
+launcher with direct dbt commands, caller-selected Job IDs, selectors, SQL, paths,
+flags, or compute overrides.
 
 The supported platform is a customer Azure Databricks workspace with a canonical
 `adb-...azuredatabricks.net` per-workspace URL. Before mutation, reject AWS,

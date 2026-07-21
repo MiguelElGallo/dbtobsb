@@ -120,9 +120,17 @@ resource is absent, stop and explain that v0.4.0 requires it to exist. Do not
 provision a substitute or choose a different resource silently.
 
 Summarize the answers without secrets or numeric IDs. Ask the user to confirm the
-summary once. This confirmation authorizes only the stated installation and one
-run; it does not authorize deletion, retention changes, a second run, or unrelated
-workspace changes.
+summary once unless they have already explicitly confirmed those choices. Do not
+ask them to repeat an answer. This confirmation authorizes only the stated
+installation and one run; it does not authorize deletion, retention changes, a
+second run, or unrelated workspace changes.
+
+Treat an explicit instruction such as "approve this and the next ones" as standing
+installer approval for the same task. It remains valid across clean retries and
+preview-digest changes while the workspace, resource choices, mutations, workload,
+cost ceiling, and finish state remain within the confirmed scope. Never infer
+standing approval from silence or from approval of an unrelated task. If a preview
+materially expands that scope, stop and obtain approval for the expansion.
 
 ## 3. Validate the chosen project locally
 
@@ -156,9 +164,12 @@ classification, nine objects, grants, workspace ACL, three runtime Jobs, tempora
 Jobs, four App resources and environment bindings, end-user ACL, project policy,
 two bounded App deployment checks, warehouse state/size/auto-stop and non-management
 notice, cost boundary, and terminal finish state. Show the user that exact preview
-without exposing numeric IDs or local state. Type `APPROVE` only after the user
-approves that digest. The installer must repeat the full read-only preflight and
-fail if the digest changes before saving state or mutating anything.
+without exposing numeric IDs or local state. If standing installer approval covers
+the preview, type `APPROVE` without asking again. Otherwise pause and obtain
+approval before typing it. A new digest by itself does not require renewed approval;
+compare the preview against the confirmed scope. The installer must repeat the full
+read-only preflight and fail if the digest changes before saving state or mutating
+anything.
 
 If interrupted, run the same bootstrap command and let the installer resume. Never
 delete or edit the state file. App deployment checks can be quiet for several
