@@ -2329,6 +2329,7 @@ class ReleaseManager:
                 "uc_securable": {
                     "permission": "SELECT",
                     "securable_full_name": f"{prefix}.dbt_run_health",
+                    "securable_kind": "TABLE_VIEW",
                     "securable_type": "TABLE",
                 },
             },
@@ -2337,6 +2338,7 @@ class ReleaseManager:
                 "uc_securable": {
                     "permission": "SELECT",
                     "securable_full_name": f"{prefix}.dbt_node_health",
+                    "securable_kind": "TABLE_VIEW",
                     "securable_type": "TABLE",
                 },
             },
@@ -2345,6 +2347,7 @@ class ReleaseManager:
                 "uc_securable": {
                     "permission": "SELECT",
                     "securable_full_name": f"{prefix}.dbt_collection_health",
+                    "securable_kind": "TABLE_VIEW",
                     "securable_type": "TABLE",
                 },
             },
@@ -2432,9 +2435,16 @@ class ReleaseManager:
                     direct_acl.add(assignment)
         return direct_acl
 
+    @staticmethod
+    def _expected_app_direct_acl(state: InstallationState) -> set[tuple[str, str, str]]:
+        return {
+            ("user", state.actor, "CAN_MANAGE"),
+            ("group", state.app_user_group_name, "CAN_USE"),
+        }
+
     def _grant_app_user_access(self, state: InstallationState) -> None:
         client = self._client(state.profile)
-        expected = {("group", state.app_user_group_name, "CAN_USE")}
+        expected = self._expected_app_direct_acl(state)
         try:
             app_before = client.apps.get(state.app_name).as_dict()
             permissions_before = client.apps.get_permissions(state.app_name).as_dict()
@@ -2588,7 +2598,7 @@ class ReleaseManager:
         if (
             app_document.get("compute_status", {}).get("state") != "STOPPED"
             or not self._app_resources_match(state, app_document.get("resources"))
-            or direct_acl != {("group", state.app_user_group_name, "CAN_USE")}
+            or direct_acl != self._expected_app_direct_acl(state)
         ):
             raise ReleaseCliError("DBTOBSB_INSTALLER_APP_READBACK_FAILED")
         return state

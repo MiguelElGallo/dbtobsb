@@ -1357,6 +1357,23 @@ def test_app_deployment_match_requires_exact_snapshot_source_and_environment() -
         assert not ReleaseManager._app_deployment_matches(changed)
 
 
+def test_app_resource_readback_requires_server_resolved_view_kind() -> None:
+    state = _state()
+    manager = _LifecycleManager(Path.cwd())
+    resources = list(manager._expected_app_resources(state).values())
+
+    assert manager._app_resources_match(state, resources)
+    for resource in resources:
+        uc_securable = resource.get("uc_securable")
+        if isinstance(uc_securable, dict):
+            changed = [dict(item) for item in resources]
+            target = next(item for item in changed if item["name"] == resource["name"])
+            target["uc_securable"] = {
+                key: value for key, value in uc_securable.items() if key != "securable_kind"
+            }
+            assert not manager._app_resources_match(state, changed)
+
+
 @pytest.fixture
 def isolated_app_deploy_overlay(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
@@ -1622,7 +1639,12 @@ def test_app_deploy_uses_one_apply_one_deployment_and_one_stopped_acl_update(
 
         def get_permissions(self, app_name: str) -> SimpleNamespace:
             assert app_name == state.app_name
-            entries = []
+            entries = [
+                {
+                    "user_name": state.actor,
+                    "all_permissions": [{"permission_level": "CAN_MANAGE", "inherited": False}],
+                }
+            ]
             if self.direct:
                 entries.append(
                     {
@@ -1798,7 +1820,12 @@ def test_targeted_app_user_access_is_idempotent_and_keeps_app_stopped(tmp_path: 
 
         def get_permissions(self, app_name: str) -> SimpleNamespace:
             assert app_name == state.app_name
-            entries = []
+            entries = [
+                {
+                    "user_name": state.actor,
+                    "all_permissions": [{"permission_level": "CAN_MANAGE", "inherited": False}],
+                }
+            ]
             if self.direct:
                 entries.append(
                     {
