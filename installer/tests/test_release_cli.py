@@ -1097,6 +1097,8 @@ def test_app_readback_requires_exact_resource_names_permissions_and_targets(
 
     assert manager._app_resources_match(_state(), expected)
     assert not manager._app_resources_match(_state(), expected[:-1])
+    assert not manager._app_resources_match(_state(), [*expected, expected[0]])
+    assert not manager._app_resources_match(_state(), [{"name": []}, *expected[1:]])
     changed = [dict(item) for item in expected]
     changed[0] = {
         "name": "dbtobsb-app-warehouse",

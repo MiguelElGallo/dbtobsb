@@ -2357,8 +2357,16 @@ class ReleaseManager:
         if not isinstance(resources, list) or any(not isinstance(item, dict) for item in resources):
             return False
         items = cast(list[dict[str, Any]], resources)
+        names = [item.get("name") for item in items]
+        expected = self._expected_app_resources(state)
+        if (
+            len(items) != len(expected)
+            or any(not isinstance(name, str) for name in names)
+            or len(set(names)) != len(names)
+        ):
+            return False
         actual = {item.get("name"): item for item in items}
-        return actual == self._expected_app_resources(state)
+        return actual == expected
 
     @staticmethod
     def _app_deployment_matches(deployment: Mapping[str, Any]) -> bool:
