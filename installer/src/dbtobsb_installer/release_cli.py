@@ -1,4 +1,4 @@
-"""Supported attended lifecycle launcher for the private v0.3 Databricks release."""
+"""Supported attended lifecycle launcher for the private v0.4 Databricks release."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ from typing import Any, NoReturn, Protocol, TextIO, cast
 
 import yaml
 from databricks.sdk import WorkspaceClient
+from databricks.sdk.errors import NotFound
 from databricks.sdk.service.catalog import PermissionsChange, Privilege
 from databricks.sdk.service.iam import AccessControlRequest, PermissionLevel
 from databricks.sdk.service.jobs import CronSchedule, JobSettings, PauseStatus
@@ -62,6 +63,9 @@ _APP_KEY = "dbtobsb_smoke"
 _APP_NAME = "dbtobsb-smoke"
 _WORKSPACE_ROOT = "/Workspace/dbtobsb"
 _APP_SOURCE_PATH = f"{_WORKSPACE_ROOT}/.bundle/dbtobsb/{_TARGET}/files/app"
+_REMOTE_TERRAFORM_STATE_PATH = (
+    f"{_WORKSPACE_ROOT}/.bundle/dbtobsb/{_TARGET}/state/terraform.tfstate"
+)
 _APP_ENVIRONMENT_NAMES = frozenset(
     {
         "DBTOBSB_WAREHOUSE_ID",
@@ -79,9 +83,9 @@ _WAREHOUSE = re.compile(r"^[0-9a-f]{16}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _WAIT_TIMEOUT = timedelta(minutes=20)
 _BASE_WHEELS = {
-    "contracts": "dbtobsb_contracts-0.3.0-py3-none-any.whl",
-    "capture": "dbtobsb_capture-0.3.0-py3-none-any.whl",
-    "collector": "dbtobsb_collector-0.3.0-py3-none-any.whl",
+    "contracts": "dbtobsb_contracts-0.4.0-py3-none-any.whl",
+    "capture": "dbtobsb_capture-0.4.0-py3-none-any.whl",
+    "collector": "dbtobsb_collector-0.4.0-py3-none-any.whl",
 }
 _STAGES = (
     "CONFIGURED",
@@ -475,7 +479,7 @@ class ReleaseManager:
                 client = WorkspaceClient(
                     profile=profile,
                     product="dbtobsb-installer",
-                    product_version="0.3.0",
+                    product_version="0.4.0",
                 )
             except Exception:
                 raise ReleaseCliError("DBTOBSB_INSTALLER_PROFILE_INVALID") from None
@@ -810,6 +814,7 @@ class ReleaseManager:
         *,
         select: str | None = None,
     ) -> None:
+        self._reject_terraform_state(state)
         self._verify_bundle_fragments(
             allow_temporary=select
             in {
@@ -832,6 +837,18 @@ class ReleaseManager:
         if select is not None:
             command.extend(("--select", select))
         self.runner.run(tuple(command), timeout_seconds=900)
+
+    def _reject_terraform_state(self, state: InstallationState) -> None:
+        local = self.root / ".databricks" / "bundle" / _TARGET / "terraform" / "terraform.tfstate"
+        if local.is_symlink() or local.exists():
+            raise ReleaseCliError("DBTOBSB_INSTALLER_TERRAFORM_STATE_UNSUPPORTED")
+        try:
+            self._client(state.profile).workspace.get_status(_REMOTE_TERRAFORM_STATE_PATH)
+        except NotFound:
+            return
+        except Exception:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_TERRAFORM_STATE_CHECK_FAILED") from None
+        raise ReleaseCliError("DBTOBSB_INSTALLER_TERRAFORM_STATE_UNSUPPORTED")
 
     def _verify_bundle_fragments(self, *, allow_temporary: bool) -> None:
         directory = self.root / _BUNDLE_BASE_DIRECTORY
@@ -1697,6 +1714,7 @@ class ReleaseManager:
     def _destroy_bundle(self, state: InstallationState) -> None:
         if state.final_wheels is None:
             raise ReleaseCliError("DBTOBSB_INSTALLER_STATE_INCOMPLETE")
+        self._reject_terraform_state(state)
         self.runner.run(
             (
                 "databricks",

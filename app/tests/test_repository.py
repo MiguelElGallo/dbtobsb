@@ -12,6 +12,7 @@ from dbtobsb_app.repository import (
     COLLECTION_COLUMNS,
     NODE_COLUMNS,
     RUN_COLUMNS,
+    TREND_COLUMNS,
     AppDataAccessError,
     DatabricksSqlRepository,
     databricks_repository,
@@ -103,6 +104,15 @@ def _collection_values() -> tuple[Any, ...]:
         1,
         now,
         50,
+    )
+
+
+def _trend_values() -> tuple[Any, ...]:
+    return (
+        40,
+        datetime(2026, 7, 16, 10, 0, tzinfo=UTC),
+        2,
+        7,
     )
 
 
@@ -202,6 +212,36 @@ def test_collection_query_is_fixed_quoted_parameterized_and_allowlisted() -> Non
         assert forbidden not in query
 
 
+def test_trend_query_is_fixed_parameterized_and_uses_only_sanitized_views() -> None:
+    calls: list[tuple[str, dict[str, int]]] = []
+    repository = DatabricksSqlRepository(
+        _bindings(), lambda: FakeConnection([_trend_values()], calls)
+    )
+
+    rows = repository.recent_trends(12)
+
+    assert rows[0].failed_node_results == 2
+    assert rows[0].model_results == 7
+    query, parameters = calls[0]
+    assert "FROM `customer-catalog`.`obs`.`dbt_run_health`" in query
+    assert "LEFT JOIN `customer-catalog`.`obs`.`dbt_node_health`" in query
+    assert "`pair_state` = 'PAIR_VALID'" in query
+    assert "n.`status` IN ('error', 'fail')" in query
+    assert "n.`resource_type` = 'model'" in query
+    assert "LIMIT :limit" in query
+    assert parameters == {"limit": 12}
+    assert all(f"`{column}`" in query for column in TREND_COLUMNS)
+    for forbidden in (
+        "raw_archive_locator",
+        "archive_sha256",
+        "manifest_sha256",
+        "run_results_sha256",
+        "compiled_code",
+        "message",
+    ):
+        assert forbidden not in query
+
+
 def test_each_read_uses_and_closes_a_fresh_connection() -> None:
     counts = {"opened": 0, "closed": 0}
     calls: list[tuple[str, dict[str, int]]] = []
@@ -228,6 +268,15 @@ def test_unexpected_view_shape_is_rejected() -> None:
 
     with pytest.raises(AppDataAccessError, match="DBTOBSB_APP_RUN_VIEW_CONTRACT_MISMATCH"):
         repository.recent_runs(1)
+
+
+def test_unexpected_trend_shape_is_rejected() -> None:
+    repository = DatabricksSqlRepository(
+        _bindings(), lambda: FakeConnection([_trend_values()[:-1]], [])
+    )
+
+    with pytest.raises(AppDataAccessError, match="DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH"):
+        repository.recent_trends(1)
 
 
 def test_connector_failure_is_reclassified_without_response_text() -> None:

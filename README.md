@@ -17,13 +17,14 @@ provides read-only views and an App for answering questions such as:
 
 - Which dbt run failed?
 - Which model or test failed?
+- Are failures or observed model counts changing over time?
 - Were the result files and structured logs captured completely?
 - Did collection succeed even when dbt failed?
 
 No external telemetry platform is required. The evidence and compute stay inside
 the customer's Azure Databricks workspace.
 
-> **Azure Databricks only:** dbtobsb `v0.3.0` installs only in an Azure
+> **Azure Databricks only:** dbtobsb `v0.4.0` installs only in an Azure
 > Databricks workspace deployed in the customer's Azure subscription and reached
 > through its canonical `https://adb-...azuredatabricks.net` workspace URL. It
 > does not support AWS Databricks, GCP Databricks, **Databricks Free Edition**, or
@@ -39,6 +40,7 @@ the customer's Azure Databricks workspace.
   bounded structured dbt logs.
 - Databricks tables containing run, model, seed, snapshot, and test results.
 - Three read-only health views for normal queries and the App.
+- Native App charts for failed node results and model-result counts over time.
 - Restricted Unity Catalog storage for the original captured files.
 - A read-only Databricks App that is stopped by default.
 - No required schedule and no external monitoring service.
@@ -104,14 +106,15 @@ attestation.
 
 ## Supported release
 
-The current release is `v0.3.0`. It is installed privately through a Databricks
-Declarative Automation Bundle; Databricks Marketplace distribution is not
-included.
+This branch prepares the `v0.4.0` release candidate. It is installed privately
+through a Databricks Declarative Automation Bundle; Databricks Marketplace
+distribution is not included. The candidate is not stable until its independent
+reviews and complete live Azure qualification are recorded.
 
 - [Supported environment](https://miguelelgallo.github.io/dbtobsb/reference/supported-environment.html)
 - [Security and permissions](https://miguelelgallo.github.io/dbtobsb/reference/security-and-permissions.html)
-- [Exact release contract](docs/releases/v0.3.0-support-contract.md)
-- [Sanitized Azure acceptance evidence](docs/evidence/v0.3.0-stable-acceptance-2026-07-18.md)
+- [Exact release contract](docs/releases/v0.4.0-support-contract.md)
+- [Historical v0.3.0 Azure acceptance evidence](docs/evidence/v0.3.0-stable-acceptance-2026-07-18.md)
 
 ## Documentation and development
 

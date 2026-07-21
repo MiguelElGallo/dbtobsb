@@ -1,6 +1,8 @@
 # Compatibility and limitations
 
-This page describes the private `v0.3.0` release qualified on Azure Databricks. Marketplace distribution remains out of scope.
+This page describes the private `v0.4.0` release candidate. Azure qualification
+is a required release gate and has not yet been recorded for this candidate.
+Marketplace distribution remains out of scope.
 
 > **Platform boundary:** This release does not support Databricks Free Edition,
 > the retired Community Edition, AWS Databricks, or GCP Databricks. “Personal
@@ -13,7 +15,7 @@ This page describes the private `v0.3.0` release qualified on Azure Databricks. 
 | Component | Qualified value |
 | --- | --- |
 | Cloud | Azure Databricks only; Free Edition excluded |
-| Deployment CLI | Databricks CLI `1.7.0` |
+| Deployment CLI | Databricks CLI `1.8.0` |
 | Bundle engine | Direct |
 | dbt process compute | Serverless Jobs environment client `5` |
 | dbt SQL target | Existing Databricks SQL warehouse |

@@ -19,6 +19,7 @@ from dbtobsb_app.models import (
     NodeHealth,
     RunHealth,
     StructuredLogState,
+    TrendPoint,
 )
 from dbtobsb_app.repository import AppDataAccessError
 
@@ -115,12 +116,22 @@ def _collection() -> CollectionHealth:
     )
 
 
+def _trend() -> TrendPoint:
+    return TrendPoint(
+        observed_job_run_id=4,
+        observed_at=datetime(2026, 7, 16, 10, 0, tzinfo=UTC),
+        failed_node_results=1,
+        model_results=7,
+    )
+
+
 class FakeRepository:
     def __init__(self, *, fail: Exception | None = None) -> None:
         self.fail = fail
         self.run_limits: list[int] = []
         self.node_limits: list[int] = []
         self.collection_limits: list[int] = []
+        self.trend_limits: list[int] = []
 
     def recent_runs(self, limit: int) -> tuple[RunHealth, ...]:
         self.run_limits.append(limit)
@@ -139,6 +150,12 @@ class FakeRepository:
         if self.fail is not None:
             raise self.fail
         return (_collection(),)
+
+    def recent_trends(self, limit: int) -> tuple[TrendPoint, ...]:
+        self.trend_limits.append(limit)
+        if self.fail is not None:
+            raise self.fail
+        return (_trend(),)
 
 
 def test_health_is_stable_and_does_not_create_repository() -> None:
@@ -233,6 +250,7 @@ def test_setup_only_state_is_useful_and_never_queries() -> None:
     assert runs.json()["items"] == []
     assert client.get("/api/v1/nodes").json()["state"] == "setup_required"
     assert client.get("/api/v1/collection").json()["state"] == "setup_required"
+    assert client.get("/api/v1/trends").json()["state"] == "setup_required"
     page = client.get("/")
     assert page.status_code == 200
     assert "Finish App setup" in page.text
@@ -250,15 +268,23 @@ def test_ready_json_apis_return_only_public_models_and_forward_limit() -> None:
     runs = client.get("/api/v1/runs?limit=7")
     nodes = client.get("/api/v1/nodes?limit=8")
     collection = client.get("/api/v1/collection?limit=9")
+    trends = client.get("/api/v1/trends?limit=10")
 
     assert runs.status_code == 200
     assert runs.json()["state"] == "ready"
     assert runs.json()["items"][0]["observed_job_run_id"] == 4
     assert nodes.json()["items"][0]["unique_id"] == "model.weather.daily"
     assert collection.json()["items"][0]["collector_state"] == "PUBLISHED"
+    assert trends.json()["items"][0] == {
+        "observed_job_run_id": 4,
+        "observed_at": "2026-07-16T10:00:00Z",
+        "failed_node_results": 1,
+        "model_results": 7,
+    }
     assert repository.run_limits == [7]
     assert repository.node_limits == [8]
     assert repository.collection_limits == [9]
+    assert repository.trend_limits == [10]
     serialized = runs.text + nodes.text
     for forbidden in (
         "raw_archive_locator",
@@ -381,6 +407,15 @@ def test_node_model_rejects_negative_failure_count() -> None:
         NodeHealth.model_validate(candidate)
 
 
+@pytest.mark.parametrize("field", ["failed_node_results", "model_results"])
+def test_trend_model_rejects_negative_counts(field: str) -> None:
+    candidate = _trend().model_dump()
+    candidate[field] = -1
+
+    with pytest.raises(ValidationError):
+        TrendPoint.model_validate(candidate)
+
+
 @pytest.mark.parametrize(
     "result_state",
     [
@@ -463,10 +498,12 @@ def test_limits_are_bounded_before_repository_access() -> None:
     assert client.get("/api/v1/runs?limit=0").status_code == 422
     assert client.get("/api/v1/nodes?limit=101").status_code == 422
     assert client.get("/api/v1/collection?limit=0").status_code == 422
+    assert client.get("/api/v1/trends?limit=101").status_code == 422
     assert client.get("/observability?limit=1000").status_code == 422
     assert repository.run_limits == []
     assert repository.node_limits == []
     assert repository.collection_limits == []
+    assert repository.trend_limits == []
 
 
 def test_connector_details_never_escape_categorized_errors(
@@ -479,7 +516,7 @@ def test_connector_details_never_escape_categorized_errors(
         create_app(environment=_environment(), repository_factory=lambda _: repository)
     )
 
-    for path in ("/api/v1/runs", "/api/v1/nodes", "/api/v1/collection"):
+    for path in ("/api/v1/runs", "/api/v1/nodes", "/api/v1/collection", "/api/v1/trends"):
         response = client.get(path)
         assert response.status_code == 503
         detail = response.json()["error"]
@@ -498,6 +535,7 @@ def test_connector_details_never_escape_categorized_errors(
     assert "Recent runs unavailable" in page.text
     assert "Recent nodes unavailable" in page.text
     assert "Collection health unavailable" in page.text
+    assert "Dashboard trends unavailable" in page.text
     assert 'href="/operators/how-to/reconcile-collection/"' in page.text
     assert "DBTOBSB_APP_QUERY_FAILED" in page.text
     assert "aaaaaaaaaaaaaaaa" in page.text
@@ -575,6 +613,10 @@ def test_dashboard_preserves_healthy_panel_when_other_panel_fails() -> None:
             "DBTOBSB_APP_COLLECTION_VIEW_CONTRACT_MISMATCH",
             "Open /operators/how-to/reconcile-installation/ and follow this code.",
         ),
+        (
+            "DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH",
+            "Open /operators/how-to/reconcile-installation/ and follow this code.",
+        ),
     ],
 )
 def test_safe_error_categories_have_one_deterministic_recovery(code: str, action: str) -> None:
@@ -626,6 +668,11 @@ def test_dashboard_is_self_contained_escaped_and_hardened() -> None:
     assert "Recent runs" in response.text
     assert "Recent nodes" in response.text
     assert "Collection health" in response.text
+    assert "Failures over time" in response.text
+    assert "Total models over time" in response.text
+    assert "native dbt status error or fail" in response.text
+    assert "not total project inventory" in response.text
+    assert 'role="img"' in response.text
     assert "Build logs" in response.text
     assert "Retrieval" in response.text
     assert "Issue" in response.text
@@ -635,9 +682,9 @@ def test_dashboard_is_self_contained_escaped_and_hardened() -> None:
     assert ">None</td>" in response.text
     assert ">No</td>" in response.text
     assert ">Unknown</td>" in response.text
-    assert response.text.count('role="region"') == 3
-    assert response.text.count('tabindex="0"') == 3
-    assert response.text.count("<caption") == 3
+    assert response.text.count('role="region"') == 4
+    assert response.text.count('tabindex="0"') == 4
+    assert response.text.count("<caption") == 4
     assert '<th scope="row">4</th>' in response.text
     assert '<time datetime="2026-07-16T10:00:00+00:00">' in response.text
     assert "How to read this evidence" in response.text
@@ -650,6 +697,8 @@ def test_dashboard_is_self_contained_escaped_and_hardened() -> None:
     assert "auto-start" in response.text
     assert "auto-stop" in response.text
     assert "&lt;img src=x onerror=alert(1)&gt;" in response.text
+    assert "minmax(min(300px,100%),1fr)" in response.text
+    assert "@media (max-width:600px)" in response.text
     assert "<script>" not in response.text
     assert "http://" not in response.text
     assert "https://" not in response.text
@@ -669,6 +718,9 @@ def test_empty_dashboard_has_concrete_next_steps() -> None:
         def recent_collection(self, limit: int) -> tuple[CollectionHealth, ...]:
             return ()
 
+        def recent_trends(self, limit: int) -> tuple[TrendPoint, ...]:
+            return ()
+
     client = TestClient(
         create_app(environment=_environment(), repository_factory=lambda _: EmptyRepository())
     )
@@ -680,6 +732,7 @@ def test_empty_dashboard_has_concrete_next_steps() -> None:
     assert "verify its collector child succeeded" in page.text
     assert "Review the run capture state and issue code above" in page.text
     assert "No collection records yet" in page.text
+    assert "No accepted trend data yet" in page.text
 
 
 def test_openapi_has_json_surfaces_and_no_external_interactive_docs() -> None:
@@ -692,11 +745,13 @@ def test_openapi_has_json_surfaces_and_no_external_interactive_docs() -> None:
     assert "/api/v1/runs" in document["paths"]
     assert "/api/v1/nodes" in document["paths"]
     assert "/api/v1/collection" in document["paths"]
+    assert "/api/v1/trends" in document["paths"]
     assert "/" not in document["paths"]
     assert "/observability" not in document["paths"]
     assert "auto-start" in document["paths"]["/api/v1/runs"]["get"]["description"]
     assert "auto-start" in document["paths"]["/api/v1/nodes"]["get"]["description"]
     assert "auto-start" in document["paths"]["/api/v1/collection"]["get"]["description"]
+    assert "auto-start" in document["paths"]["/api/v1/trends"]["get"]["description"]
     cost_header = document["paths"]["/api/v1/runs"]["get"]["responses"]["200"]["headers"]
     assert "X-DBTOBSB-Cost-Notice" in cost_header
     assert "auto-start" in cost_header["X-DBTOBSB-Cost-Notice"]["description"]

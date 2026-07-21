@@ -65,9 +65,9 @@ _VARIABLE_DEFAULTS = {
     "observed_service_principal_name": "replace_me",
     "collector_service_principal_name": "replace_me",
     "job_manager_group_name": "replace_me",
-    "contracts_wheel_filename": "dbtobsb_contracts-0.3.0-py3-none-any.whl",
-    "capture_wheel_filename": "dbtobsb_capture-0.3.0-py3-none-any.whl",
-    "collector_wheel_filename": "dbtobsb_collector-0.3.0-py3-none-any.whl",
+    "contracts_wheel_filename": "dbtobsb_contracts-0.4.0-py3-none-any.whl",
+    "capture_wheel_filename": "dbtobsb_capture-0.4.0-py3-none-any.whl",
+    "collector_wheel_filename": "dbtobsb_collector-0.4.0-py3-none-any.whl",
 }
 _EXPECTED_ARTIFACTS = {
     "contracts_wheel": {

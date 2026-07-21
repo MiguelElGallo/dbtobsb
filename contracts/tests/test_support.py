@@ -17,7 +17,7 @@ def test_packaged_support_manifest_is_exact_and_final() -> None:
     assert manifest.release_state == "FINAL"
     assert manifest.platform["cloud"] == "AZURE_DATABRICKS"
     assert manifest.installation["launcher"] == "dbtobsb bootstrap"
-    assert manifest.installation["runtime_trust_ledger"] == "NOT_IN_V0_3_SUPPORTED_PATH"
+    assert manifest.installation["runtime_trust_ledger"] == "NOT_IN_V0_4_SUPPORTED_PATH"
     assert len(manifest.customer_state["objects"]) == 9
     assert len(manifest.customer_state["direct_grants"]) == 17
     assert manifest.dbt["packages"]["dbt-core"] == "1.11.12"
@@ -58,6 +58,13 @@ def test_packaged_support_manifest_is_exact_and_final() -> None:
         "operator_supplied_connection_fields": (),
     }
     assert manifest.app["landing_queries"] is False
+    assert manifest.app["dashboard_rendering"] == (
+        "NATIVE_SERVER_RENDERED_APP_NO_EXTERNAL_DASHBOARD_RESOURCE"
+    )
+    assert manifest.app["dashboard_metrics"] == (
+        "FAILED_NODE_RESULTS_PER_RUN",
+        "MODEL_RESULTS_PER_RUN",
+    )
     assert manifest.lifecycle["default_action"] == "STOP"
     assert "ZERO_PRODUCT_STARTED_COMPUTE" in manifest.qualification["live_cases"]
     assert manifest.distribution["marketplace"] is False

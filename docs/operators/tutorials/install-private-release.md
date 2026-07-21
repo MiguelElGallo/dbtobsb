@@ -1,4 +1,4 @@
-# Install the private v0.3 release
+# Install the private v0.4 release
 
 This is the supported route for one Azure Databricks workspace and one dbt Core project. The installer discovers existing customer resources, shows the selected boundary, and leaves the read-only App stopped. It does not require an external telemetry service or Databricks Marketplace.
 
@@ -10,7 +10,7 @@ This is the supported route for one Azure Databricks workspace and one dbt Core 
 
 ## Before you begin
 
-Use a managed Apple-silicon Mac with Python 3.12, `uv`, and Databricks CLI `1.7.0`. Run from a private checkout of this repository. The signed-in person must use a named Azure Databricks OAuth U2M profile and must be both account and workspace administrator.
+Use a managed Apple-silicon Mac with Python 3.12, `uv`, and Databricks CLI `1.8.0`. Run from a private checkout of this repository. The signed-in person must use a named Azure Databricks OAuth U2M profile and must be both account and workspace administrator.
 
 Prepare these customer-owned resources first:
 

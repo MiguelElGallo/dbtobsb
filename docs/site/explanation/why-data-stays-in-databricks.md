@@ -28,5 +28,5 @@ authority remain trusted.
 ## The customer keeps governance responsibility
 
 Customer-local storage lets the customer apply its own access, retention, backup,
-legal-hold, export, and deletion policies. `v0.3.0` does not automate or certify
+legal-hold, export, and deletion policies. `v0.4.0` does not automate or certify
 those controls.

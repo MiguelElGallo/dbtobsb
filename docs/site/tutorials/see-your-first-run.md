@@ -157,13 +157,21 @@ printf 'START\n' | uv run --project installer --no-sync dbtobsb start
 ```
 
 Open the App and select **Load observability**. The App shows the same run, node,
-and collection data as the SQL views. Loading data can start the bound SQL
-warehouse.
+and collection data as the SQL views. It also shows **Failures over time** and
+**Total models over time** for recent accepted runs. Loading data can start the
+bound SQL warehouse.
+
+The failure chart counts accepted node results whose native dbt status is `error`
+or `fail`. The model chart counts accepted model-result rows in each run. It does
+not claim to count every model in the project, because unselected models do not
+produce a result row. Expand **View chart data as a table** for the exact accessible
+values behind both charts.
 
 ![The dbtobsb App showing published collection health and recent runs](../images/app-observability-dashboard.png){ loading="lazy" }
 
-*The read-only App after loading data. The cost notice stays visible above the
-collection and run history.*
+*Historical v0.3 App evidence after loading data. In v0.4, the native trend charts
+appear above the same collection and run history; replace this image only after
+the v0.4 live qualification is complete.*
 
 ## 6. Stop compute
 

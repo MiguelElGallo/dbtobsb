@@ -10,7 +10,7 @@ from databricks.sdk.core import Config
 from pydantic import ValidationError
 
 from dbtobsb_app.configuration import ResourceBindings
-from dbtobsb_app.models import CollectionHealth, NodeHealth, RunHealth
+from dbtobsb_app.models import CollectionHealth, NodeHealth, RunHealth, TrendPoint
 
 MAX_LIMIT = 100
 DEFAULT_LIMIT = 25
@@ -84,6 +84,13 @@ COLLECTION_COLUMNS: tuple[str, ...] = (
     "last_reconciliation_run_id",
 )
 
+TREND_COLUMNS: tuple[str, ...] = (
+    "observed_job_run_id",
+    "observed_at",
+    "failed_node_results",
+    "model_results",
+)
+
 
 class ObservabilityRepository(Protocol):
     """Read-only dependency injected into HTTP handlers."""
@@ -93,6 +100,8 @@ class ObservabilityRepository(Protocol):
     def recent_nodes(self, limit: int) -> tuple[NodeHealth, ...]: ...
 
     def recent_collection(self, limit: int) -> tuple[CollectionHealth, ...]: ...
+
+    def recent_trends(self, limit: int) -> tuple[TrendPoint, ...]: ...
 
 
 class Cursor(Protocol):
@@ -187,6 +196,29 @@ class DatabricksSqlRepository:
             bindings.collection_health_view.quoted,
             "`first_discovered_at` DESC NULLS LAST, `dbt_task_run_id` DESC",
         )
+        self._trends_query = f"""WITH recent_runs AS (
+  SELECT
+    `observed_job_run_id`,
+    `dbt_task_run_id`,
+    `generated_at` AS `observed_at`
+  FROM {bindings.run_health_view.quoted}
+  WHERE `pair_state` = 'PAIR_VALID'
+  ORDER BY `generated_at` DESC, `dbt_task_run_id` DESC
+  LIMIT :limit
+)
+SELECT
+  r.`observed_job_run_id`,
+  r.`observed_at`,
+  CAST(COALESCE(SUM(CASE WHEN n.`status` IN ('error', 'fail') THEN 1 ELSE 0 END), 0)
+    AS BIGINT) AS `failed_node_results`,
+  CAST(COALESCE(SUM(CASE WHEN n.`resource_type` = 'model' THEN 1 ELSE 0 END), 0)
+    AS BIGINT) AS `model_results`
+FROM recent_runs AS r
+LEFT JOIN {bindings.node_health_view.quoted} AS n
+  ON n.`dbt_task_run_id` = r.`dbt_task_run_id`
+ AND n.`observed_job_run_id` = r.`observed_job_run_id`
+GROUP BY r.`observed_job_run_id`, r.`observed_at`
+ORDER BY r.`observed_at` ASC, r.`observed_job_run_id` ASC"""
 
     def recent_runs(self, limit: int) -> tuple[RunHealth, ...]:
         """Return a bounded newest-first run view projection."""
@@ -235,6 +267,22 @@ class DatabricksSqlRepository:
             )
         except ValidationError:
             raise AppDataAccessError("DBTOBSB_APP_COLLECTION_VIEW_CONTRACT_MISMATCH") from None
+
+    def recent_trends(self, limit: int) -> tuple[TrendPoint, ...]:
+        """Return oldest-first aggregates for the newest accepted dbt runs."""
+        try:
+            return tuple(
+                TrendPoint.model_validate(row)
+                for row in _rows(
+                    self._connection_factory,
+                    query=self._trends_query,
+                    columns=TREND_COLUMNS,
+                    limit=limit,
+                    contract_error_code="DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH",
+                )
+            )
+        except ValidationError:
+            raise AppDataAccessError("DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH") from None
 
 
 def databricks_repository(bindings: ResourceBindings) -> ObservabilityRepository:

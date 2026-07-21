@@ -1,6 +1,6 @@
 # Install the private release
 
-Use this guide to install dbtobsb `v0.3.0` in one Azure Databricks workspace.
+Use this guide to install dbtobsb `v0.4.0` in one Azure Databricks workspace.
 The installation is attended: one accountable administrator reviews the selected
 resources before any change is made.
 
@@ -33,9 +33,9 @@ Use a managed Apple-silicon Mac with:
 
 - Python `3.12`;
 - `uv`;
-- Databricks CLI `1.7.0`;
+- Databricks CLI `1.8.0`;
 - `jq` for the optional final-state checks;
-- a checkout of the `v0.3.0` release; and
+- a checkout of the `v0.4.0` release; and
 - a named Azure Databricks OAuth profile for the canonical
   `https://adb-...azuredatabricks.net` workspace URL. Do not use `DEFAULT`.
 
@@ -52,7 +52,7 @@ databricks current-user me --profile '<profile>' --output json
 ```
 
 The versions must match the [supported environment](../reference/supported-environment.md),
-the Git command must print `v0.3.0`, and both Databricks commands must succeed for
+the Git command must print `v0.4.0`, and both Databricks commands must succeed for
 the same named profile and supported Azure workspace. Stop if the profile belongs
 to Free Edition or another cloud.
 

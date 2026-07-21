@@ -28,10 +28,10 @@ PROTOCOL = "dbtobsb.native-bridge.v1"
 WHEEL_TAG = "py3-none-macosx_11_0_arm64"
 SOURCE_DATE_EPOCH = "315532800"
 EXPECTED_CLI = {
-    "commit": "2f68ee4951ef96fa9d99e40c8ebadccf08412d58",
+    "commit": "3b9fe151888df8fe937090e5f2be0a5c6dc0ff18",
     "module": "github.com/databricks/cli",
-    "module_sum": "h1:rXIWpyz11eng0BJ3b83MHkmvxqHhbID1xa9nHRu9lHA=",
-    "version": "v1.7.0",
+    "module_sum": "h1:+1aoZobpIBqGPuS1gyveIFeOC1BVK2jn8G6qYaQ/GwM=",
+    "version": "v1.8.0",
 }
 EXPECTED_SDK = {
     "module": "github.com/databricks/databricks-sdk-go",

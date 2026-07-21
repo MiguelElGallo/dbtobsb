@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from databricks.sdk.errors import NotFound
 
 from dbtobsb_installer.release_cli import (
     InstallationState,
@@ -22,9 +23,9 @@ from dbtobsb_installer.release_cli import (
 
 _DIGEST = "a" * 64
 _FINAL_WHEELS = {
-    "contracts": f"dbtobsb_contracts-0.3.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
-    "capture": f"dbtobsb_capture-0.3.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
-    "collector": f"dbtobsb_collector-0.3.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
+    "contracts": f"dbtobsb_contracts-0.4.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
+    "capture": f"dbtobsb_capture-0.4.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
+    "collector": f"dbtobsb_collector-0.4.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
 }
 
 
@@ -180,6 +181,35 @@ class _StopManager(ReleaseManager):
         assert state.reconciler_job_id == 13
 
 
+class _TerraformWorkspace:
+    def __init__(self, outcome: str) -> None:
+        self.outcome = outcome
+        self.paths: list[str] = []
+
+    def get_status(self, path: str) -> SimpleNamespace:
+        self.paths.append(path)
+        if self.outcome == "missing":
+            raise NotFound("missing")
+        if self.outcome == "error":
+            raise RuntimeError("untrusted remote failure")
+        return SimpleNamespace(path=path)
+
+
+class _TerraformStateManager(ReleaseManager):
+    def __init__(self, root: Path, outcome: str) -> None:
+        super().__init__(
+            root=root,
+            runner=_NoCommandRunner(),
+            input_stream=io.StringIO(),
+            output_stream=io.StringIO(),
+        )
+        self.workspace = _TerraformWorkspace(outcome)
+
+    def _client(self, profile: str) -> Any:
+        assert profile == "paid-azure-test"
+        return SimpleNamespace(workspace=self.workspace)
+
+
 def test_stop_accepts_cancel_waiter_race_after_terminal_readback(tmp_path: Path) -> None:
     active_run = SimpleNamespace(job_id=11, run_id=101)
     manager = _StopManager(tmp_path, [[active_run], []])
@@ -251,6 +281,39 @@ def test_selection_is_sorted_and_accepts_only_canonical_number() -> None:
             input_stream=io.StringIO("01\n"),
             output_stream=io.StringIO(),
         )
+
+
+def test_cli_1_8_guard_accepts_only_absent_terraform_state(tmp_path: Path) -> None:
+    manager = _TerraformStateManager(tmp_path, "missing")
+
+    manager._reject_terraform_state(_state())
+
+    assert manager.workspace.paths == [
+        "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/state/terraform.tfstate"
+    ]
+
+
+def test_cli_1_8_guard_rejects_local_or_remote_terraform_state(tmp_path: Path) -> None:
+    local_state = tmp_path / ".databricks" / "bundle" / "smoke" / "terraform" / "terraform.tfstate"
+    local_state.parent.mkdir(parents=True)
+    local_state.write_text("{}", encoding="utf-8")
+    local_manager = _TerraformStateManager(tmp_path, "missing")
+
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_TERRAFORM_STATE_UNSUPPORTED"):
+        local_manager._reject_terraform_state(_state())
+    assert local_manager.workspace.paths == []
+
+    local_state.unlink()
+    remote_manager = _TerraformStateManager(tmp_path, "present")
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_TERRAFORM_STATE_UNSUPPORTED"):
+        remote_manager._reject_terraform_state(_state())
+
+
+def test_cli_1_8_guard_fails_closed_when_remote_state_cannot_be_read(tmp_path: Path) -> None:
+    manager = _TerraformStateManager(tmp_path, "error")
+
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_TERRAFORM_STATE_CHECK_FAILED"):
+        manager._reject_terraform_state(_state())
 
 
 def test_bootstrap_resumes_after_final_deploy_without_repeating_completed_stages(

@@ -3,7 +3,7 @@ module github.com/miguelperedo/dbtobsb/native
 go 1.26.5
 
 require (
-	github.com/databricks/cli v1.7.0
+	github.com/databricks/cli v1.8.0
 	github.com/databricks/databricks-sdk-go v0.154.0
 	github.com/google/uuid v1.6.0
 )

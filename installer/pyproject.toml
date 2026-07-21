@@ -1,6 +1,6 @@
 [project]
 name = "dbtobsb-installer"
-version = "0.3.0"
+version = "0.4.0"
 description = "Attended local installer utilities for dbtobsb"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -10,8 +10,8 @@ dependencies = [
     "dbt-common==1.37.5",
     "dbt-core==1.11.12",
     "dbt-protos==1.0.541",
-    "dbtobsb-collector==0.3.0",
-    "dbtobsb-contracts==0.3.0",
+    "dbtobsb-collector==0.4.0",
+    "dbtobsb-contracts==0.4.0",
     "pyyaml==6.0.3",
 ]
 

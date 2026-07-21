@@ -1,6 +1,6 @@
 # Python API
 
-`dbtobsb_capture` exposes the stable artifact-pair inspection API plus the v0.3 collector-facing archive APIs. For installation and a guided first result, use [Inspect an artifact pair](../tutorials/inspect-an-artifact-pair.md#4-use-the-python-api).
+`dbtobsb_capture` exposes the stable artifact-pair inspection API plus the v0.4 collector-facing archive APIs. For installation and a guided first result, use [Inspect an artifact pair](../tutorials/inspect-an-artifact-pair.md#4-use-the-python-api).
 
 <a id="run-a-first-inspection"></a>
 
@@ -68,9 +68,9 @@ PAIR_VALID
 
 The example reads files before calling the API. The API itself never opens a caller path.
 
-## v0.3 collector APIs
+## v0.4 collector APIs
 
-These exports support the customer-local v0.3 collector. They are shipped in the content-addressed `0.3.0` release wheels and remain governed by `dbtobsb.support.v1`.
+These exports support the customer-local v0.4 collector. They are shipped in the content-addressed `0.4.0` release wheels and remain governed by `dbtobsb.support.v1`.
 
 | Export | Purpose |
 | --- | --- |

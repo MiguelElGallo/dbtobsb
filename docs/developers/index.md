@@ -10,4 +10,4 @@ Current developer guidance is part of the reader documentation:
 - [Why outcomes stay separate](../site/explanation/why-outcomes-stay-separate.md)
 
 Files below `docs/developers` are retained as development history. They are not the
-navigation or starting point for the supported `v0.3.0` release.
+navigation or starting point for the supported `v0.4.0` release.

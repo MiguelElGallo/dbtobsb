@@ -114,6 +114,8 @@ _APP_KEYS = {
     "load_action",
     "warehouse_may_auto_start_after_load",
     "browser_close_stops_compute",
+    "dashboard_rendering",
+    "dashboard_metrics",
     "resources",
     "first_answer",
 }
@@ -158,7 +160,7 @@ _PACKAGE_VERSIONS = {
     "dbt-protos": "1.0.541",
     "dbt-spark": "1.10.3",
 }
-_EXPECTED_CANONICAL_SHA256 = "a440ab8a9cd6c0b00736e617554fd47d736b2764bdc3b17b71a935befc694401"
+_EXPECTED_CANONICAL_SHA256 = "493d746cca8cf250ff5f4a9087bf9a0c9f83670f2ef192e6542860110d2d9340"
 
 
 def _mapping(value: Any, *, name: str, keys: set[str]) -> dict[str, Any]:
@@ -239,7 +241,7 @@ def parse_support_manifest(raw: bytes) -> SupportManifest:
         "release_state": "FINAL",
         "cloud": "AZURE_DATABRICKS",
         "bundle_engine": "DIRECT",
-        "databricks_cli": "1.7.0",
+        "databricks_cli": "1.8.0",
         "bootstrap_compute": "SERVERLESS_LAKEFLOW_PYTHON_WHEEL_JOB",
         "dbt_task_compute": "SERVERLESS_LAKEFLOW_JOB",
         "app_compute": "DATABRICKS_APP_SERVERLESS",
@@ -355,11 +357,11 @@ def parse_support_manifest(raw: bytes) -> SupportManifest:
         "schema_requirement": "EXISTING_DEDICATED_SCHEMA_SESSION_USER_IS_OWNER",
         "bootstrap_run_as": "BUNDLE_DEPLOYER_COMBINED_ADMIN",
         "bootstrap_job_lifecycle": "TEMPORARY_REMOVE_AFTER_TERMINAL_READBACK",
-        "native_mutation_registry": "FOUNDATION_NOT_INVOKED_V0_3",
+        "native_mutation_registry": "FOUNDATION_NOT_INVOKED_V0_4",
         "bundle_sql_hooks": False,
         "bootstrap_idempotency": "EXACT_PRE_BINDING_ONLY",
         "post_binding_resume": "LIFECYCLE_READBACK_NO_BOOTSTRAP_REPLAY",
-        "runtime_trust_ledger": "NOT_IN_V0_3_SUPPORTED_PATH",
+        "runtime_trust_ledger": "NOT_IN_V0_4_SUPPORTED_PATH",
     }
     if installation != expected_installation:
         raise ValueError("DBTOBSB_SUPPORT_MANIFEST_INSTALLATION_INVALID")
@@ -463,6 +465,11 @@ def parse_support_manifest(raw: bytes) -> SupportManifest:
         "load_action": "EXPLICIT_LOAD_OBSERVABILITY",
         "warehouse_may_auto_start_after_load": True,
         "browser_close_stops_compute": False,
+        "dashboard_rendering": "NATIVE_SERVER_RENDERED_APP_NO_EXTERNAL_DASHBOARD_RESOURCE",
+        "dashboard_metrics": [
+            "FAILED_NODE_RESULTS_PER_RUN",
+            "MODEL_RESULTS_PER_RUN",
+        ],
         "resources": [
             "APP_QUERY_WAREHOUSE",
             "dbt_run_health",

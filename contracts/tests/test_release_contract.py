@@ -7,7 +7,7 @@ from pathlib import Path
 from dbtobsb_contracts import load_support_manifest
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-_RELEASE_CONTRACT = _REPOSITORY_ROOT / "docs" / "releases" / "v0.3.0-support-contract.md"
+_RELEASE_CONTRACT = _REPOSITORY_ROOT / "docs" / "releases" / "v0.4.0-support-contract.md"
 
 
 def _release_text() -> str:

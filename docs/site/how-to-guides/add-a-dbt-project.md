@@ -1,6 +1,6 @@
 # Prepare a dbt project
 
-Use this guide before a fresh dbtobsb installation. Version `0.3.0` installs one
+Use this guide before a fresh dbtobsb installation. Version `0.4.0` installs one
 observed dbt Core project and does not replace a project in place.
 
 ## Create the minimum project
