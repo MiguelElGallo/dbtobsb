@@ -37,6 +37,10 @@ _DEPLOYED_RUNTIME_CODES = frozenset(
         "DBTOBSB_DEPLOYMENT_BINDING_NOT_FINALIZED",
     }
 )
+_PRE_APP_BOOTSTRAP_RECOVERY = (
+    "Use docs/site/how-to-guides/install-private-release.md#recover-a-failed-bootstrap "
+    "and follow the matching code."
+)
 _BOOTSTRAP_CODES = frozenset(
     {
         "DBTOBSB_BOOTSTRAP_ACTOR_SCHEMA_OWNER_MISMATCH",
@@ -230,22 +234,22 @@ def bootstrap_operator_diagnostic(error: Exception) -> OperatorDiagnostic:
         action = "Run the documented evidence-object reconciliation workflow."
     elif code == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED":
         component = "table creation authorization"
-        action = "Open /operators/how-to/reconcile-installation/ and follow the matching code."
+        action = _PRE_APP_BOOTSTRAP_RECOVERY
     elif code == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE":
         component = "managed storage connectivity"
-        action = "Open /operators/how-to/reconcile-installation/ and follow the matching code."
+        action = _PRE_APP_BOOTSTRAP_RECOVERY
     elif code == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_OBJECT_CONFLICT":
         component = "fresh-install table conflict"
-        action = "Open /operators/how-to/reconcile-installation/ and follow the matching code."
+        action = _PRE_APP_BOOTSTRAP_RECOVERY
     elif code == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_PLATFORM_UNSUPPORTED":
         component = "serverless DDL support"
-        action = "Open /operators/how-to/reconcile-installation/ and follow the matching code."
+        action = _PRE_APP_BOOTSTRAP_RECOVERY
     elif code == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_SQL_INCOMPATIBLE":
         component = "Databricks DDL compatibility"
-        action = "Open /operators/how-to/reconcile-installation/ and follow the matching code."
+        action = _PRE_APP_BOOTSTRAP_RECOVERY
     elif code == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_INTERNAL_ERROR":
         component = "Databricks table creation runtime"
-        action = "Open /operators/how-to/reconcile-installation/ and follow the matching code."
+        action = _PRE_APP_BOOTSTRAP_RECOVERY
     elif code in {
         "DBTOBSB_BOOTSTRAP_DBT_POLICY_BINDING_INVALID",
         "DBTOBSB_BOOTSTRAP_JOB_BINDING_INVALID",

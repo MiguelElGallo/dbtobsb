@@ -56,11 +56,14 @@ Use $install-and-run-dbtobsb to install dbtobsb, run the weather example,
 prove that its model result and structured logs were captured, and stop compute.
 ```
 
-Before changing anything, the agent asks you to confirm the workspace, project,
+Before changing anything, the agent establishes the workspace, project,
 identities, group, warehouse, catalog, schemas, allowed changes, compute deadline,
 warehouse stop policy, and final retained state. It rejects Free Edition and
-non-Azure workspaces. It asks again before approving the installer's exact change
-preview.
+non-Azure workspaces. Once you authorize that summarized task, the agent shows
+each exact preview and digest as progress evidence and answers the installer's
+confirmation prompts itself. It does not ask again across retries or digest
+changes that remain within the task scope. A material expansion of the resources,
+mutations, workload, cost ceiling, or finish state is a new task decision.
 
 The expected result is one successful weather model, captured model results,
 complete structured logs, published observability rows, and all product compute

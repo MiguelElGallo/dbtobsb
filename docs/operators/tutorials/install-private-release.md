@@ -33,7 +33,7 @@ uv sync --project installer --locked
 uv run --project installer --no-sync dbtobsb bootstrap
 ```
 
-Select the named profile, service principals, group, warehouse, empty evidence schema, dbt target schema, and dbt project. The two schemas may use different existing catalogs. Review the displayed workspace, fully qualified data targets, project, and identities. Type `APPROVE` only when every selection is correct.
+Select the named profile, service principals, group, warehouse, empty evidence schema, dbt target schema, and dbt project. The two schemas may use different existing catalogs. Review the displayed workspace, fully qualified data targets, project, and identities. For a manual installation, type `APPROVE` only when every selection is correct. Once an agent's summarized installation-and-run task is authorized, it always shows the exact preview and digest, enters `APPROVE` itself at matching previews, and does not request another approval for retries within the same resources, mutations, workload, cost ceiling, and finish state. Material expansion is a new task decision.
 
 The launcher snapshots and seals the project, deploys three Jobs and the App through the Bundle, runs one temporary serverless bootstrap Job, applies the fixed grants, verifies the deployment, and removes the temporary Job. Successful completion ends with:
 

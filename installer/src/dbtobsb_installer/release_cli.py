@@ -156,6 +156,29 @@ _CREDENTIAL_ENVIRONMENT_NAMES = frozenset(
         "AZURE_USERNAME",
     }
 )
+_TEMPORARY_JOB_DIAGNOSTIC_KEYS = frozenset(
+    {
+        "action",
+        "code",
+        "component",
+        "consequence",
+        "outcome",
+        "responsible_actor",
+        "summary",
+    }
+)
+_TEMPORARY_JOB_BOOTSTRAP_CODES = frozenset(
+    {
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_INTERNAL_ERROR",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_OBJECT_CONFLICT",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_PLATFORM_UNSUPPORTED",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_SQL_INCOMPATIBLE",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE",
+    }
+)
+_MAX_TEMPORARY_JOB_LOG_CHARACTERS = 1_000_000
+_MAX_TEMPORARY_JOB_DIAGNOSTIC_LINE_CHARACTERS = 4_096
 
 
 class ReleaseCliError(RuntimeError):
@@ -576,6 +599,37 @@ def _parse_json(raw: bytes, *, code: str) -> Any:
         return json.loads(raw, object_pairs_hook=_json_object)
     except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
         raise ReleaseCliError(code) from None
+
+
+def _temporary_job_diagnostic_code(task_output: object) -> str | None:
+    """Extract one exact static bootstrap code without returning native task text."""
+    if not isinstance(task_output, Mapping):
+        return None
+    logs = task_output.get("logs")
+    if not isinstance(logs, str) or len(logs) > _MAX_TEMPORARY_JOB_LOG_CHARACTERS:
+        return None
+    observed: set[str] = set()
+    for raw_line in logs.splitlines():
+        line = raw_line.strip()
+        if not line or len(line) > _MAX_TEMPORARY_JOB_DIAGNOSTIC_LINE_CHARACTERS:
+            continue
+        try:
+            document = json.loads(line)
+        except (TypeError, ValueError):
+            continue
+        if (
+            not isinstance(document, dict)
+            or set(document) != _TEMPORARY_JOB_DIAGNOSTIC_KEYS
+            or any(not isinstance(value, str) for value in document.values())
+            or document.get("outcome") != "denied"
+        ):
+            continue
+        code = document.get("code")
+        if code in _TEMPORARY_JOB_BOOTSTRAP_CODES:
+            observed.add(cast(str, code))
+    if len(observed) != 1:
+        return None
+    return next(iter(observed))
 
 
 def _canonical_json(value: Any) -> bytes:
@@ -2022,6 +2076,10 @@ class ReleaseManager:
         client = self._client(state.profile)
         temporary_job_id: int | None = None
         operation_succeeded = False
+        operation_failure: ReleaseCliError | None = None
+        cleanup_succeeded = True
+        progress_started = False
+        terminal_observed = False
         try:
             self._deploy(state, state.final_wheels, select=f"jobs.{key}")
             temporary_job_id = self._temporary_job_id(state, key)
@@ -2030,6 +2088,11 @@ class ReleaseManager:
                 for run in client.jobs.list_runs(job_id=temporary_job_id, limit=25)
                 if run.run_id is not None
             }
+            progress_started = True
+            print(
+                "Lifecycle progress: fixed temporary Job submitted; waiting for a terminal result.",
+                file=self.output,
+            )
             output = b""
             # A lost local response is not proof that the remote operation failed.
             # The new-run and task-output checks below are the authority.
@@ -2057,33 +2120,77 @@ class ReleaseManager:
                 if run.run_id is not None and run.run_id not in previous_run_ids
             ]
             if not runs:
-                raise ReleaseCliError("DBTOBSB_INSTALLER_TEMPORARY_JOB_READBACK_FAILED")
-            latest = max(runs, key=lambda item: item.start_time or 0)
-            result_state = getattr(getattr(latest, "state", None), "result_state", None)
-            if getattr(result_state, "value", result_state) != "SUCCESS":
-                raise ReleaseCliError("DBTOBSB_INSTALLER_TEMPORARY_JOB_FAILED")
-            event_observed = expected_event.encode("ascii") in output
-            for task in latest.tasks or []:
-                if task.run_id is None:
-                    continue
-                try:
-                    task_output = client.jobs.get_run_output(task.run_id).as_dict()
+                operation_failure = ReleaseCliError(
+                    "DBTOBSB_INSTALLER_TEMPORARY_JOB_READBACK_FAILED"
+                )
+            else:
+                latest = max(runs, key=lambda item: item.start_time or 0)
+                terminal_observed = True
+                event_observed = expected_event.encode("ascii") in output
+                diagnostic_codes: set[str] = set()
+                for task in latest.tasks or []:
+                    if task.run_id is None:
+                        continue
+                    try:
+                        task_output = client.jobs.get_run_output(task.run_id).as_dict()
+                    except Exception:
+                        continue
                     if expected_event in json.dumps(task_output, sort_keys=True):
                         event_observed = True
-                except Exception:
-                    continue
-            if not event_observed:
-                raise ReleaseCliError("DBTOBSB_INSTALLER_TEMPORARY_JOB_READBACK_FAILED")
-            operation_succeeded = True
+                    diagnostic_code = _temporary_job_diagnostic_code(task_output)
+                    if diagnostic_code is not None:
+                        diagnostic_codes.add(diagnostic_code)
+                result_state = getattr(getattr(latest, "state", None), "result_state", None)
+                if getattr(result_state, "value", result_state) != "SUCCESS":
+                    operation_failure = ReleaseCliError(
+                        next(iter(diagnostic_codes))
+                        if len(diagnostic_codes) == 1
+                        else "DBTOBSB_INSTALLER_TEMPORARY_JOB_FAILED"
+                    )
+                elif not event_observed:
+                    operation_failure = ReleaseCliError(
+                        "DBTOBSB_INSTALLER_TEMPORARY_JOB_READBACK_FAILED"
+                    )
+                else:
+                    operation_succeeded = True
+        except ReleaseCliError as error:
+            operation_failure = error
+        except Exception:
+            operation_failure = ReleaseCliError("DBTOBSB_INSTALLER_TEMPORARY_JOB_READBACK_FAILED")
         finally:
-            overlay.unlink(missing_ok=True)
+            try:
+                overlay.unlink(missing_ok=True)
+            except OSError:
+                cleanup_succeeded = False
             if reconcile_bundle:
                 try:
                     self._deploy(state, state.final_wheels)
-                except ReleaseCliError:
-                    operation_succeeded = False
-        if not operation_succeeded:
+                except Exception:
+                    cleanup_succeeded = False
+            if progress_started:
+                terminal_status = "terminal" if terminal_observed else "terminal state not verified"
+                if not reconcile_bundle:
+                    progress = (
+                        f"Lifecycle progress: fixed temporary Job {terminal_status}; "
+                        "temporary Job cleanup remains in the attended lifecycle."
+                    )
+                elif cleanup_succeeded:
+                    progress = (
+                        f"Lifecycle progress: fixed temporary Job {terminal_status}; "
+                        "temporary Job cleanup verified."
+                    )
+                else:
+                    progress = (
+                        f"Lifecycle progress: fixed temporary Job {terminal_status}; "
+                        "temporary Job cleanup not verified."
+                    )
+                print(progress, file=self.output)
+        if not cleanup_succeeded:
             raise ReleaseCliError("DBTOBSB_INSTALLER_TEMPORARY_JOB_CLEANUP_FAILED")
+        if operation_failure is not None:
+            raise operation_failure
+        if not operation_succeeded:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_TEMPORARY_JOB_FAILED")
 
     @staticmethod
     def _permission_change(

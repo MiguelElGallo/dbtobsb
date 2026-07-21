@@ -402,17 +402,38 @@ def test_delete_uninstall_binding_mismatch_precedes_spark_and_hides_arguments(
         (
             "DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED",
             "table creation authorization",
-            "Open /operators/how-to/reconcile-installation/ and follow the matching code.",
+            "Use docs/site/how-to-guides/install-private-release.md#recover-a-failed-bootstrap "
+            "and follow the matching code.",
         ),
         (
             "DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE",
             "managed storage connectivity",
-            "Open /operators/how-to/reconcile-installation/ and follow the matching code.",
+            "Use docs/site/how-to-guides/install-private-release.md#recover-a-failed-bootstrap "
+            "and follow the matching code.",
+        ),
+        (
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_OBJECT_CONFLICT",
+            "fresh-install table conflict",
+            "Use docs/site/how-to-guides/install-private-release.md#recover-a-failed-bootstrap "
+            "and follow the matching code.",
+        ),
+        (
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_PLATFORM_UNSUPPORTED",
+            "serverless DDL support",
+            "Use docs/site/how-to-guides/install-private-release.md#recover-a-failed-bootstrap "
+            "and follow the matching code.",
         ),
         (
             "DBTOBSB_BOOTSTRAP_TABLE_CREATE_SQL_INCOMPATIBLE",
             "Databricks DDL compatibility",
-            "Open /operators/how-to/reconcile-installation/ and follow the matching code.",
+            "Use docs/site/how-to-guides/install-private-release.md#recover-a-failed-bootstrap "
+            "and follow the matching code.",
+        ),
+        (
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_INTERNAL_ERROR",
+            "Databricks table creation runtime",
+            "Use docs/site/how-to-guides/install-private-release.md#recover-a-failed-bootstrap "
+            "and follow the matching code.",
         ),
     ],
 )

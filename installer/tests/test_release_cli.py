@@ -6,7 +6,7 @@ import io
 import json
 import os
 import struct
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -29,6 +29,7 @@ from dbtobsb_installer.release_cli import (
     _SealedCliCredentials,
     _select,
     _supported_catalogs,
+    _temporary_job_diagnostic_code,
     _verify_databricks_cli_executable,
     main,
 )
@@ -56,6 +57,72 @@ class _NoCommandRunner:
     ) -> bytes:
         del command, timeout_seconds, stdin
         raise AssertionError("No external command was expected")
+
+
+def _operator_diagnostic_line(code: str, *, canary: str = "") -> str:
+    return json.dumps(
+        {
+            "action": f"Use the fixed local runbook.{canary}",
+            "code": code,
+            "component": "fixed bootstrap component",
+            "consequence": "Bootstrap stopped.",
+            "outcome": "denied",
+            "responsible_actor": "UC operator",
+            "summary": "Denied: bootstrap is not ready.",
+        },
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_INTERNAL_ERROR",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_OBJECT_CONFLICT",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_PLATFORM_UNSUPPORTED",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_SQL_INCOMPATIBLE",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE",
+    ],
+)
+def test_temporary_job_diagnostic_extracts_only_allowlisted_code(code: str) -> None:
+    canary = "SENSITIVE_NATIVE_TASK_TEXT_CANARY"
+
+    observed = _temporary_job_diagnostic_code(
+        {"logs": f"untrusted prefix\n{_operator_diagnostic_line(code, canary=canary)}\n"}
+    )
+
+    assert observed == code
+    assert observed is not None
+    assert canary not in observed
+
+
+@pytest.mark.parametrize(
+    "logs",
+    [
+        _operator_diagnostic_line("DBTOBSB_BOOTSTRAP_UNKNOWN"),
+        json.dumps(
+            {
+                **json.loads(
+                    _operator_diagnostic_line("DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE")
+                ),
+                "native_message": "SENSITIVE_NATIVE_TASK_TEXT_CANARY",
+            }
+        ),
+        (
+            _operator_diagnostic_line("DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE")
+            + "\n"
+            + _operator_diagnostic_line("DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED")
+        ),
+        "x" * 1_000_001,
+        "SENSITIVE_NATIVE_TASK_TEXT_CANARY",
+    ],
+)
+def test_temporary_job_diagnostic_rejects_unknown_malformed_conflicting_or_raw(
+    logs: str,
+) -> None:
+    assert _temporary_job_diagnostic_code({"logs": logs}) is None
 
 
 def _state(*, stage: str = "INSTALLED") -> InstallationState:
@@ -101,10 +168,242 @@ def _state(*, stage: str = "INSTALLED") -> InstallationState:
     )
 
 
+class _RecordingBundleRunner:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, ...]] = []
+
+    def run(
+        self,
+        command: tuple[str, ...],
+        *,
+        timeout_seconds: int,
+        stdin: bytes | None = None,
+    ) -> bytes:
+        del timeout_seconds, stdin
+        self.calls.append(command)
+        return b""
+
+
+class _TaskOutput:
+    def __init__(self, document: object) -> None:
+        self.document = document
+
+    def as_dict(self) -> object:
+        return self.document
+
+
+class _TemporaryJobs:
+    def __init__(self, logs: str) -> None:
+        self.logs = logs
+        self.list_calls: list[dict[str, object]] = []
+        self.output_calls: list[int] = []
+
+    def list_runs(self, **kwargs: object) -> list[SimpleNamespace]:
+        self.list_calls.append(dict(kwargs))
+        if not kwargs.get("completed_only"):
+            return []
+        return [
+            SimpleNamespace(
+                run_id=901,
+                start_time=1,
+                state=SimpleNamespace(result_state=SimpleNamespace(value="FAILED")),
+                tasks=[SimpleNamespace(run_id=902)],
+            )
+        ]
+
+    def get_run_output(self, run_id: int) -> _TaskOutput:
+        self.output_calls.append(run_id)
+        return _TaskOutput({"logs": self.logs})
+
+
+class _TemporaryJobManager(ReleaseManager):
+    def __init__(
+        self,
+        root: Path,
+        logs: str,
+        *,
+        cleanup_failure: bool = False,
+    ) -> None:
+        self.bundle_runner = _RecordingBundleRunner()
+        self.jobs = _TemporaryJobs(logs)
+        self.deploy_calls: list[str | None] = []
+        self.cleanup_failure = cleanup_failure
+        super().__init__(
+            root=root,
+            runner=self.bundle_runner,
+            input_stream=io.StringIO(),
+            output_stream=io.StringIO(),
+        )
+
+    def _client(self, profile: str) -> Any:
+        del profile
+        return SimpleNamespace(jobs=self.jobs)
+
+    def _deploy(
+        self,
+        state: InstallationState,
+        wheels: Mapping[str, str],
+        *,
+        select: str | None = None,
+    ) -> None:
+        del state, wheels
+        self.deploy_calls.append(select)
+        if select is None and self.cleanup_failure:
+            raise ReleaseCliError("SENSITIVE_NATIVE_CLEANUP_TEXT_CANARY")
+
+    def _temporary_job_id(self, state: InstallationState, key: str) -> int:
+        del state, key
+        return 900
+
+    def bootstrap(self) -> None:
+        self._run_temporary_job(
+            _state(stage="FINAL_DEPLOYED"),
+            key="dbtobsb_bootstrap",
+            entry_point="bootstrap",
+            parameters=("--fixed",),
+            expected_event="dbtobsb_bootstrap_verified",
+        )
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_INTERNAL_ERROR",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_OBJECT_CONFLICT",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_PLATFORM_UNSUPPORTED",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_SQL_INCOMPATIBLE",
+        "DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE",
+    ],
+)
+def test_failed_temporary_job_surfaces_only_allowlisted_code_and_cleans_up(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    code: str,
+) -> None:
+    canary = "SENSITIVE_NATIVE_TASK_TEXT_CANARY"
+    manager = _TemporaryJobManager(
+        tmp_path,
+        _operator_diagnostic_line(code, canary=canary),
+    )
+
+    assert main(["bootstrap"], manager=manager) == 2
+
+    captured = capsys.readouterr()
+    progress = cast(io.StringIO, manager.output).getvalue()
+    assert captured.err == f"{code}\n"
+    assert captured.out == ""
+    assert canary not in captured.err
+    assert canary not in progress
+    assert len(manager.bundle_runner.calls) == 1
+    assert manager.bundle_runner.calls[0][:3] == (
+        "databricks",
+        "bundle",
+        "run",
+    )
+    assert manager.deploy_calls == ["jobs.dbtobsb_bootstrap", None]
+    assert manager.jobs.output_calls == [902]
+    assert "fixed temporary Job submitted" in progress
+    assert "temporary Job cleanup verified" in progress
+    assert not (tmp_path / ".dbtobsb-bundle-base/99-lifecycle.generated.yml").exists()
+
+
+@pytest.mark.parametrize(
+    "logs",
+    [
+        _operator_diagnostic_line("DBTOBSB_BOOTSTRAP_UNKNOWN"),
+        "SENSITIVE_NATIVE_TASK_TEXT_CANARY",
+        (
+            _operator_diagnostic_line("DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE")
+            + "\n"
+            + _operator_diagnostic_line("DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED")
+        ),
+        json.dumps(
+            {
+                **json.loads(
+                    _operator_diagnostic_line("DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE")
+                ),
+                "native_message": "SENSITIVE_NATIVE_TASK_TEXT_CANARY",
+            }
+        ),
+    ],
+)
+def test_failed_temporary_job_uses_generic_code_for_untrusted_output(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    logs: str,
+) -> None:
+    manager = _TemporaryJobManager(tmp_path, logs)
+
+    assert main(["bootstrap"], manager=manager) == 2
+
+    captured = capsys.readouterr()
+    progress = cast(io.StringIO, manager.output).getvalue()
+    assert captured.err == "DBTOBSB_INSTALLER_TEMPORARY_JOB_FAILED\n"
+    assert "SENSITIVE_NATIVE_TASK_TEXT_CANARY" not in captured.err
+    assert "SENSITIVE_NATIVE_TASK_TEXT_CANARY" not in progress
+    assert len(manager.bundle_runner.calls) == 1
+    assert manager.deploy_calls == ["jobs.dbtobsb_bootstrap", None]
+    assert not (tmp_path / ".dbtobsb-bundle-base/99-lifecycle.generated.yml").exists()
+
+
+def test_temporary_job_cleanup_failure_overrides_operation_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    manager = _TemporaryJobManager(
+        tmp_path,
+        _operator_diagnostic_line("DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE"),
+        cleanup_failure=True,
+    )
+
+    assert main(["bootstrap"], manager=manager) == 2
+
+    captured = capsys.readouterr()
+    progress = cast(io.StringIO, manager.output).getvalue()
+    assert captured.err == "DBTOBSB_INSTALLER_TEMPORARY_JOB_CLEANUP_FAILED\n"
+    assert "SENSITIVE_NATIVE_CLEANUP_TEXT_CANARY" not in captured.err
+    assert "temporary Job cleanup not verified" in progress
+    assert len(manager.bundle_runner.calls) == 1
+    assert manager.deploy_calls == ["jobs.dbtobsb_bootstrap", None]
+
+
+def test_agent_install_docs_do_not_reintroduce_repeated_approval_prompts() -> None:
+    repository = Path(__file__).resolve().parents[2]
+    expected_policy = {
+        "AGENTS.md": "must answer the installer's confirmation prompts itself",
+        ".agents/skills/install-and-run-dbtobsb/SKILL.md": (
+            "`APPROVE` at every matching preview without asking the user again"
+        ),
+        "README.md": "answers the installer's confirmation prompts itself",
+        "docs/site/how-to-guides/install-private-release.md": (
+            "answers the installer's confirmation prompts itself"
+        ),
+        "docs/operators/tutorials/install-private-release.md": (
+            "enters `APPROVE` itself at matching previews"
+        ),
+        "docs/releases/v0.4.0-support-contract.md": "Agent task authorization",
+    }
+
+    for relative_path, required_text in expected_policy.items():
+        document = (repository / relative_path).read_text(encoding="utf-8")
+        assert required_text in " ".join(document.split())
+        assert "standing approval" not in document.casefold()
+        assert "pause again" not in document.casefold()
+
+    recovery_guide = (repository / "docs/site/how-to-guides/install-private-release.md").read_text(
+        encoding="utf-8"
+    )
+    assert "## Recover a failed bootstrap" in recovery_guide
+    for code in sorted(release_cli_module._TEMPORARY_JOB_BOOTSTRAP_CODES):
+        assert f"`{code}`" in recovery_guide
+
+
 class _LifecycleManager(ReleaseManager):
     def __init__(self, root: Path, answers: str = "") -> None:
         self.events: list[tuple[Any, ...]] = []
         self.fail_temporary = False
+        self.temporary_failure_code = "DBTOBSB_INSTALLER_TEMPORARY_JOB_FAILED"
         super().__init__(
             root=root,
             runner=_NoCommandRunner(),
@@ -115,7 +414,7 @@ class _LifecycleManager(ReleaseManager):
     def _run_temporary_job(self, state: InstallationState, **kwargs: Any) -> None:
         del state
         if self.fail_temporary:
-            raise ReleaseCliError("DBTOBSB_INSTALLER_TEMPORARY_JOB_FAILED")
+            raise ReleaseCliError(self.temporary_failure_code)
         self.events.append(("temporary", kwargs))
 
     def _release_source_commit(self) -> str:
@@ -1173,6 +1472,24 @@ def test_interrupted_bootstrap_keeps_last_verified_stage_and_resumes(tmp_path: P
     resumed = _LifecycleManager(tmp_path)
     resumed.bootstrap()
     assert _required_state(tmp_path).stage == "INSTALLED"
+
+
+def test_classified_bootstrap_failure_keeps_app_undeployed_and_last_stage(
+    tmp_path: Path,
+) -> None:
+    _save_state(tmp_path, _state(stage="FINAL_DEPLOYED"))
+    interrupted = _LifecycleManager(tmp_path)
+    interrupted.fail_temporary = True
+    interrupted.temporary_failure_code = "DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE"
+
+    with pytest.raises(
+        ReleaseCliError,
+        match="DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE",
+    ):
+        interrupted.bootstrap()
+
+    assert _required_state(tmp_path).stage == "FINAL_DEPLOYED"
+    assert interrupted.events == []
 
 
 def test_delete_uninstall_uses_second_approval_and_never_redeploys_bundle(

@@ -23,9 +23,13 @@ Use $install-and-run-dbtobsb to install dbtobsb, run the weather example,
 prove that its model result and structured logs were captured, and stop compute.
 ```
 
-The agent asks for every resource, mutation, cost, project, and finish choice before
-it changes anything. It still pauses at the installation preview and cannot type
-`APPROVE` without your confirmation.
+The agent establishes every resource, mutation, cost, project, and finish choice
+before it changes anything. It always shows the exact installation preview and
+digest. Once you authorize that summarized task, the agent answers the installer's
+confirmation prompts itself, including typing `APPROVE` at matching previews. It
+does not ask again across retries or digest changes within that scope. A material
+expansion of the workspace, resources, mutations, workload, cost ceiling, or
+finish state is a new task decision.
 
 ## Before you begin
 
@@ -163,6 +167,26 @@ uv run --project installer --no-sync dbtobsb bootstrap
 
 The installer compares the saved stage with remote state and continues safely. It
 does not repeat a change when the previous result is unknown.
+
+## Recover a failed bootstrap
+
+The temporary bootstrap Job emits only an allowlisted static diagnostic. The
+installer reads that diagnostic from the selected terminal task, removes the
+temporary Job, keeps the last verified local stage, and prints the code without a
+native exception, SQL text, identifier, or raw log. Missing, malformed,
+conflicting, or unknown task output remains the generic
+`DBTOBSB_INSTALLER_TEMPORARY_JOB_FAILED` code. Do not retry until the matching
+condition is resolved:
+
+| Code | Safe next action |
+| --- | --- |
+| `DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED` | Ask the Unity Catalog administrator to verify that the attended actor still owns the selected schema and can create managed tables there. Resume through the same launcher; do not add broad grants. |
+| `DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE` | Ask the storage and Databricks account administrators to validate read/write access for the managed identity behind the catalog storage root and the serverless network path, including an attached network connectivity configuration, firewall or network-security-perimeter rules, and established private endpoints when those controls are used. Do not run a write test or change storage from the installer workstation. |
+| `DBTOBSB_BOOTSTRAP_TABLE_CREATE_OBJECT_CONFLICT` | Preserve the schema and installer state. Use the attended inventory to resolve the unexpected or partial object; do not delete it by guesswork. |
+| `DBTOBSB_BOOTSTRAP_TABLE_CREATE_PLATFORM_UNSUPPORTED`, `DBTOBSB_BOOTSTRAP_TABLE_CREATE_SQL_INCOMPATIBLE`, `DBTOBSB_BOOTSTRAP_TABLE_CREATE_INTERNAL_ERROR` | Keep setup stopped and escalate the static code. This release has no supported local workaround for a platform, DDL-compatibility, or internal-runtime failure. |
+
+The selected SQL warehouse is not the bootstrap compute path. Starting it does
+not validate or repair storage access for the temporary serverless Job.
 
 ## 4. Continue to a first run
 

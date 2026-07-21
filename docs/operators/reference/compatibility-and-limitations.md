@@ -36,7 +36,8 @@ Exact package pins are a release control. A range-compatible future version is n
 
 ## Qualified dbt command
 
-The final live proof used `dbt build` with the fixed named selector `weather_release`. Its run-results arguments attested:
+The required live proof uses `dbt build` with the fixed named selector
+`weather_release`. Its run-results arguments must attest:
 
 ```text
 which=build
@@ -51,7 +52,8 @@ The strict pair validator enforces every value above. The installed customer-pro
 
 ## Databricks manifest compatibility exception
 
-The exact live pair emitted this macro field:
+The exact qualification fixture contains this macro field, and the required live
+pair must reproduce it:
 
 ```json
 {"supported_languages":["sql","python","javascript"]}
@@ -81,9 +83,10 @@ It does not use SQL `read_files` as the acceptance parser. Permissive file inges
 - The installer retains schema/object-owner authority as an explicit trusted root.
 - Primary artifacts must be exactly the sealed per-attempt `manifest.json` and `run_results.json`; unexpected paths fail closed.
 - Structured dbt logs are bounded and retained, but compiled SQL, catalog artifacts, source freshness results, and query history are not normalized.
-- The live proof covers an early product-runner failure with no retrievable archive; node-level failure, partial, and invalid states additionally have offline fixtures.
-- Retain- and delete-uninstall are qualified, but automated retention policy, legal hold, export, scheduled purge, and restore are not shipped.
+- The live proof must cover an early product-runner failure with no retrievable archive; node-level failure, partial, and invalid states additionally have offline fixtures.
+- Retain- and delete-uninstall must pass the live matrix before publication, but automated retention policy, legal hold, export, scheduled purge, and restore are not shipped.
 - The release installer contains a generated SPDX SBOM for its native helper dependencies, but it is not signed and does not include Marketplace packaging, upgrade migration, or rollback automation.
-- Default Storage was proven in a disposable serverless catalog; other managed/external storage topologies are unqualified.
+- The live packet must record the exact managed-storage topology it proves. Until
+  that packet is accepted, no storage topology is qualified for this candidate.
 
 These limitations are release boundaries, not suggested workarounds. Do not bypass them by weakening validation or granting a personal owner broader production access.

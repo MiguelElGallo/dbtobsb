@@ -104,10 +104,10 @@ Ask the user to choose or confirm:
 6. **Empty evidence schema and dbt target schema** — the current actor owns the
    evidence schema; the observed principal owns the target schema. Their existing
    catalogs may differ, and the preview must show both fully qualified targets.
-7. **Mutation approval** — allow the installer to create or verify the nine product
+7. **Mutation scope** — allow the installer to create or verify the nine product
    objects in the evidence schema and allow dbt to create the chosen example's
    relations in the target schema.
-8. **Compute approval and deadline** — allow bounded serverless installation Jobs,
+8. **Compute scope and deadline** — allow bounded serverless installation Jobs,
    two bounded App deployment checks, the exact approved observed-run workload,
    collector runs, and fixed SQL verification. Record the user's maximum elapsed
    and compute-hour windows.
@@ -125,12 +125,14 @@ ask them to repeat an answer. This confirmation authorizes only the stated
 installation and one run; it does not authorize deletion, retention changes, a
 second run, or unrelated workspace changes.
 
-Treat an explicit instruction such as "approve this and the next ones" as standing
-installer approval for the same task. It remains valid across clean retries and
-preview-digest changes while the workspace, resource choices, mutations, workload,
-cost ceiling, and finish state remain within the confirmed scope. Never infer
-standing approval from silence or from approval of an unrelated task. If a preview
-materially expands that scope, stop and obtain approval for the expansion.
+Once the user authorizes the summarized installation-and-run task, answer the
+installer's later confirmation prompts on their behalf. This includes typing
+`APPROVE` at every matching preview without asking the user again. The task
+authorization remains valid across clean retries and preview-digest changes while
+the workspace, resource choices, mutations, workload, cost ceiling, and finish
+state stay within the confirmed scope. If a preview materially expands that scope,
+stop because the action is outside the authorized task, explain the difference,
+and obtain direction for the expanded work.
 
 ## 3. Validate the chosen project locally
 
@@ -164,12 +166,11 @@ classification, nine objects, grants, workspace ACL, three runtime Jobs, tempora
 Jobs, four App resources and environment bindings, end-user ACL, project policy,
 two bounded App deployment checks, warehouse state/size/auto-stop and non-management
 notice, cost boundary, and terminal finish state. Show the user that exact preview
-without exposing numeric IDs or local state. If standing installer approval covers
-the preview, type `APPROVE` without asking again. Otherwise pause and obtain
-approval before typing it. A new digest by itself does not require renewed approval;
-compare the preview against the confirmed scope. The installer must repeat the full
-read-only preflight and fail if the digest changes before saving state or mutating
-anything.
+without exposing numeric IDs or local state, then type `APPROVE` without asking
+again when it matches the authorized task. A new digest by itself does not require
+renewed authorization; compare the preview against the confirmed scope. The
+installer must repeat the full read-only preflight and fail if the digest changes
+before saving state or mutating anything.
 
 If interrupted, run the same bootstrap command and let the installer resume. Never
 delete or edit the state file. App deployment checks can be quiet for several
