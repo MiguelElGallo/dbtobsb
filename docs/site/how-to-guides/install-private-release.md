@@ -190,6 +190,22 @@ condition is resolved:
 The selected SQL warehouse is not the bootstrap compute path. Starting it does
 not validate or repair storage access for the temporary serverless Job.
 
+## Recover a failed App deployment
+
+An App-phase failure is not installation success. The launcher first attempts to
+stop App compute and verifies `STOPPED`. It preserves the last Direct checkpoint,
+the nine evidence objects, and the fixed runtime grants.
+
+| Code | Safe next action |
+| --- | --- |
+| `DBTOBSB_INSTALLER_APP_STOP_FAILED` | App compute may still be billable. Run `uv run --project installer --no-sync dbtobsb stop` from the same checkout and profile. If stopped readback still fails, escalate this code before doing anything else. |
+| `DBTOBSB_INSTALLER_FRESH_APP_REQUIRED`, `DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED` | Do not invoke deployment again. Run `uv run --project installer --no-sync dbtobsb uninstall --retain`, enter `RETAIN`, and verify the receipt reports the App removed and evidence retained. Use a different existing empty evidence schema for another fresh qualification attempt. |
+| `DBTOBSB_INSTALLER_APP_PERMISSION_FAILED`, `DBTOBSB_INSTALLER_APP_READBACK_FAILED` | Preserve the stopped App and do not edit its ACL by hand. Run the same retain-uninstall command, then escalate the static code and sanitized ACL category before another fresh attempt. |
+
+Interrupted App-phase stop and retain-uninstall are cleanup paths only. They do
+not convert the partial state to installed, adopt an existing deployment, or add
+an upgrade path. Delete-uninstall remains unavailable until installation succeeds.
+
 ## 4. Continue to a first run
 
 The App remains stopped and the reconciler schedule remains paused. Continue with
@@ -199,5 +215,5 @@ If the installer reports a stable code instead of success, preserve that code an
 the local state file. Do not edit Jobs, grants, App bindings, or evidence objects by
 hand. Project-preparation errors start with `DBTOBSB_ONBOARDING_`; use the checks in
 [Prepare a dbt project](add-a-dbt-project.md) before running the same bootstrap
-command again. For any other code, follow the safe action printed by the installer
-or escalate the code without attaching raw logs or the state file.
+command again. For any other code, use the matching table on this page or escalate
+the code without attaching raw logs or the state file.

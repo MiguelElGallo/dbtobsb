@@ -124,6 +124,7 @@ _UNINSTALL_STAGES = (
     "OBJECTS_HANDLED",
     "BUNDLE_DESTROYED",
 )
+_INTERRUPTED_APP_STAGES = frozenset({"GRANTS_APPLIED", "APP_DEPLOYED"})
 _PRODUCT_TABLES = frozenset(
     {
         MANIFEST_TABLE,
@@ -337,10 +338,13 @@ class InstallationState:
                     or pattern.fullmatch(value) is None
                 ):
                     raise ReleaseCliError("DBTOBSB_INSTALLER_STATE_INVALID")
+        valid_uninstall_source = self.stage == "INSTALLED" or (
+            self.stage in _INTERRUPTED_APP_STAGES and self.uninstall_mode == "RETAIN"
+        )
         if (self.uninstall_mode is None) != (self.uninstall_stage is None) or (
             self.uninstall_mode is not None
             and (
-                self.stage != "INSTALLED"
+                not valid_uninstall_source
                 or self.uninstall_mode not in {"DELETE", "RETAIN"}
                 or self.uninstall_stage not in _UNINSTALL_STAGES
             )
@@ -2463,6 +2467,19 @@ class ReleaseManager:
         ):
             raise ReleaseCliError("DBTOBSB_INSTALLER_APP_PERMISSION_FAILED")
 
+    def _stop_app_after_deployment_attempt(self, state: InstallationState) -> None:
+        try:
+            client = self._client(state.profile)
+            app = client.apps.get(state.app_name).as_dict()
+            if app.get("compute_status", {}).get("state") != "STOPPED":
+                with suppress(Exception):
+                    client.apps.stop(state.app_name).result(timeout=_WAIT_TIMEOUT)
+            app = client.apps.get(state.app_name).as_dict()
+        except Exception:
+            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_STOP_FAILED") from None
+        if app.get("compute_status", {}).get("state") != "STOPPED":
+            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_STOP_FAILED")
+
     def _deploy_app(self, state: InstallationState) -> InstallationState:
         if state.final_wheels is None:
             raise ReleaseCliError("DBTOBSB_INSTALLER_STATE_INCOMPLETE")
@@ -2477,6 +2494,13 @@ class ReleaseManager:
         self._deploy(state, state.final_wheels)
         state = self._with_direct_state(state)
         _save_state(self.root, state)
+        try:
+            return self._deploy_stopped_app(state)
+        except Exception:
+            self._stop_app_after_deployment_attempt(state)
+            raise
+
+    def _deploy_stopped_app(self, state: InstallationState) -> InstallationState:
         before = self._list_deployments(state)
 
         def configured(deployment: Mapping[str, Any]) -> bool:
@@ -2534,13 +2558,7 @@ class ReleaseManager:
                 if time.monotonic() >= deadline:
                     raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
                 time.sleep(2)
-        try:
-            client = self._client(state.profile)
-            app = client.apps.get(state.app_name).as_dict()
-            if app.get("compute_status", {}).get("state") != "STOPPED":
-                client.apps.stop(state.app_name).result(timeout=_WAIT_TIMEOUT)
-        except Exception:
-            raise ReleaseCliError("DBTOBSB_INSTALLER_APP_STOP_FAILED") from None
+        self._stop_app_after_deployment_attempt(state)
         if deployment is None:
             raise ReleaseCliError("DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED")
         status = deployment.get("status")
@@ -2714,9 +2732,18 @@ class ReleaseManager:
             file=self.output,
         )
 
-    def _installed_state(self, *, allow_uninstall: bool = False) -> InstallationState:
+    def _installed_state(
+        self,
+        *,
+        allow_uninstall: bool = False,
+        allow_interrupted_app_phase: bool = False,
+    ) -> InstallationState:
         state = _load_state(self.root)
-        if state is None or state.stage != "INSTALLED":
+        interrupted_app_phase = state is not None and state.stage in _INTERRUPTED_APP_STAGES
+        if state is None or (
+            state.stage != "INSTALLED"
+            and not (allow_interrupted_app_phase and interrupted_app_phase)
+        ):
             raise ReleaseCliError("DBTOBSB_INSTALLER_INSTALLED_STATE_REQUIRED")
         self._verify_state_release(state)
         if state.uninstall_stage is not None and not allow_uninstall:
@@ -2871,7 +2898,7 @@ class ReleaseManager:
         }
 
     def stop(self) -> None:
-        state = self._installed_state()
+        state = self._installed_state(allow_interrupted_app_phase=True)
         self._stop_state(state)
         receipt = {
             "app_state": "STOPPED",
@@ -3024,7 +3051,10 @@ class ReleaseManager:
                 raise ReleaseCliError("DBTOBSB_UNINSTALL_LOCAL_CLEANUP_FAILED") from None
 
     def uninstall(self, *, delete: bool) -> None:
-        state = self._installed_state(allow_uninstall=True)
+        state = self._installed_state(
+            allow_uninstall=True,
+            allow_interrupted_app_phase=not delete,
+        )
         expected = "DELETE" if delete else "RETAIN"
         if state.uninstall_mode is not None and state.uninstall_mode != expected:
             raise ReleaseCliError("DBTOBSB_UNINSTALL_MODE_MISMATCH")

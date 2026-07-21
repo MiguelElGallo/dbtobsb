@@ -1392,6 +1392,24 @@ def test_app_deploy_checkpoints_direct_state_before_deployment_readback(
 
     manager = InterruptedAppManager()
 
+    class Apps:
+        def __init__(self) -> None:
+            self.compute_state = "ACTIVE"
+
+        def get(self, app_name: str) -> SimpleNamespace:
+            assert app_name == state.app_name
+            return SimpleNamespace(
+                as_dict=lambda: {"compute_status": {"state": self.compute_state}}
+            )
+
+        def stop(self, app_name: str) -> SimpleNamespace:
+            assert app_name == state.app_name
+            self.compute_state = "STOPPED"
+            return SimpleNamespace(result=lambda timeout: None)
+
+    apps = Apps()
+    cast(dict[str, Any], manager._clients)[state.profile] = SimpleNamespace(apps=apps)
+
     with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_APP_DEPLOYMENT_READBACK_FAILED"):
         manager._deploy_app(state)
 
@@ -1400,6 +1418,7 @@ def test_app_deploy_checkpoints_direct_state_before_deployment_readback(
     assert checkpoint.direct_state_lineage == updated.lineage
     assert checkpoint.direct_state_serial == updated.serial
     assert checkpoint.direct_state_sha256 == updated.sha256
+    assert apps.compute_state == "STOPPED"
 
 
 def test_app_deploy_uses_one_apply_one_deployment_and_one_stopped_acl_update(
@@ -1790,6 +1809,37 @@ def test_retain_uninstall_preserves_objects_after_readback(tmp_path: Path) -> No
         "bundle-destroy",
         "local-cleanup",
     ]
+
+
+def test_interrupted_app_phase_can_stop_and_retain_uninstall(tmp_path: Path) -> None:
+    _save_state(tmp_path, _state(stage="GRANTS_APPLIED"))
+    stopped = _LifecycleManager(tmp_path)
+
+    stopped.stop()
+
+    assert stopped.events == [("stop",)]
+
+    retained = _LifecycleManager(tmp_path, "RETAIN\n")
+    retained.uninstall(delete=False)
+
+    assert [event[0] for event in retained.events] == [
+        "stop",
+        "app-delete",
+        "grants",
+        "retain-readback",
+        "bundle-destroy",
+        "local-cleanup",
+    ]
+
+
+def test_interrupted_app_phase_cannot_delete_evidence(tmp_path: Path) -> None:
+    _save_state(tmp_path, _state(stage="GRANTS_APPLIED"))
+    manager = _LifecycleManager(tmp_path, "DELETE\nDELETE PRODUCT DATA\n")
+
+    with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_INSTALLED_STATE_REQUIRED"):
+        manager.uninstall(delete=True)
+
+    assert manager.events == []
 
 
 def test_uninstall_denial_has_no_side_effects(tmp_path: Path) -> None:
