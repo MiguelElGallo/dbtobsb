@@ -40,7 +40,7 @@ def _bounded_clock(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _contract() -> StableDeploymentContract:
     return StableDeploymentContract(
-        source_code_path="/Workspace/Users/installer/.bundle/dbtobsb/release_v050/files/app",
+        source_code_path="/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/files/app",
         source_tree_sha256="a" * 64,
         resource_bindings_sha256="b" * 64,
         command=("uvicorn", "dbtobsb_app.main:app"),
