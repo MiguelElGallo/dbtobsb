@@ -637,7 +637,9 @@ def test_world_readable_state_is_rejected(tmp_path: Path) -> None:
         _load_state(tmp_path)
 
 
-def test_v04_rejects_legacy_state_before_lifecycle_or_success(tmp_path: Path) -> None:
+def test_current_release_rejects_legacy_state_before_lifecycle_or_success(
+    tmp_path: Path,
+) -> None:
     legacy = tmp_path / ".dbtobsb" / "release-installation-v1.json"
     legacy.parent.mkdir()
     legacy.write_text('{"schema":"dbtobsb.installer-state.v1","stage":"INSTALLED"}\n')
@@ -668,14 +670,14 @@ def test_v04_rejects_legacy_state_before_lifecycle_or_success(tmp_path: Path) ->
         ),
     ],
 )
-def test_v04_state_rejects_unknown_or_mixed_release_identity(
+def test_current_release_state_rejects_unknown_or_mixed_release_identity(
     changes: dict[str, Any], code: str
 ) -> None:
     with pytest.raises(ReleaseCliError, match=code):
         replace(_state(), **changes)
 
 
-def test_v04_state_rejects_changed_source_before_success(tmp_path: Path) -> None:
+def test_current_release_state_rejects_changed_source_before_success(tmp_path: Path) -> None:
     _save_state(tmp_path, replace(_state(), release_source_commit="c" * 40))
     manager = _LifecycleManager(tmp_path)
 

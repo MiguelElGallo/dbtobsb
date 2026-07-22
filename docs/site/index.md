@@ -89,8 +89,9 @@ Raw artifacts and logs are restricted evidence. The App and normal SQL views exp
 only a reviewed set of fields; they do not expose compiled SQL, raw log messages,
 environment values, or secrets.
 
-## Supported release
+## Release candidate
 
-The supported path uses Azure Databricks—not Free Edition—dbt Core `1.11.12`,
-dbt-databricks `1.12.2`, Python `3.12`, and Databricks CLI `1.9.0`.
-See [Supported environment](reference/supported-environment.md) before installing.
+The `v0.5.0` candidate targets Azure Databricks—not Free Edition—dbt Core
+`1.11.12`, dbt-databricks `1.12.2`, Python `3.12`, and Databricks CLI `1.9.0`.
+It is not a supported release until the live Azure acceptance gate passes. See
+[Supported environment](reference/supported-environment.md) before qualification.
