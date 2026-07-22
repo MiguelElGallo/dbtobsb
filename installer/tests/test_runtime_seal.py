@@ -38,10 +38,10 @@ from dbtobsb_installer.runtime_seal import (
 )
 
 PROFILE = "dbtobsb-smoke"
-TARGET = "smoke"
+TARGET = "release_v050"
 HOST = "https://adb-1234567890123456.10.azuredatabricks.net"
 WORKSPACE_ID = 1234567890123456
-WORKSPACE_ROOT = "/Workspace/dbtobsb/.bundle/dbtobsb/smoke"
+WORKSPACE_ROOT = f"/Workspace/dbtobsb/.bundle/dbtobsb/{TARGET}"
 ARTIFACT_ROOT = f"{WORKSPACE_ROOT}/artifacts/.internal"
 RESOLVED_DEPENDENCIES = (
     f"{ARTIFACT_ROOT}/dbtobsb_contracts-0.5.0-py3-none-any.whl",

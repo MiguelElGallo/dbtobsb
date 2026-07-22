@@ -1115,13 +1115,15 @@ def test_cli_1_8_guard_accepts_only_absent_terraform_state(tmp_path: Path) -> No
     manager._reject_terraform_state(_state(stage="ONBOARDED"))
 
     assert manager.workspace.paths == [
-        "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/state/terraform.tfstate",
-        "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/state/resources.json",
+        "/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/state/terraform.tfstate",
+        "/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/state/resources.json",
     ]
 
 
 def test_cli_1_8_guard_rejects_local_or_remote_terraform_state(tmp_path: Path) -> None:
-    local_state = tmp_path / ".databricks" / "bundle" / "smoke" / "terraform" / "terraform.tfstate"
+    local_state = (
+        tmp_path / ".databricks" / "bundle" / "release_v050" / "terraform" / "terraform.tfstate"
+    )
     local_state.parent.mkdir(parents=True)
     local_state.write_text("{}", encoding="utf-8")
     local_manager = _TerraformStateManager(tmp_path, "missing")
@@ -1131,7 +1133,7 @@ def test_cli_1_8_guard_rejects_local_or_remote_terraform_state(tmp_path: Path) -
     assert local_manager.workspace.paths == []
 
     local_state.unlink()
-    direct_state = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    direct_state = tmp_path / ".databricks" / "bundle" / "release_v050" / "resources.json"
     direct_state.write_text("{}", encoding="utf-8")
     with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_FRESH_INSTALL_REQUIRED"):
         local_manager._reject_terraform_state(_state(stage="ONBOARDED"))
@@ -1205,7 +1207,7 @@ def test_resume_requires_identical_local_remote_direct_state_and_bound_identity(
     tmp_path: Path,
 ) -> None:
     raw = _direct_state_raw()
-    path = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    path = tmp_path / ".databricks" / "bundle" / "release_v050" / "resources.json"
     path.parent.mkdir(parents=True)
     path.write_bytes(raw)
 
@@ -1226,7 +1228,7 @@ def test_resume_requires_identical_local_remote_direct_state_and_bound_identity(
 
 def test_cli_1_8_direct_state_accepts_exact_permission_subresources(tmp_path: Path) -> None:
     raw = _direct_state_raw(include_app_permissions=True)
-    path = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    path = tmp_path / ".databricks" / "bundle" / "release_v050" / "resources.json"
     path.parent.mkdir(parents=True)
     path.write_bytes(raw)
     manager = _LifecycleManager(tmp_path)
@@ -1243,7 +1245,7 @@ def test_bootstrap_verifies_direct_state_before_resumed_mutation_or_success(
     tmp_path: Path,
 ) -> None:
     raw = _direct_state_raw()
-    path = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    path = tmp_path / ".databricks" / "bundle" / "release_v050" / "resources.json"
     path.parent.mkdir(parents=True)
     path.write_bytes(raw)
 
@@ -1320,7 +1322,7 @@ def test_bootstrap_verifies_direct_state_before_resumed_mutation_or_success(
 def test_direct_state_changed_bytes_require_higher_serial(tmp_path: Path) -> None:
     original = _direct_state_raw()
     changed = original.rstrip() + b" \n"
-    path = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    path = tmp_path / ".databricks" / "bundle" / "release_v050" / "resources.json"
     path.parent.mkdir(parents=True)
     path.write_bytes(changed)
     manager = _LifecycleManager(tmp_path)
@@ -1340,7 +1342,7 @@ def test_direct_state_changed_bytes_require_higher_serial(tmp_path: Path) -> Non
 def test_app_deployment_match_requires_exact_snapshot_source_and_environment() -> None:
     deployment = {
         "mode": "SNAPSHOT",
-        "source_code_path": "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/files/app",
+        "source_code_path": "/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/files/app",
         "env_vars": [
             {"name": "DBTOBSB_WAREHOUSE_ID"},
             {"name": "DBTOBSB_RUN_HEALTH_VIEW"},
@@ -1595,7 +1597,7 @@ def test_app_deploy_uses_one_apply_one_deployment_and_one_stopped_acl_update(
     deployment = {
         "deployment_id": "deployment",
         "mode": "SNAPSHOT",
-        "source_code_path": "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/files/app",
+        "source_code_path": "/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/files/app",
         "env_vars": [
             {"name": "DBTOBSB_WAREHOUSE_ID"},
             {"name": "DBTOBSB_RUN_HEALTH_VIEW"},

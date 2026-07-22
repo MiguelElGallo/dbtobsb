@@ -188,7 +188,7 @@ def test_unknown_root_extension_is_rejected(tmp_path: Path) -> None:
 @pytest.mark.parametrize("overlay", ["variables", "resources", "git_source", "mode"])
 def test_target_overlays_and_extensions_are_rejected(tmp_path: Path, overlay: str) -> None:
     document = _document()
-    document["targets"]["smoke"][overlay] = {"caller": "controlled"}
+    document["targets"]["release_v050"][overlay] = {"caller": "controlled"}
 
     with pytest.raises(ValueError, match="DBTOBSB_BUNDLE_TARGET_INVALID"):
         validate_bundle(_write_bundle(tmp_path, document))
@@ -196,7 +196,7 @@ def test_target_overlays_and_extensions_are_rejected(tmp_path: Path, overlay: st
 
 def test_additional_target_is_rejected(tmp_path: Path) -> None:
     document = _document()
-    document["targets"]["production"] = document["targets"]["smoke"]
+    document["targets"]["production"] = document["targets"]["release_v050"]
 
     with pytest.raises(ValueError, match="DBTOBSB_BUNDLE_TARGET_INVALID"):
         validate_bundle(_write_bundle(tmp_path, document))

@@ -68,7 +68,7 @@ _RELEASE_VERSION = "0.5.0"
 _STATE_SCHEMA = "dbtobsb.installer-state.v2"
 _STATE_FILE = "release-installation-v2.json"
 _LEGACY_STATE_FILE = "release-installation-v1.json"
-_TARGET = "smoke"
+_TARGET = "release_v050"
 _APP_KEY = "dbtobsb_smoke"
 _APP_NAME = "dbtobsb-smoke"
 _WORKSPACE_ROOT = "/Workspace/dbtobsb"
@@ -77,7 +77,7 @@ _REMOTE_TERRAFORM_STATE_PATH = (
     f"{_WORKSPACE_ROOT}/.bundle/dbtobsb/{_TARGET}/state/terraform.tfstate"
 )
 _REMOTE_DIRECT_STATE_PATH = f"{_WORKSPACE_ROOT}/.bundle/dbtobsb/{_TARGET}/state/resources.json"
-_LOCAL_DIRECT_STATE_PATH = Path(".databricks/bundle/smoke/resources.json")
+_LOCAL_DIRECT_STATE_PATH = Path(f".databricks/bundle/{_TARGET}/resources.json")
 _APP_ENVIRONMENT_NAMES = frozenset(
     {
         "DBTOBSB_WAREHOUSE_ID",

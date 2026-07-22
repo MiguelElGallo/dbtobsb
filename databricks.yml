@@ -176,7 +176,7 @@ resources:
               - databricks-sdk==0.117.0
 
 targets:
-  smoke:
+  release_v050:
     default: true
     workspace:
       # The attended installer creates /Workspace/dbtobsb with CAN_MANAGE for
