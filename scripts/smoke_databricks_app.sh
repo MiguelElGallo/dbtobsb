@@ -7,7 +7,7 @@ if [[ $- == *x* ]]; then
   exit 2
 fi
 
-readonly REQUIRED_CLI_VERSION='Databricks CLI v1.8.0'
+readonly REQUIRED_CLI_VERSION='Databricks CLI v1.9.0'
 readonly APP_NAME='dbtobsb-smoke'
 readonly APP_RESOURCE_KEY='dbtobsb_smoke'
 readonly BUNDLE_TARGET='smoke'

@@ -1,6 +1,6 @@
 ---
 name: install-and-run-dbtobsb
-description: Fresh-install or safely resume dbtobsb v0.4.0 in Azure Databricks, run the approved installed dbt Core weather or qualification workload, prove model results, structured logs, collection state, and dashboard trends in customer-local evidence views, and finish with compute stopped. Use when a user asks an agent to install dbtobsb, run the demo or qualification project, make a first observed run, execute the v0.4 live qualification matrix, test capture end to end, or verify dbt observability after cloning this repository.
+description: Fresh-install or safely resume dbtobsb v0.5.0 in Azure Databricks, run the approved installed dbt Core weather or qualification workload, prove model results, structured logs, collection state, and dashboard trends in customer-local evidence views, and finish with compute stopped. Use when a user asks an agent to install dbtobsb, run the demo or qualification project, make a first observed run, execute the v0.5 live qualification matrix, test capture end to end, or verify dbt observability after cloning this repository.
 ---
 
 # Install and run dbtobsb
@@ -28,12 +28,12 @@ Before acting, read these repository files:
 4. `docs/site/how-to-guides/stop-or-uninstall.md`
 5. `docs/site/reference/dbt-project-input.md`
 
-Treat `docs/releases/v0.4.0-support-contract.md` and the packaged support manifest as authoritative when another
+Treat `docs/releases/v0.5.0-support-contract.md` and the packaged support manifest as authoritative when another
 document is ambiguous. Do not use the legacy App-shell smoke path in `README.md`.
 
 ## Preserve the product boundaries
 
-- v0.4.0 supports a fresh installation or resume of its own v2 state only. It has
+- v0.5.0 supports a fresh installation or resume of its own v2 state only. It has
   no upgrade, adoption, or legacy-install migration path. Reject a legacy v1 state,
   prior App, product Job, product object, or Terraform state before mutation.
 - Use only the attended `dbtobsb bootstrap` installer and the installed
@@ -56,10 +56,10 @@ document is ambiguous. Do not use the legacy App-shell smoke path in `README.md`
 From the repository root:
 
 1. Confirm the tracked worktree is clean. Require `installer/pyproject.toml` and
-   the support manifest to identify v0.4.0, recompute the manifest canonical
+   the support manifest to identify v0.5.0, recompute the manifest canonical
    SHA-256 through `load_support_manifest()`, record the current 40-hex Git commit,
-   and require the sealed official Databricks CLI 1.8.0 executable identity. Do not
-   compare the source to a v0.3 tag or infer v0.4 integrity from a legacy release.
+   and require the sealed official Databricks CLI 1.9.0 executable identity. Do not
+   compare the source to a v0.3 tag or infer v0.5 integrity from a legacy release.
 2. Check Python, `uv`, Databricks CLI, and `jq` against the supported-environment
    page.
 3. Run `databricks auth profiles --output json`. Keep only valid Azure OAuth
@@ -74,7 +74,7 @@ From the repository root:
    warehouses, catalogs, schemas, and dbt projects that the installer can select.
 6. Check for `.dbtobsb/release-installation-v2.json` without printing its contents.
    Preserve it. It may resume only when its release version, support-manifest
-   digest, source commit, wheel identities, and CLI seal all match v0.4.0. Preserve
+   digest, source commit, wheel identities, and CLI seal all match v0.5.0. Preserve
    but reject `.dbtobsb/release-installation-v1.json`; do not create an upgrade path.
 
 Treat resource names, identities, the workspace host, and local state as sensitive
@@ -116,7 +116,7 @@ Ask the user to choose or confirm:
 
 Do not ask whether the user has administrator rights; assume that as requested.
 Still let the installer verify identity, ownership, and access. If a required
-resource is absent, stop and explain that v0.4.0 requires it to exist. Do not
+resource is absent, stop and explain that v0.5.0 requires it to exist. Do not
 provision a substitute or choose a different resource silently.
 
 Summarize the answers without secrets or numeric IDs. Ask the user to confirm the
@@ -161,7 +161,7 @@ Use a PTY and answer the installer's numbered prompts from the confirmed choices
 Do not pipe or prequeue answers.
 
 When the installer displays **Installation preview**, pause. It must show one
-canonical preview digest and the exact v0.4 release identity, fresh-state
+canonical preview digest and the exact v0.5 release identity, fresh-state
 classification, nine objects, grants, workspace ACL, three runtime Jobs, temporary
 Jobs, four App resources and environment bindings, end-user ACL, project policy,
 one bounded App deployment check plus stopped viewer-ACL readback, warehouse state/size/auto-stop and non-management
@@ -182,7 +182,7 @@ and reconciler `PAUSED`; reject extra, missing, or mismatched lifecycle state.
 ## 5. Run the approved observed Job workload
 
 For an ordinary first-run request, run exactly one observed Job. For an explicitly
-approved v0.4 release qualification, run only the bounded cases in the v0.4 support
+approved v0.5 release qualification, run only the bounded cases in the v0.5 support
 manifest, including two deterministic complete runs, one failure or partial-artifact
 case, and missed-collection reconciliation. Never turn release qualification into
 an unbounded extra run.
@@ -274,7 +274,7 @@ Require exactly one row with `collector_state = PUBLISHED`, a null issue, and at
 least one collection attempt. These view rows—not raw log output—are the supported
 proof that the model ran and its bounded structured logs were captured.
 
-For v0.4 release qualification, also execute the exact fixed aggregate used by
+For v0.5 release qualification, also execute the exact fixed aggregate used by
 the App over the newest approved run count. It must select only `PAIR_VALID` runs,
 order newest-first inside the bounded CTE, join `dbt_run_health` to
 `dbt_node_health` on workspace, observed Job, observed Job run, dbt task run, and

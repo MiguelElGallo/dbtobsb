@@ -1,4 +1,4 @@
-"""Supported attended lifecycle launcher for the private v0.4 Databricks release."""
+"""Supported attended lifecycle launcher for the private v0.5 Databricks release."""
 
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ from dbtobsb_installer.runtime_seal import (
     build_runtime_artifact_candidate,
 )
 
-_RELEASE_VERSION = "0.4.0"
+_RELEASE_VERSION = "0.5.0"
 _STATE_SCHEMA = "dbtobsb.installer-state.v2"
 _STATE_FILE = "release-installation-v2.json"
 _LEGACY_STATE_FILE = "release-installation-v1.json"
@@ -95,14 +95,14 @@ _WAREHOUSE = re.compile(r"^[0-9a-f]{16}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _GIT_COMMIT = re.compile(r"^[0-9a-f]{40}$")
 _DIRECT_LINEAGE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
-_SEALED_DATABRICKS_CLI_SHA256 = "e6107da75e9dfc16c462563e11958c65689ea47d04d54cb4b31d0eb961f40be7"
+_SEALED_DATABRICKS_CLI_SHA256 = "5ee48369334289c1828a1fd96b6aa5e7f54c8adb5b1ab7cc97da625c9adf2782"
 _MACHO_64_MAGIC = 0xFEEDFACF
 _CPU_TYPE_ARM64 = 0x0100000C
 _WAIT_TIMEOUT = timedelta(minutes=20)
 _BASE_WHEELS = {
-    "contracts": "dbtobsb_contracts-0.4.0-py3-none-any.whl",
-    "capture": "dbtobsb_capture-0.4.0-py3-none-any.whl",
-    "collector": "dbtobsb_collector-0.4.0-py3-none-any.whl",
+    "contracts": "dbtobsb_contracts-0.5.0-py3-none-any.whl",
+    "capture": "dbtobsb_capture-0.5.0-py3-none-any.whl",
+    "collector": "dbtobsb_collector-0.5.0-py3-none-any.whl",
 }
 _STAGES = (
     "CONFIGURED",
@@ -454,7 +454,7 @@ def _file_sha256(path: Path) -> str:
 
 
 def _supported_catalogs(rows: object) -> list[dict[str, Any]]:
-    """Return only writable Unity Catalog catalogs accepted by the v0.4 installer."""
+    """Return only writable Unity Catalog catalogs accepted by the v0.5 installer."""
     if not isinstance(rows, list):
         raise ReleaseCliError("DBTOBSB_INSTALLER_CATALOG_DISCOVERY_INVALID")
     result: list[dict[str, Any]] = []
@@ -796,7 +796,7 @@ class ReleaseManager:
                     profile=profile,
                     credentials_strategy=_SealedCliCredentials(self.runner, profile),
                     product="dbtobsb-installer",
-                    product_version="0.4.0",
+                    product_version="0.5.0",
                 )
             except Exception:
                 raise ReleaseCliError("DBTOBSB_INSTALLER_PROFILE_INVALID") from None
@@ -1451,7 +1451,7 @@ class ReleaseManager:
         customer_state = cast(Mapping[str, Any], document["customer_state"])
         print("\nInstallation preview", file=self.output)
         print(f"  Preview SHA-256: {preflight.sha256}", file=self.output)
-        print("  Release: dbtobsb v0.4.0 fresh installation only", file=self.output)
+        print("  Release: dbtobsb v0.5.0 fresh installation only", file=self.output)
         print(
             f"  Release identity: {json.dumps(release, separators=(',', ':'))}",
             file=self.output,
@@ -1732,7 +1732,7 @@ class ReleaseManager:
             }
         if (
             document.get("state_version") != 2
-            or document.get("cli_version") not in {"1.8.0", "v1.8.0"}
+            or document.get("cli_version") not in {"1.9.0", "v1.9.0"}
             or not isinstance(lineage, str)
             or _DIRECT_LINEAGE.fullmatch(lineage) is None
             or isinstance(serial, bool)

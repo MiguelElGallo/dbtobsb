@@ -3,8 +3,8 @@ module github.com/miguelperedo/dbtobsb/native
 go 1.26.5
 
 require (
-	github.com/databricks/cli v1.8.0
-	github.com/databricks/databricks-sdk-go v0.154.0
+	github.com/databricks/cli v1.9.0
+	github.com/databricks/databricks-sdk-go v0.160.0
 	github.com/google/uuid v1.6.0
 )
 
@@ -34,8 +34,8 @@ require (
 	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/api v0.265.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260203192932-546029d2fa20 // indirect

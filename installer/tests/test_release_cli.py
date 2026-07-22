@@ -37,9 +37,9 @@ from dbtobsb_installer.release_cli import (
 
 _DIGEST = "a" * 64
 _FINAL_WHEELS = {
-    "contracts": f"dbtobsb_contracts-0.4.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
-    "capture": f"dbtobsb_capture-0.4.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
-    "collector": f"dbtobsb_collector-0.4.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
+    "contracts": f"dbtobsb_contracts-0.5.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
+    "capture": f"dbtobsb_capture-0.5.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
+    "collector": f"dbtobsb_collector-0.5.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
 }
 _CANDIDATE_WHEELS = {
     key: value.replace("+dbtobsb.final.", "+dbtobsb.candidate.")
@@ -130,10 +130,10 @@ def _state(*, stage: str = "INSTALLED") -> InstallationState:
     has_direct_state = stage not in {"CONFIGURED", "ONBOARDED"}
     return InstallationState(
         schema="dbtobsb.installer-state.v2",
-        release_version="0.4.0",
+        release_version="0.5.0",
         support_contract_sha256=load_support_manifest().canonical_sha256,
         release_source_commit=_COMMIT,
-        databricks_cli_sha256=("e6107da75e9dfc16c462563e11958c65689ea47d04d54cb4b31d0eb961f40be7"),
+        databricks_cli_sha256=("5ee48369334289c1828a1fd96b6aa5e7f54c8adb5b1ab7cc97da625c9adf2782"),
         stage=stage,
         profile="paid-azure-test",
         host="https://adb-1234567890123456.10.azuredatabricks.net",
@@ -383,7 +383,7 @@ def test_agent_install_docs_do_not_reintroduce_repeated_approval_prompts() -> No
         "docs/operators/tutorials/install-private-release.md": (
             "enters `APPROVE` itself at matching previews"
         ),
-        "docs/releases/v0.4.0-support-contract.md": "Agent task authorization",
+        "docs/releases/v0.5.0-support-contract.md": "Agent task authorization",
     }
 
     for relative_path, required_text in expected_policy.items():
@@ -661,7 +661,7 @@ def test_v04_rejects_legacy_state_before_lifecycle_or_success(tmp_path: Path) ->
             {
                 "final_wheels": {
                     **_FINAL_WHEELS,
-                    "collector": _FINAL_WHEELS["collector"].replace("0.4.0", "0.3.0"),
+                    "collector": _FINAL_WHEELS["collector"].replace("0.5.0", "0.4.0"),
                 }
             },
             "DBTOBSB_INSTALLER_STATE_INVALID",
@@ -1025,7 +1025,7 @@ def _preflight(*, warehouse_state: str = "STOPPED") -> BootstrapPreflight:
                 "databricks_cli_sha256": _DIGEST,
                 "release_source_commit": _COMMIT,
                 "support_contract_sha256": _DIGEST,
-                "version": "0.4.0",
+                "version": "0.5.0",
             },
         }
     )
@@ -1052,7 +1052,7 @@ def test_exact_preview_is_digest_bound_and_denial_has_zero_mutation(tmp_path: Pa
 
     output = cast(io.StringIO, manager.output).getvalue()
     assert f"Preview SHA-256: {snapshot.sha256}" in output
-    assert "v0.4.0 fresh installation only" in output
+    assert "v0.5.0 fresh installation only" in output
     assert "App deployment: one bounded check, followed by stopped ACL readback" in output
     assert "dbtobsb does not manage or stop it" in output
     for expected in (
@@ -1172,7 +1172,7 @@ def _direct_state_raw(
     return (
         json.dumps(
             {
-                "cli_version": "1.8.0",
+                "cli_version": "1.9.0",
                 "lineage": "12345678-1234-1234-1234-123456789abc",
                 "serial": 7,
                 "state": resources,

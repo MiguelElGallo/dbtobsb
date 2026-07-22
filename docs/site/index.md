@@ -36,16 +36,16 @@ and a successful dbt build can still have missing evidence.
 
 !!! warning "Azure Databricks only"
 
-    dbtobsb `v0.4.0` does not run on AWS Databricks, GCP Databricks, or
+    dbtobsb `v0.5.0` does not run on AWS Databricks, GCP Databricks, or
     **Databricks Free Edition**. Databricks does not use “Personal Edition” as the
     product name; personal-use signup creates a Free Edition workspace. Install
     only in a supported Azure Databricks workspace. See
     [Supported environment](reference/supported-environment.md).
 
-!!! info "Qualified private release"
+!!! warning "Private release candidate"
 
-    Version `0.4.0` passed its independent reviews and complete live Azure
-    qualification. It is not distributed through Databricks Marketplace. The
+    Version `0.5.0` is not supported until its independent reviews and complete
+    live Azure qualification pass. It is not distributed through Databricks Marketplace. The
     source repository and this documentation are public; customer installation
     and runtime evidence remain private to the customer's workspace.
 
@@ -92,5 +92,5 @@ environment values, or secrets.
 ## Supported release
 
 The supported path uses Azure Databricks—not Free Edition—dbt Core `1.11.12`,
-dbt-databricks `1.12.2`, Python `3.12`, and Databricks CLI `1.8.0`.
+dbt-databricks `1.12.2`, Python `3.12`, and Databricks CLI `1.9.0`.
 See [Supported environment](reference/supported-environment.md) before installing.

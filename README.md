@@ -24,7 +24,7 @@ provides read-only views and an App for answering questions such as:
 No external telemetry platform is required. The evidence and compute stay inside
 the customer's Azure Databricks workspace.
 
-> **Azure Databricks only:** dbtobsb `v0.4.0` installs only in an Azure
+> **Azure Databricks only:** dbtobsb `v0.5.0` installs only in an Azure
 > Databricks workspace deployed in the customer's Azure subscription and reached
 > through its canonical `https://adb-...azuredatabricks.net` workspace URL. It
 > does not support AWS Databricks, GCP Databricks, **Databricks Free Edition**, or
@@ -107,16 +107,16 @@ responsible for access, retention, export, deletion, backup, legal hold, and
 regulatory approval. dbtobsb is not a compliance certification or external
 attestation.
 
-## Supported release
+## Release candidate
 
-Version `v0.4.0` is installed privately through a Databricks Declarative
-Automation Bundle; Databricks Marketplace distribution is not included. Its
-immutable release artifacts passed the complete live Azure qualification.
+Version `v0.5.0` is being qualified for private installation through a Databricks
+Declarative Automation Bundle; Databricks Marketplace distribution is not included.
+It is not a supported release until the local and complete live Azure gates pass.
 
 - [Supported environment](https://miguelelgallo.github.io/dbtobsb/reference/supported-environment.html)
 - [Security and permissions](https://miguelelgallo.github.io/dbtobsb/reference/security-and-permissions.html)
-- [Exact release contract](docs/releases/v0.4.0-support-contract.md)
-- [v0.4.0 Azure acceptance evidence](docs/evidence/v0.4.0-live-acceptance-2026-07-22.md)
+- [Exact release contract](docs/releases/v0.5.0-support-contract.md)
+- v0.5.0 Azure acceptance evidence pending
 - [Historical v0.3.0 Azure acceptance evidence](docs/evidence/v0.3.0-stable-acceptance-2026-07-18.md)
 
 ## Documentation and development

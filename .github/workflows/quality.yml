@@ -48,15 +48,15 @@ jobs:
 
       - name: Install the sealed Databricks CLI release
         env:
-          DATABRICKS_CLI_SHA256: e6107da75e9dfc16c462563e11958c65689ea47d04d54cb4b31d0eb961f40be7
+          DATABRICKS_CLI_SHA256: 5ee48369334289c1828a1fd96b6aa5e7f54c8adb5b1ab7cc97da625c9adf2782
         run: |
           set -euo pipefail
           cli_root="${RUNNER_TEMP}/dbtobsb-databricks-cli"
-          archive="${cli_root}/databricks_cli_1.8.0_darwin_arm64.tar.gz"
+          archive="${cli_root}/databricks_cli_1.9.0_darwin_arm64.tar.gz"
           mkdir -p "${cli_root}/bin"
           curl --fail --location --proto '=https' --tlsv1.2 \
             --output "${archive}" \
-            https://github.com/databricks/cli/releases/download/v1.8.0/databricks_cli_1.8.0_darwin_arm64.tar.gz
+            https://github.com/databricks/cli/releases/download/v1.9.0/databricks_cli_1.9.0_darwin_arm64.tar.gz
           tar -xzf "${archive}" -C "${cli_root}/bin" databricks
           printf '%s  %s\n' "${DATABRICKS_CLI_SHA256}" "${cli_root}/bin/databricks" \
             | shasum -a 256 --check

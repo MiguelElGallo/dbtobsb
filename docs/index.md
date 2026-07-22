@@ -18,8 +18,8 @@ Plans, decisions, review records, research, templates, and dated evidence remain
 this `docs` directory. They support development and audit work but are intentionally
 outside the reader site's navigation and search.
 
-- [v0.4.0 support contract](releases/v0.4.0-support-contract.md)
-- [v0.4.0 Azure acceptance evidence](evidence/v0.4.0-live-acceptance-2026-07-22.md)
+- [v0.5.0 support contract](releases/v0.5.0-support-contract.md)
+- v0.5.0 Azure acceptance evidence pending
 - [Historical v0.3.0 support contract](releases/v0.3.0-support-contract.md)
 - [Historical v0.3.0 Azure acceptance evidence](evidence/v0.3.0-stable-acceptance-2026-07-18.md)
 - [Review process](plans/review-process.md)

@@ -1,12 +1,12 @@
 [project]
 name = "dbtobsb-collector"
-version = "0.4.0"
+version = "0.5.0"
 description = "Customer-local Databricks collector for dbt Core task evidence"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "databricks-sdk==0.117.0",
-    "dbtobsb-capture==0.4.0",
-    "dbtobsb-contracts==0.4.0",
+    "dbtobsb-capture==0.5.0",
+    "dbtobsb-contracts==0.5.0",
 ]
 
 [build-system]

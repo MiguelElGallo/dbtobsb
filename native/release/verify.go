@@ -21,15 +21,15 @@ import (
 const (
 	ManifestSchema = "dbtobsb.databricks-cli-release.v1"
 	CLIModule      = "github.com/databricks/cli"
-	CLIVersion     = "v1.8.0"
-	CLIModuleSum   = "h1:+1aoZobpIBqGPuS1gyveIFeOC1BVK2jn8G6qYaQ/GwM="
-	CLICommit      = "3b9fe151888df8fe937090e5f2be0a5c6dc0ff18"
+	CLIVersion     = "v1.9.0"
+	CLIModuleSum   = "h1:LY1uF6TP+3MT+VuIziaKLd1jjHua+OEeXd15uu4OxU4="
+	CLICommit      = "51ce3c7c5c4d5ba7ea20b8c8742f8ee995b3f6f6"
 	SDKModule      = "github.com/databricks/databricks-sdk-go"
-	SDKVersion     = "v0.154.0"
-	SDKModuleSum   = "h1:Vmif0i0rbu7kgphoEBPRroZNd5uLBOITvjU4dr2lwXY="
+	SDKVersion     = "v0.160.0"
+	SDKModuleSum   = "h1:vwgT/11y2vMw41BxcKbUUqarg45lmoEdukk9yYJg5AM="
 	ArtifactOS     = "darwin"
 	ArtifactArch   = "arm64"
-	ArtifactSHA256 = "e6107da75e9dfc16c462563e11958c65689ea47d04d54cb4b31d0eb961f40be7"
+	ArtifactSHA256 = "5ee48369334289c1828a1fd96b6aa5e7f54c8adb5b1ab7cc97da625c9adf2782"
 )
 
 //go:embed manifest.json

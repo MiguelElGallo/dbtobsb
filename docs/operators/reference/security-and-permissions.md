@@ -1,6 +1,6 @@
 # Security and permissions
 
-The private `v0.4.0` release keeps evidence customer-local and is designed for regulated deployment constraints. Its supported route uses one combined administrator; it does not claim independent separation of duties.
+The private `v0.5.0` release keeps evidence customer-local and is designed for regulated deployment constraints. Its supported route uses one combined administrator; it does not claim independent separation of duties.
 
 ## Trust boundary
 
