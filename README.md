@@ -107,16 +107,17 @@ responsible for access, retention, export, deletion, backup, legal hold, and
 regulatory approval. dbtobsb is not a compliance certification or external
 attestation.
 
-## Release candidate
+## Supported release
 
-Version `v0.5.0` is being qualified for private installation through a Databricks
-Declarative Automation Bundle; Databricks Marketplace distribution is not included.
-It is not a supported release until the local and complete live Azure gates pass.
+Version `v0.5.0` is installed privately through a Databricks Declarative
+Automation Bundle; Databricks Marketplace distribution is not included. Its
+immutable release artifacts passed the complete live Azure qualification.
 
 - [Supported environment](https://miguelelgallo.github.io/dbtobsb/reference/supported-environment.html)
 - [Security and permissions](https://miguelelgallo.github.io/dbtobsb/reference/security-and-permissions.html)
 - [Exact release contract](docs/releases/v0.5.0-support-contract.md)
-- v0.5.0 Azure acceptance evidence pending
+- [v0.5.0 Azure acceptance evidence](docs/evidence/v0.5.0-live-acceptance-2026-07-22.md)
+- [Historical v0.4.0 Azure acceptance evidence](docs/evidence/v0.4.0-live-acceptance-2026-07-22.md)
 - [Historical v0.3.0 Azure acceptance evidence](docs/evidence/v0.3.0-stable-acceptance-2026-07-18.md)
 
 ## Documentation and development

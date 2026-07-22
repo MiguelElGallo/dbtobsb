@@ -1,8 +1,9 @@
 # Compatibility and limitations
 
-This page describes the private `v0.5.0` release candidate. It is not supported
-until the local release suite and complete Azure qualification pass. Marketplace
-distribution remains out of scope.
+This page describes the qualified private `v0.5.0` release. Its complete Azure
+qualification is recorded in the
+[v0.5.0 acceptance evidence](../../evidence/v0.5.0-live-acceptance-2026-07-22.md).
+Marketplace distribution remains out of scope.
 
 > **Platform boundary:** This release does not support Databricks Free Edition,
 > the retired Community Edition, AWS Databricks, or GCP Databricks. “Personal
@@ -10,9 +11,9 @@ distribution remains out of scope.
 > to Free Edition. Use a customer Azure Databricks workspace with its canonical
 > `adb-...azuredatabricks.net` URL.
 
-## Candidate combination
+## Qualified combination
 
-| Component | Candidate value |
+| Component | Qualified value |
 | --- | --- |
 | Cloud | Azure Databricks only; Free Edition excluded |
 | Deployment CLI | Databricks CLI `1.9.0` |

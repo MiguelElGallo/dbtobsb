@@ -42,10 +42,10 @@ and a successful dbt build can still have missing evidence.
     only in a supported Azure Databricks workspace. See
     [Supported environment](reference/supported-environment.md).
 
-!!! warning "Private release candidate"
+!!! info "Qualified private release"
 
-    Version `0.5.0` is not supported until its independent reviews and complete
-    live Azure qualification pass. It is not distributed through Databricks Marketplace. The
+    Version `0.5.0` passed its release reviews and complete live Azure
+    qualification. It is not distributed through Databricks Marketplace. The
     source repository and this documentation are public; customer installation
     and runtime evidence remain private to the customer's workspace.
 
@@ -89,9 +89,9 @@ Raw artifacts and logs are restricted evidence. The App and normal SQL views exp
 only a reviewed set of fields; they do not expose compiled SQL, raw log messages,
 environment values, or secrets.
 
-## Release candidate
+## Supported release
 
-The `v0.5.0` candidate targets Azure Databricks—not Free Edition—dbt Core
-`1.11.12`, dbt-databricks `1.12.2`, Python `3.12`, and Databricks CLI `1.9.0`.
-It is not a supported release until the live Azure acceptance gate passes. See
-[Supported environment](reference/supported-environment.md) before qualification.
+The qualified private `v0.5.0` release targets Azure Databricks—not Free
+Edition—dbt Core `1.11.12`, dbt-databricks `1.12.2`, Python `3.12`, and
+Databricks CLI `1.9.0`. See
+[Supported environment](reference/supported-environment.md) before installation.

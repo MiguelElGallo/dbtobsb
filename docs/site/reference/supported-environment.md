@@ -1,7 +1,7 @@
 # Supported environment
 
-The dbtobsb `v0.5.0` candidate is limited to the combination on this page. It is
-not supported until the same tests and complete live Azure qualification pass.
+The qualified private dbtobsb `v0.5.0` release is limited to the combination on
+this page. Its immutable artifacts passed the complete live Azure qualification.
 
 !!! danger "Not Databricks Free Edition"
 
