@@ -128,7 +128,7 @@ def _resolved_commands() -> list[str]:
 
 def _resolved_runner_task() -> SimpleNamespace:
     project = (
-        "/Workspace/Users/reviewer@example.com/.bundle/dbtobsb/release_v050/files/"
+        "/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/files/"
         f"{_policy().project_directory.removeprefix('./')}"
     )
     configured = [
@@ -433,7 +433,7 @@ def _task(
     dbt_overrides: dict[str, Any] | None = None,
 ) -> SimpleNamespace:
     resolved_project_directory = project_directory or (
-        "/Workspace/Users/reviewer@example.com/.bundle/dbtobsb/release_v050/files/"
+        "/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/files/"
         f"{_policy().project_directory.removeprefix('./')}"
     )
     dbt_task = SimpleNamespace(

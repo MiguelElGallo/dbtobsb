@@ -122,7 +122,7 @@ def _resolved_commands(*, task_run_id: int, repair_count: int) -> list[str]:
 
 def _dbt_task(*, task_run_id: int, repair_count: int) -> SimpleNamespace:
     project = (
-        "/Workspace/Users/reviewer@example.com/.bundle/dbtobsb/release_v050/files/"
+        "/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/files/"
         f"{_policy().project_directory.removeprefix('./')}"
     )
     configured = [
