@@ -42,12 +42,12 @@ and a successful dbt build can still have missing evidence.
     only in a supported Azure Databricks workspace. See
     [Supported environment](reference/supported-environment.md).
 
-!!! info "Private release candidate"
+!!! info "Qualified private release"
 
-    Version `0.4.0` remains a candidate until its independent reviews and complete
-    live Azure qualification are recorded. It is not distributed through Databricks
-    Marketplace. The source repository and this documentation are public; customer
-    installation and runtime evidence remain private to the customer's workspace.
+    Version `0.4.0` passed its independent reviews and complete live Azure
+    qualification. It is not distributed through Databricks Marketplace. The
+    source repository and this documentation are public; customer installation
+    and runtime evidence remain private to the customer's workspace.
 
 ## Choose what you need
 

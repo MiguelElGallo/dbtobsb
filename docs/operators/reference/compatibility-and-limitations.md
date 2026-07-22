@@ -1,7 +1,8 @@
 # Compatibility and limitations
 
-This page describes the private `v0.4.0` release candidate. Azure qualification
-is a required release gate and has not yet been recorded for this candidate.
+This page describes the qualified private `v0.4.0` release. Its complete Azure
+qualification is recorded in the
+[v0.4.0 acceptance evidence](../../evidence/v0.4.0-live-acceptance-2026-07-22.md).
 Marketplace distribution remains out of scope.
 
 > **Platform boundary:** This release does not support Databricks Free Edition,
@@ -86,7 +87,10 @@ It does not use SQL `read_files` as the acceptance parser. Permissive file inges
 - The live proof must cover an early product-runner failure with no retrievable archive; node-level failure, partial, and invalid states additionally have offline fixtures.
 - Retain- and delete-uninstall must pass the live matrix before publication, but automated retention policy, legal hold, export, scheduled purge, and restore are not shipped.
 - The release installer contains a generated SPDX SBOM for its native helper dependencies, but it is not signed and does not include Marketplace packaging, upgrade migration, or rollback automation.
-- The live packet must record the exact managed-storage topology it proves. Until
-  that packet is accepted, no storage topology is qualified for this candidate.
+- The qualified storage topology is a Unity Catalog managed catalog with a
+  catalog-level managed storage root. The customer-owned evidence schema inherits
+  that storage and has no schema-level managed location. The product tables and
+  Volumes are managed; external storage topologies are not qualified by this
+  release packet.
 
 These limitations are release boundaries, not suggested workarounds. Do not bypass them by weakening validation or granting a personal owner broader production access.
