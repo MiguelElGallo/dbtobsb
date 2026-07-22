@@ -88,7 +88,7 @@ if [ "${DATABRICKS_AUTH_STORAGE:-}" != secure ]; then
 fi
 printf '%s\\n' "$*" >> "$FAKE_CALL_LOG"
 case "$*" in
-  "--version") printf '%s\\n' 'Databricks CLI v1.7.0' ;;
+  "--version") printf '%s\\n' 'Databricks CLI v1.8.0' ;;
   "auth describe"*)
     printf '%s' '{"username":"smoke@example.com","details":{"auth_type":"databricks-cli",'
     printf '%s\\n' '"host":"https://example.azuredatabricks.net"}}'

@@ -4,7 +4,7 @@
   "platform": {
     "cloud": "AZURE_DATABRICKS",
     "bundle_engine": "DIRECT",
-    "databricks_cli": "1.7.0",
+    "databricks_cli": "1.8.0",
     "bootstrap_compute": "SERVERLESS_LAKEFLOW_PYTHON_WHEEL_JOB",
     "dbt_task_compute": "SERVERLESS_LAKEFLOW_JOB",
     "app_compute": "DATABRICKS_APP_SERVERLESS",
@@ -23,11 +23,11 @@
     "schema_requirement": "EXISTING_DEDICATED_SCHEMA_SESSION_USER_IS_OWNER",
     "bootstrap_run_as": "BUNDLE_DEPLOYER_COMBINED_ADMIN",
     "bootstrap_job_lifecycle": "TEMPORARY_REMOVE_AFTER_TERMINAL_READBACK",
-    "native_mutation_registry": "FOUNDATION_NOT_INVOKED_V0_3",
+    "native_mutation_registry": "FOUNDATION_NOT_INVOKED_V0_4",
     "bundle_sql_hooks": false,
     "bootstrap_idempotency": "EXACT_PRE_BINDING_ONLY",
     "post_binding_resume": "LIFECYCLE_READBACK_NO_BOOTSTRAP_REPLAY",
-    "runtime_trust_ledger": "NOT_IN_V0_3_SUPPORTED_PATH"
+    "runtime_trust_ledger": "NOT_IN_V0_4_SUPPORTED_PATH"
   },
   "customer_state": {
     "schema_created": false,
@@ -72,7 +72,7 @@
     "direct_grants": [
       {
         "principal": "COLLECTOR_SERVICE_PRINCIPAL",
-        "securable": "PARENT_CATALOG",
+        "securable": "EVIDENCE_CATALOG",
         "privileges": [
           "USE CATALOG"
         ],
@@ -140,7 +140,7 @@
       },
       {
         "principal": "OBSERVED_SERVICE_PRINCIPAL",
-        "securable": "PARENT_CATALOG",
+        "securable": "EVIDENCE_CATALOG",
         "privileges": [
           "USE CATALOG"
         ],
@@ -156,6 +156,14 @@
       },
       {
         "principal": "OBSERVED_SERVICE_PRINCIPAL",
+        "securable": "DBT_TARGET_CATALOG",
+        "privileges": [
+          "USE CATALOG"
+        ],
+        "provisioner": "ATTENDED_INSTALLER"
+      },
+      {
+        "principal": "OBSERVED_SERVICE_PRINCIPAL",
         "securable": "dbtobsb_stage",
         "privileges": [
           "READ VOLUME",
@@ -165,7 +173,7 @@
       },
       {
         "principal": "APP_SERVICE_PRINCIPAL",
-        "securable": "PARENT_CATALOG",
+        "securable": "EVIDENCE_CATALOG",
         "privileges": [
           "USE CATALOG"
         ],
@@ -337,12 +345,19 @@
   },
   "app": {
     "initial_state": "STOPPED",
+    "installation_deployment_checks": 1,
+    "end_user_acl_provisioner": "TARGETED_APPS_PERMISSION_API_WHILE_STOPPED",
     "start_command": "dbtobsb start",
     "stop_command": "dbtobsb stop",
     "landing_queries": false,
     "load_action": "EXPLICIT_LOAD_OBSERVABILITY",
     "warehouse_may_auto_start_after_load": true,
     "browser_close_stops_compute": false,
+    "dashboard_rendering": "NATIVE_SERVER_RENDERED_APP_NO_EXTERNAL_DASHBOARD_RESOURCE",
+    "dashboard_metrics": [
+      "FAILED_NODE_RESULTS_PER_RUN",
+      "MODEL_RESULTS_PER_RUN"
+    ],
     "resources": [
       "APP_QUERY_WAREHOUSE",
       "dbt_run_health",
@@ -449,7 +464,8 @@
       "CONFLICTING_REPLAY",
       "RECONCILIATION",
       "EMPTY_APP",
-      "APP_QUERY_FAILURE"
+      "APP_QUERY_FAILURE",
+      "APP_TRENDS"
     ],
     "live_cases": [
       "TWO_COMPLETE_DETERMINISTIC_RUNS",

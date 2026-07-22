@@ -46,7 +46,7 @@ of each state and code. Do not run the reconciler while
 `recovery_lease_ready` is `false`.
 
 If the query returns no row for a completed observed run from the last 24 hours,
-run the reconciler once. Version `0.3.0` cannot discover a run after that 24-hour
+run the reconciler once. Version `0.4.0` cannot discover a run after that 24-hour
 window. If an older run is absent, preserve only its safe identifiers and escalate;
 do not widen the scan or create a row by hand.
 

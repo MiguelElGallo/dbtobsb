@@ -272,6 +272,72 @@ class _Spark:
         return _Table(_Schema([_Field(column, _DataType(kind)) for column, kind in fields]))
 
 
+@dataclass
+class _FailingSpark(_Spark):
+    fail_fragment: str = ""
+    native_error: str = "SENSITIVE_NATIVE_PLATFORM_ERROR"
+
+    def sql(self, query: str) -> _Frame:
+        if self.fail_fragment in query:
+            raise RuntimeError(self.native_error)
+        return super().sql(query)
+
+
+class _NativeSqlError(Exception):
+    def __init__(self, *, condition: str, sql_state: str) -> None:
+        super().__init__("SENSITIVE_NATIVE_MESSAGE")
+        self._condition = condition
+        self._sql_state = sql_state
+
+    def getCondition(self) -> str:
+        return self._condition
+
+    def getSqlState(self) -> str:
+        return self._sql_state
+
+
+class _JavaWrappedSqlError(Exception):
+    def __init__(self, native: _NativeSqlError) -> None:
+        super().__init__("SENSITIVE_PY4J_MESSAGE")
+        self.java_exception = native
+
+
+class _HostileNativeSqlError(Exception):
+    def __init__(self) -> None:
+        super().__init__("SENSITIVE_HOSTILE_NATIVE_MESSAGE")
+
+    @property
+    def java_exception(self) -> Any:
+        raise RuntimeError("SENSITIVE_NATIVE_ACCESSOR_CANARY")
+
+    @property
+    def getCondition(self) -> Any:
+        raise RuntimeError("SENSITIVE_CONDITION_ACCESSOR_CANARY")
+
+
+@dataclass
+class _ClassifiedFailingSpark(_Spark):
+    native_condition: str = ""
+    sql_state: str = ""
+    java_wrapped: bool = False
+
+    def sql(self, query: str) -> _Frame:
+        if f"CREATE TABLE `c`.`s`.`{REGISTRY_TABLE}`" in query:
+            native = _NativeSqlError(condition=self.native_condition, sql_state=self.sql_state)
+            if self.java_wrapped:
+                raise _JavaWrappedSqlError(native)
+            raise native
+        return super().sql(query)
+
+
+@dataclass
+class _HostileFailingSpark(_Spark):
+    def sql(self, query: str) -> _Frame:
+        if f"CREATE TABLE `c`.`s`.`{REGISTRY_TABLE}`" in query:
+            raise _HostileNativeSqlError
+        return super().sql(query)
+
+
 def _install_exact(spark: _Spark | None = None) -> _Spark:
     installed = spark or _Spark()
     bootstrap_objects(
@@ -340,6 +406,167 @@ def test_fresh_bootstrap_creates_only_fixed_attested_objects() -> None:
     assert spark.manifest_rows == [
         _manifest_row(catalog="catalog-with-hyphen", schema="observability")
     ]
+
+
+@pytest.mark.parametrize(
+    ("failure_fragment", "expected_code"),
+    [
+        (
+            "SELECT session_user() AS session_user",
+            "DBTOBSB_BOOTSTRAP_SESSION_USER_READ_FAILED",
+        ),
+        (
+            "SELECT schema_name, schema_owner",
+            "DBTOBSB_BOOTSTRAP_SCHEMA_METADATA_READ_FAILED",
+        ),
+        (
+            "SELECT table_name, table_type",
+            "DBTOBSB_BOOTSTRAP_RELATION_INVENTORY_READ_FAILED",
+        ),
+        (
+            "SELECT volume_name, volume_type",
+            "DBTOBSB_BOOTSTRAP_VOLUME_INVENTORY_READ_FAILED",
+        ),
+        (f"CREATE TABLE `c`.`s`.`{REGISTRY_TABLE}`", "DBTOBSB_BOOTSTRAP_TABLE_CREATE_FAILED"),
+        (f"CREATE VOLUME `c`.`s`.`{RAW_VOLUME_NAME}`", "DBTOBSB_BOOTSTRAP_VOLUME_CREATE_FAILED"),
+        (f"CREATE VIEW `c`.`s`.`{RUN_HEALTH_VIEW}`", "DBTOBSB_BOOTSTRAP_VIEW_CREATE_FAILED"),
+        (
+            f"CREATE TABLE `c`.`s`.`{MANIFEST_TABLE}`",
+            "DBTOBSB_BOOTSTRAP_MANIFEST_CREATE_FAILED",
+        ),
+        (f"INSERT INTO `c`.`s`.`{MANIFEST_TABLE}`", "DBTOBSB_BOOTSTRAP_MANIFEST_WRITE_FAILED"),
+    ],
+)
+def test_bootstrap_sql_boundaries_report_only_safe_stage_codes(
+    failure_fragment: str,
+    expected_code: str,
+) -> None:
+    spark = _FailingSpark(fail_fragment=failure_fragment)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        bootstrap_objects(spark, catalog="c", schema="s", binding=_BINDING)
+
+    assert str(exc_info.value) == expected_code
+    assert spark.native_error not in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    ("condition", "sql_state", "expected_code"),
+    [
+        (
+            "INSUFFICIENT_PERMISSIONS",
+            "42501",
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED",
+        ),
+        (
+            "STORAGE_CREDENTIAL_DOES_NOT_EXIST",
+            "KD001",
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE",
+        ),
+        (
+            "TABLE_OR_VIEW_ALREADY_EXISTS",
+            "42P07",
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_OBJECT_CONFLICT",
+        ),
+        (
+            "FEATURE_NOT_SUPPORTED",
+            "0A000",
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_PLATFORM_UNSUPPORTED",
+        ),
+        (
+            "PARSE_SYNTAX_ERROR",
+            "42601",
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_SQL_INCOMPATIBLE",
+        ),
+        (
+            "INTERNAL_ERROR",
+            "XX000",
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_INTERNAL_ERROR",
+        ),
+        (
+            "STORAGE_PERMISSION_DENIED",
+            "42501",
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED",
+        ),
+        (
+            "EXTERNAL_LOCATION_ALREADY_EXISTS",
+            "42P07",
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_OBJECT_CONFLICT",
+        ),
+        (
+            "STORAGE_FEATURE_NOT_SUPPORTED",
+            "0A000",
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_PLATFORM_UNSUPPORTED",
+        ),
+        ("DELTA_TABLE_ID_MISMATCH", "KD007", "DBTOBSB_BOOTSTRAP_TABLE_CREATE_FAILED"),
+        (
+            "UNAUTHENTICATED",
+            "08000",
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED",
+        ),
+        ("SERVER_IS_BUSY", "08KD1", "DBTOBSB_BOOTSTRAP_TABLE_CREATE_FAILED"),
+        ("PYTHON_REPL_CREATION_FAILED", "58000", "DBTOBSB_BOOTSTRAP_TABLE_CREATE_FAILED"),
+        ("UNCLASSIFIED", "HY000", "DBTOBSB_BOOTSTRAP_TABLE_CREATE_FAILED"),
+        ("unsafe value", "unsafe", "DBTOBSB_BOOTSTRAP_TABLE_CREATE_FAILED"),
+    ],
+)
+def test_table_create_uses_only_fixed_native_error_families(
+    condition: str,
+    sql_state: str,
+    expected_code: str,
+) -> None:
+    spark = _ClassifiedFailingSpark(native_condition=condition, sql_state=sql_state)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        bootstrap_objects(spark, catalog="c", schema="s", binding=_BINDING)
+
+    assert str(exc_info.value) == expected_code
+    assert "SENSITIVE_NATIVE_MESSAGE" not in str(exc_info.value)
+    if condition == "unsafe value":
+        assert condition not in str(exc_info.value)
+
+
+def test_table_create_classifies_java_wrapped_native_metadata_without_message() -> None:
+    spark = _ClassifiedFailingSpark(
+        native_condition="STORAGE_CREDENTIAL_DOES_NOT_EXIST",
+        sql_state="KD001",
+        java_wrapped=True,
+    )
+
+    with pytest.raises(RuntimeError) as exc_info:
+        bootstrap_objects(spark, catalog="c", schema="s", binding=_BINDING)
+
+    assert str(exc_info.value) == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE"
+    assert "SENSITIVE" not in str(exc_info.value)
+
+
+def test_table_create_hostile_native_properties_fall_back_without_message() -> None:
+    with pytest.raises(RuntimeError) as exc_info:
+        bootstrap_objects(_HostileFailingSpark(), catalog="c", schema="s", binding=_BINDING)
+
+    assert str(exc_info.value) == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_FAILED"
+    assert "SENSITIVE" not in str(exc_info.value)
+
+
+def test_table_create_classifier_failure_falls_back_without_message(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_classifier(error: Exception) -> str:
+        del error
+        raise RuntimeError("SENSITIVE_CLASSIFIER_CANARY")
+
+    monkeypatch.setattr(bootstrap_module, "_table_create_failure_code", fail_classifier)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        bootstrap_objects(
+            _FailingSpark(fail_fragment=f"CREATE TABLE `c`.`s`.`{REGISTRY_TABLE}`"),
+            catalog="c",
+            schema="s",
+            binding=_BINDING,
+        )
+
+    assert str(exc_info.value) == "DBTOBSB_BOOTSTRAP_TABLE_CREATE_FAILED"
+    assert "SENSITIVE" not in str(exc_info.value)
 
 
 def test_exact_v1_rerun_is_idempotent_and_ddl_free() -> None:

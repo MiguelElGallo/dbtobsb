@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import UTC, datetime
 from typing import Any
 
@@ -12,6 +13,7 @@ from dbtobsb_app.repository import (
     COLLECTION_COLUMNS,
     NODE_COLUMNS,
     RUN_COLUMNS,
+    TREND_COLUMNS,
     AppDataAccessError,
     DatabricksSqlRepository,
     databricks_repository,
@@ -103,6 +105,15 @@ def _collection_values() -> tuple[Any, ...]:
         1,
         now,
         50,
+    )
+
+
+def _trend_values() -> tuple[Any, ...]:
+    return (
+        40,
+        datetime(2026, 7, 16, 10, 0, tzinfo=UTC),
+        2,
+        7,
     )
 
 
@@ -202,6 +213,172 @@ def test_collection_query_is_fixed_quoted_parameterized_and_allowlisted() -> Non
         assert forbidden not in query
 
 
+def test_trend_query_is_fixed_parameterized_and_uses_only_sanitized_views() -> None:
+    calls: list[tuple[str, dict[str, int]]] = []
+    repository = DatabricksSqlRepository(
+        _bindings(), lambda: FakeConnection([_trend_values()], calls)
+    )
+
+    rows = repository.recent_trends(12)
+
+    assert rows[0].failed_node_results == 2
+    assert rows[0].model_results == 7
+    query, parameters = calls[0]
+    assert "FROM `customer-catalog`.`obs`.`dbt_run_health`" in query
+    assert "LEFT JOIN `customer-catalog`.`obs`.`dbt_node_health`" in query
+    assert "`pair_state` = 'PAIR_VALID'" in query
+    for column in (
+        "workspace_id",
+        "observed_job_id",
+        "observed_job_run_id",
+        "dbt_task_run_id",
+        "observed_task_key",
+    ):
+        assert f"n.`{column}` = r.`{column}`" in query
+    assert "n.`status` IN ('error', 'fail')" in query
+    assert "n.`resource_type` = 'model'" in query
+    assert "GROUP BY r.`workspace_id`, r.`observed_job_id`, r.`observed_job_run_id`" in query
+    assert "LIMIT :limit" in query
+    assert parameters == {"limit": 12}
+    assert all(f"`{column}`" in query for column in TREND_COLUMNS)
+    for forbidden in (
+        "raw_archive_locator",
+        "archive_sha256",
+        "manifest_sha256",
+        "run_results_sha256",
+        "compiled_code",
+        "message",
+    ):
+        assert forbidden not in query
+
+
+class _SqliteCursor:
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._cursor = connection.cursor()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self._cursor.close()
+
+    def execute(self, operation: str, parameters: dict[str, int]) -> None:
+        translated = operation.replace(
+            "`customer-catalog`.`obs`.`dbt_run_health`", "run_health"
+        ).replace("`customer-catalog`.`obs`.`dbt_node_health`", "node_health")
+        self._cursor.execute(translated, parameters)
+
+    def fetchall(self) -> list[tuple[Any, ...]]:
+        return self._cursor.fetchall()
+
+
+class _SqliteConnection:
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        return None
+
+    def cursor(self) -> _SqliteCursor:
+        return _SqliteCursor(self._connection)
+
+
+def _trend_database() -> sqlite3.Connection:
+    connection = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES)
+    connection.execute(
+        """CREATE TABLE run_health (
+          workspace_id INTEGER, observed_job_id INTEGER, observed_job_run_id INTEGER,
+          dbt_task_run_id INTEGER, observed_task_key TEXT, generated_at TIMESTAMP, pair_state TEXT
+        )"""
+    )
+    connection.execute(
+        """CREATE TABLE node_health (
+          workspace_id INTEGER, observed_job_id INTEGER, observed_job_run_id INTEGER,
+          dbt_task_run_id INTEGER, observed_task_key TEXT, resource_type TEXT, status TEXT
+        )"""
+    )
+    connection.executemany(
+        "INSERT INTO run_health VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            (1, 30, 100, 10, "dbt_build", datetime(2026, 7, 16, 8, 0), "PAIR_VALID"),
+            (1, 30, 200, 20, "dbt_build", datetime(2026, 7, 16, 9, 0), "PAIR_VALID"),
+            (1, 30, 200, 21, "dbt_build", datetime(2026, 7, 16, 9, 0), "PAIR_VALID"),
+            (1, 30, 300, 30, "dbt_build", datetime(2026, 7, 16, 10, 0), "PAIR_VALID"),
+            (1, 30, 400, 40, "dbt_build", datetime(2026, 7, 16, 11, 0), "PAIR_REJECTED"),
+        ),
+    )
+    nodes = [
+        (1, 30, 100, 10, "dbt_build", "model", "success"),
+        (1, 30, 200, 20, "dbt_build", "model", "success"),
+        (1, 30, 200, 20, "dbt_build", "model", "error"),
+        (1, 30, 200, 20, "dbt_build", "test", "fail"),
+        (1, 30, 200, 20, "dbt_build", "test", "warn"),
+        (1, 30, 200, 20, "dbt_build", "seed", "error"),
+        (1, 30, 400, 40, "dbt_build", "model", "error"),
+    ]
+    base = (1, 30, 200, 20, "dbt_build", "model", "error")
+    for index, replacement in enumerate((2, 31, 201, 99, "other")):
+        candidate = list(base)
+        candidate[index] = replacement
+        nodes.append(tuple(candidate))
+    connection.executemany("INSERT INTO node_health VALUES (?, ?, ?, ?, ?, ?, ?)", nodes)
+    return connection
+
+
+def _execute_trend_sql(
+    connection: sqlite3.Connection, query: str, *, limit: int = 3
+) -> tuple[tuple[Any, ...], ...]:
+    translated = query.replace("`customer-catalog`.`obs`.`dbt_run_health`", "run_health").replace(
+        "`customer-catalog`.`obs`.`dbt_node_health`", "node_health"
+    )
+    return tuple(connection.execute(translated, {"limit": limit}).fetchall())
+
+
+def test_complete_production_trend_path_is_bounded_and_semantically_exact() -> None:
+    connection = _trend_database()
+    repository = DatabricksSqlRepository(_bindings(), lambda: _SqliteConnection(connection))
+
+    rows = repository.recent_trends(3)
+
+    assert [
+        (row.observed_job_run_id, row.failed_node_results, row.model_results) for row in rows
+    ] == [
+        (200, 3, 2),
+        (200, 0, 0),
+        (300, 0, 0),
+    ]
+    assert len(rows) == 3
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda query: query.replace("  WHERE `pair_state` = 'PAIR_VALID'\n", ""),
+        lambda query: query.replace("LIMIT :limit", "LIMIT :limit + 1"),
+        lambda query: query.replace("`generated_at` DESC", "`generated_at` ASC"),
+        lambda query: query.replace("n.`workspace_id` = r.`workspace_id`", "1 = 1"),
+        lambda query: query.replace("n.`observed_job_id` = r.`observed_job_id`", "1 = 1"),
+        lambda query: query.replace("n.`observed_job_run_id` = r.`observed_job_run_id`", "1 = 1"),
+        lambda query: query.replace("n.`dbt_task_run_id` = r.`dbt_task_run_id`", "1 = 1"),
+        lambda query: query.replace("n.`observed_task_key` = r.`observed_task_key`", "1 = 1"),
+        lambda query: query.replace("('error', 'fail')", "('fail')"),
+        lambda query: query.replace("n.`resource_type` = 'model'", "n.`resource_type` = 'seed'"),
+        lambda query: query.replace(
+            "  r.`dbt_task_run_id`, r.`observed_task_key`", "  r.`observed_task_key`"
+        ),
+    ],
+)
+def test_trend_sql_contract_is_mutation_sensitive(mutate: Any) -> None:
+    connection = _trend_database()
+    repository = DatabricksSqlRepository(_bindings(), lambda: _SqliteConnection(connection))
+    expected = _execute_trend_sql(connection, repository._trends_query)
+
+    assert _execute_trend_sql(connection, mutate(repository._trends_query)) != expected
+
+
 def test_each_read_uses_and_closes_a_fresh_connection() -> None:
     counts = {"opened": 0, "closed": 0}
     calls: list[tuple[str, dict[str, int]]] = []
@@ -228,6 +405,15 @@ def test_unexpected_view_shape_is_rejected() -> None:
 
     with pytest.raises(AppDataAccessError, match="DBTOBSB_APP_RUN_VIEW_CONTRACT_MISMATCH"):
         repository.recent_runs(1)
+
+
+def test_unexpected_trend_shape_is_rejected() -> None:
+    repository = DatabricksSqlRepository(
+        _bindings(), lambda: FakeConnection([_trend_values()[:-1]], [])
+    )
+
+    with pytest.raises(AppDataAccessError, match="DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH"):
+        repository.recent_trends(1)
 
 
 def test_connector_failure_is_reclassified_without_response_text() -> None:

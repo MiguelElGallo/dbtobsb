@@ -25,6 +25,7 @@ from dbtobsb_app.models import (
     ReadinessResponse,
     ResponsibleActor,
     RunList,
+    TrendList,
 )
 from dbtobsb_app.repository import (
     DEFAULT_LIMIT,
@@ -42,7 +43,7 @@ from dbtobsb_app.ui import (
 )
 
 SERVICE_NAME = "dbtobsb"
-SERVICE_VERSION = "0.3.0"
+SERVICE_VERSION = "0.4.0"
 LOGO_PATH = Path(__file__).parent / "static" / "logo.png"
 
 RepositoryFactory = Callable[[ResourceBindings], ObservabilityRepository]
@@ -91,6 +92,11 @@ _ERRORS: dict[str, tuple[str, ResponsibleActor, str]] = {
     ),
     "DBTOBSB_APP_COLLECTION_VIEW_CONTRACT_MISMATCH": (
         "The collection-health view does not match this dbtobsb release.",
+        "deployment/seal verifier",
+        "Open /operators/how-to/reconcile-installation/ and follow this code.",
+    ),
+    "DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH": (
+        "The dashboard trend query does not match this dbtobsb release.",
         "deployment/seal verifier",
         "Open /operators/how-to/reconcile-installation/ and follow this code.",
     ),
@@ -304,6 +310,40 @@ def create_app(
             return _safe_error(_exception_detail(error, surface="collection"))
         return CollectionList(state="ready", limit=limit, items=items)
 
+    @app.get(
+        "/api/v1/trends",
+        response_model=TrendList,
+        responses={
+            200: {"headers": {"X-DBTOBSB-Cost-Notice": _COST_RESPONSE_HEADER}},
+            503: {
+                "model": ErrorResponse,
+                "headers": {"X-DBTOBSB-Cost-Notice": _COST_RESPONSE_HEADER},
+            },
+        },
+        tags=["Observability"],
+    )
+    def recent_trends(
+        response: Response,
+        limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
+    ) -> TrendList | JSONResponse:
+        """Return chart aggregates; this query can auto-start the SQL warehouse and cost."""
+        response.headers["X-DBTOBSB-Cost-Notice"] = _COST_HEADER_VALUE
+        if bindings.state is BindingState.SETUP_REQUIRED:
+            return TrendList(
+                state="setup_required",
+                limit=limit,
+                items=(),
+                required_bindings=bindings.missing,
+            )
+        if bindings.state is BindingState.INVALID:
+            return _safe_error(_error_detail("DBTOBSB_CONFIGURATION_INVALID", surface="trends"))
+        try:
+            source = repository()
+            items = source.recent_trends(limit)
+        except Exception as error:
+            return _safe_error(_exception_detail(error, surface="trends"))
+        return TrendList(state="ready", limit=limit, items=items)
+
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     def landing() -> HTMLResponse:
         """Render a non-querying setup or cost-awareness landing page."""
@@ -363,9 +403,11 @@ def create_app(
                     (),
                     (),
                     (),
+                    (),
                     run_failure=failure,
                     node_failure=failure,
                     collection_failure=failure,
+                    trend_failure=failure,
                 ),
                 status_code=503,
                 headers=safe_html_headers,
@@ -373,6 +415,7 @@ def create_app(
         run_failure: ErrorDetail | None = None
         node_failure: ErrorDetail | None = None
         collection_failure: ErrorDetail | None = None
+        trend_failure: ErrorDetail | None = None
         try:
             runs = source.recent_runs(limit)
         except Exception as error:
@@ -388,11 +431,17 @@ def create_app(
         except Exception as error:
             collection = ()
             collection_failure = _exception_detail(error, surface="dashboard-collection")
+        try:
+            trends = source.recent_trends(limit)
+        except Exception as error:
+            trends = ()
+            trend_failure = _exception_detail(error, surface="dashboard-trends")
         status_code = (
             503
             if run_failure is not None
             and node_failure is not None
             and collection_failure is not None
+            and trend_failure is not None
             else 200
         )
         return HTMLResponse(
@@ -400,9 +449,11 @@ def create_app(
                 runs,
                 nodes,
                 collection,
+                trends,
                 run_failure=run_failure,
                 node_failure=node_failure,
                 collection_failure=collection_failure,
+                trend_failure=trend_failure,
             ),
             status_code=status_code,
             headers=safe_html_headers,

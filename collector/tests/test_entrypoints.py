@@ -384,6 +384,57 @@ def test_delete_uninstall_binding_mismatch_precedes_spark_and_hides_arguments(
             "Databricks metadata compatibility",
             "Run the documented bootstrap compatibility reconciliation workflow.",
         ),
+        (
+            "DBTOBSB_BOOTSTRAP_SPARK_SESSION_UNAVAILABLE",
+            "serverless Spark session",
+            "Run the documented bootstrap compatibility reconciliation workflow.",
+        ),
+        (
+            "DBTOBSB_BOOTSTRAP_SCHEMA_METADATA_READ_FAILED",
+            "serverless bootstrap metadata",
+            "Run the documented bootstrap compatibility reconciliation workflow.",
+        ),
+        (
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_FAILED",
+            "fresh-install object creation",
+            "Run the documented evidence-object reconciliation workflow.",
+        ),
+        (
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_AUTHORIZATION_FAILED",
+            "table creation authorization",
+            "Use docs/site/how-to-guides/install-private-release.md#recover-a-failed-bootstrap "
+            "and follow the matching code.",
+        ),
+        (
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_STORAGE_UNAVAILABLE",
+            "managed storage connectivity",
+            "Use docs/site/how-to-guides/install-private-release.md#recover-a-failed-bootstrap "
+            "and follow the matching code.",
+        ),
+        (
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_OBJECT_CONFLICT",
+            "fresh-install table conflict",
+            "Use docs/site/how-to-guides/install-private-release.md#recover-a-failed-bootstrap "
+            "and follow the matching code.",
+        ),
+        (
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_PLATFORM_UNSUPPORTED",
+            "serverless DDL support",
+            "Use docs/site/how-to-guides/install-private-release.md#recover-a-failed-bootstrap "
+            "and follow the matching code.",
+        ),
+        (
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_SQL_INCOMPATIBLE",
+            "Databricks DDL compatibility",
+            "Use docs/site/how-to-guides/install-private-release.md#recover-a-failed-bootstrap "
+            "and follow the matching code.",
+        ),
+        (
+            "DBTOBSB_BOOTSTRAP_TABLE_CREATE_INTERNAL_ERROR",
+            "Databricks table creation runtime",
+            "Use docs/site/how-to-guides/install-private-release.md#recover-a-failed-bootstrap "
+            "and follow the matching code.",
+        ),
     ],
 )
 def test_bootstrap_prints_one_safe_recovery_workflow(
@@ -439,6 +490,21 @@ def test_unknown_bootstrap_exception_text_is_not_disclosed(
     payload = json.loads(capsys.readouterr().out)
     assert payload["code"] == "DBTOBSB_BOOTSTRAP_FAILED"
     assert canary not in json.dumps(payload, sort_keys=True)
+
+
+def test_bootstrap_spark_start_failure_is_sanitized(monkeypatch: pytest.MonkeyPatch) -> None:
+    canary = "SENSITIVE_SPARK_START_FAILURE"
+
+    def fail() -> NoReturn:
+        raise RuntimeError(canary)
+
+    monkeypatch.setattr(entrypoints, "_active_spark", fail)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        entrypoints._active_bootstrap_spark()
+
+    assert str(exc_info.value) == "DBTOBSB_BOOTSTRAP_SPARK_SESSION_UNAVAILABLE"
+    assert canary not in str(exc_info.value)
 
 
 @pytest.mark.parametrize(

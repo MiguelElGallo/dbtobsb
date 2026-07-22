@@ -108,12 +108,16 @@ _OUTPUT_KEYS = {
 }
 _APP_KEYS = {
     "initial_state",
+    "installation_deployment_checks",
+    "end_user_acl_provisioner",
     "start_command",
     "stop_command",
     "landing_queries",
     "load_action",
     "warehouse_may_auto_start_after_load",
     "browser_close_stops_compute",
+    "dashboard_rendering",
+    "dashboard_metrics",
     "resources",
     "first_answer",
 }
@@ -158,7 +162,7 @@ _PACKAGE_VERSIONS = {
     "dbt-protos": "1.0.541",
     "dbt-spark": "1.10.3",
 }
-_EXPECTED_CANONICAL_SHA256 = "a440ab8a9cd6c0b00736e617554fd47d736b2764bdc3b17b71a935befc694401"
+_EXPECTED_CANONICAL_SHA256 = "00cd8d3633474ad8b5e8a9153aa55a44f02e00fc90ef61fbab7a8f302474a5e2"
 
 
 def _mapping(value: Any, *, name: str, keys: set[str]) -> dict[str, Any]:
@@ -239,7 +243,7 @@ def parse_support_manifest(raw: bytes) -> SupportManifest:
         "release_state": "FINAL",
         "cloud": "AZURE_DATABRICKS",
         "bundle_engine": "DIRECT",
-        "databricks_cli": "1.7.0",
+        "databricks_cli": "1.8.0",
         "bootstrap_compute": "SERVERLESS_LAKEFLOW_PYTHON_WHEEL_JOB",
         "dbt_task_compute": "SERVERLESS_LAKEFLOW_JOB",
         "app_compute": "DATABRICKS_APP_SERVERLESS",
@@ -355,11 +359,11 @@ def parse_support_manifest(raw: bytes) -> SupportManifest:
         "schema_requirement": "EXISTING_DEDICATED_SCHEMA_SESSION_USER_IS_OWNER",
         "bootstrap_run_as": "BUNDLE_DEPLOYER_COMBINED_ADMIN",
         "bootstrap_job_lifecycle": "TEMPORARY_REMOVE_AFTER_TERMINAL_READBACK",
-        "native_mutation_registry": "FOUNDATION_NOT_INVOKED_V0_3",
+        "native_mutation_registry": "FOUNDATION_NOT_INVOKED_V0_4",
         "bundle_sql_hooks": False,
         "bootstrap_idempotency": "EXACT_PRE_BINDING_ONLY",
         "post_binding_resume": "LIFECYCLE_READBACK_NO_BOOTSTRAP_REPLAY",
-        "runtime_trust_ledger": "NOT_IN_V0_3_SUPPORTED_PATH",
+        "runtime_trust_ledger": "NOT_IN_V0_4_SUPPORTED_PATH",
     }
     if installation != expected_installation:
         raise ValueError("DBTOBSB_SUPPORT_MANIFEST_INSTALLATION_INVALID")
@@ -383,7 +387,7 @@ def parse_support_manifest(raw: bytes) -> SupportManifest:
     ]:
         raise ValueError("DBTOBSB_SUPPORT_MANIFEST_CUSTOMER_STATE_INVALID")
     grants = customer_state["direct_grants"]
-    if not isinstance(grants, list) or len(grants) != 17:
+    if not isinstance(grants, list) or len(grants) != 18:
         raise ValueError("DBTOBSB_SUPPORT_MANIFEST_GRANTS_INVALID")
     if any(
         not isinstance(item, dict)
@@ -457,12 +461,19 @@ def parse_support_manifest(raw: bytes) -> SupportManifest:
         raise ValueError("DBTOBSB_SUPPORT_MANIFEST_ONBOARDING_INVALID")
     if app != {
         "initial_state": "STOPPED",
+        "installation_deployment_checks": 1,
+        "end_user_acl_provisioner": "TARGETED_APPS_PERMISSION_API_WHILE_STOPPED",
         "start_command": "dbtobsb start",
         "stop_command": "dbtobsb stop",
         "landing_queries": False,
         "load_action": "EXPLICIT_LOAD_OBSERVABILITY",
         "warehouse_may_auto_start_after_load": True,
         "browser_close_stops_compute": False,
+        "dashboard_rendering": "NATIVE_SERVER_RENDERED_APP_NO_EXTERNAL_DASHBOARD_RESOURCE",
+        "dashboard_metrics": [
+            "FAILED_NODE_RESULTS_PER_RUN",
+            "MODEL_RESULTS_PER_RUN",
+        ],
         "resources": [
             "APP_QUERY_WAREHOUSE",
             "dbt_run_health",

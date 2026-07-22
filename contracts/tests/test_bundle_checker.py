@@ -146,7 +146,7 @@ def test_failure_diagnostic_is_actionable_and_contains_no_observed_values(
 @pytest.mark.parametrize(
     ("field", "value", "code"),
     [
-        ("databricks_cli_version", ">= 1.7.0", "CLI_VERSION_DRIFT"),
+        ("databricks_cli_version", ">= 1.8.0", "CLI_VERSION_DRIFT"),
         ("engine", "terraform", "ENGINE_DRIFT"),
         ("name", "caller-controlled", "METADATA_INVALID"),
     ],

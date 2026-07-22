@@ -1,15 +1,15 @@
 {
   "schema": "dbtobsb.databricks-cli-release.v1",
   "cli_module": "github.com/databricks/cli",
-  "cli_version": "v1.7.0",
-  "cli_module_sum": "h1:rXIWpyz11eng0BJ3b83MHkmvxqHhbID1xa9nHRu9lHA=",
-  "cli_commit": "2f68ee4951ef96fa9d99e40c8ebadccf08412d58",
+  "cli_version": "v1.8.0",
+  "cli_module_sum": "h1:+1aoZobpIBqGPuS1gyveIFeOC1BVK2jn8G6qYaQ/GwM=",
+  "cli_commit": "3b9fe151888df8fe937090e5f2be0a5c6dc0ff18",
   "sdk_module": "github.com/databricks/databricks-sdk-go",
   "sdk_version": "v0.154.0",
   "sdk_module_sum": "h1:Vmif0i0rbu7kgphoEBPRroZNd5uLBOITvjU4dr2lwXY=",
   "artifact": {
     "os": "darwin",
     "arch": "arm64",
-    "sha256": "a9a814373ae264d50aed606fc23bb5f4652b538b079891299fba05fb07783a01"
+    "sha256": "e6107da75e9dfc16c462563e11958c65689ea47d04d54cb4b31d0eb961f40be7"
   }
 }

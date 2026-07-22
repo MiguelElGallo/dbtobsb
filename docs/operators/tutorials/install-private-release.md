@@ -1,4 +1,4 @@
-# Install the private v0.3 release
+# Install the private v0.4 release
 
 This is the supported route for one Azure Databricks workspace and one dbt Core project. The installer discovers existing customer resources, shows the selected boundary, and leaves the read-only App stopped. It does not require an external telemetry service or Databricks Marketplace.
 
@@ -10,11 +10,11 @@ This is the supported route for one Azure Databricks workspace and one dbt Core 
 
 ## Before you begin
 
-Use a managed Apple-silicon Mac with Python 3.12, `uv`, and Databricks CLI `1.7.0`. Run from a private checkout of this repository. The signed-in person must use a named Azure Databricks OAuth U2M profile and must be both account and workspace administrator.
+Use a managed Apple-silicon Mac with Python 3.12, `uv`, and Databricks CLI `1.8.0`. Run from a private checkout of this repository. The signed-in person must use a named Azure Databricks OAuth U2M profile and must be both account and workspace administrator.
 
 Prepare these customer-owned resources first:
 
-- one existing catalog whose name is a simple SQL identifier;
+- one or two existing writable Unity Catalog catalogs whose names are simple SQL identifiers;
 - one empty, dedicated evidence schema owned by the signed-in administrator;
 - one dbt target schema owned by the observed Job service principal;
 - distinct active service principals whose display names contain `observed` and `collector`;
@@ -33,7 +33,7 @@ uv sync --project installer --locked
 uv run --project installer --no-sync dbtobsb bootstrap
 ```
 
-Select the named profile, service principals, group, warehouse, catalog, evidence schema, dbt target schema, and dbt project. Review the displayed workspace, data targets, project, and identities. Type `APPROVE` only when every selection is correct.
+Select the named profile, service principals, group, warehouse, empty evidence schema, dbt target schema, and dbt project. The two schemas may use different existing catalogs. Review the displayed workspace, fully qualified data targets, project, and identities. For a manual installation, type `APPROVE` only when every selection is correct. Once an agent's summarized installation-and-run task is authorized, it always shows the exact preview and digest, enters `APPROVE` itself at matching previews, and does not request another approval for retries within the same resources, mutations, workload, cost ceiling, and finish state. Material expansion is a new task decision.
 
 The launcher snapshots and seals the project, deploys three Jobs and the App through the Bundle, runs one temporary serverless bootstrap Job, applies the fixed grants, verifies the deployment, and removes the temporary Job. Successful completion ends with:
 
@@ -45,7 +45,7 @@ Installation may take several minutes while Databricks allocates serverless comp
 
 ## Resume safely
 
-The private `.dbtobsb/release-installation-v1.json` file records the last completed stage and is created with owner-only permissions. If the terminal or network is interrupted, do not delete it and do not edit generated Bundle files. Run the same command again:
+The private `.dbtobsb/release-installation-v2.json` file records the last completed stage and is created with owner-only permissions. If the terminal or network is interrupted, do not delete it and do not edit generated Bundle files. v0.4.0 has no upgrade or legacy-state adoption path; a v1 state or prior product installation blocks before mutation. Run the same command again:
 
 ```console
 uv run --project installer --no-sync dbtobsb bootstrap

@@ -17,13 +17,14 @@ provides read-only views and an App for answering questions such as:
 
 - Which dbt run failed?
 - Which model or test failed?
+- Are failures or observed model counts changing over time?
 - Were the result files and structured logs captured completely?
 - Did collection succeed even when dbt failed?
 
 No external telemetry platform is required. The evidence and compute stay inside
 the customer's Azure Databricks workspace.
 
-> **Azure Databricks only:** dbtobsb `v0.3.0` installs only in an Azure
+> **Azure Databricks only:** dbtobsb `v0.4.0` installs only in an Azure
 > Databricks workspace deployed in the customer's Azure subscription and reached
 > through its canonical `https://adb-...azuredatabricks.net` workspace URL. It
 > does not support AWS Databricks, GCP Databricks, **Databricks Free Edition**, or
@@ -39,6 +40,7 @@ the customer's Azure Databricks workspace.
   bounded structured dbt logs.
 - Databricks tables containing run, model, seed, snapshot, and test results.
 - Three read-only health views for normal queries and the App.
+- Native App charts for failed node results and model-result counts over time.
 - Restricted Unity Catalog storage for the original captured files.
 - A read-only Databricks App that is stopped by default.
 - No required schedule and no external monitoring service.
@@ -54,11 +56,14 @@ Use $install-and-run-dbtobsb to install dbtobsb, run the weather example,
 prove that its model result and structured logs were captured, and stop compute.
 ```
 
-Before changing anything, the agent asks you to confirm the workspace, project,
+Before changing anything, the agent establishes the workspace, project,
 identities, group, warehouse, catalog, schemas, allowed changes, compute deadline,
 warehouse stop policy, and final retained state. It rejects Free Edition and
-non-Azure workspaces. It asks again before approving the installer's exact change
-preview.
+non-Azure workspaces. Once you authorize that summarized task, the agent shows
+each exact preview and digest as progress evidence and answers the installer's
+confirmation prompts itself. It does not ask again across retries or digest
+changes that remain within the task scope. A material expansion of the resources,
+mutations, workload, cost ceiling, or finish state is a new task decision.
 
 The expected result is one successful weather model, captured model results,
 complete structured logs, published observability rows, and all product compute
@@ -104,14 +109,15 @@ attestation.
 
 ## Supported release
 
-The current release is `v0.3.0`. It is installed privately through a Databricks
-Declarative Automation Bundle; Databricks Marketplace distribution is not
-included.
+Version `v0.4.0` is installed privately through a Databricks Declarative
+Automation Bundle; Databricks Marketplace distribution is not included. Its
+immutable release artifacts passed the complete live Azure qualification.
 
 - [Supported environment](https://miguelelgallo.github.io/dbtobsb/reference/supported-environment.html)
 - [Security and permissions](https://miguelelgallo.github.io/dbtobsb/reference/security-and-permissions.html)
-- [Exact release contract](docs/releases/v0.3.0-support-contract.md)
-- [Sanitized Azure acceptance evidence](docs/evidence/v0.3.0-stable-acceptance-2026-07-18.md)
+- [Exact release contract](docs/releases/v0.4.0-support-contract.md)
+- [v0.4.0 Azure acceptance evidence](docs/evidence/v0.4.0-live-acceptance-2026-07-22.md)
+- [Historical v0.3.0 Azure acceptance evidence](docs/evidence/v0.3.0-stable-acceptance-2026-07-18.md)
 
 ## Documentation and development
 

@@ -1,6 +1,6 @@
 # Reference
 
-Reference pages describe the exact `v0.3.0` contract.
+Reference pages describe the exact `v0.4.0` contract.
 
 - [Supported environment](supported-environment.md)
 - [dbt project input](dbt-project-input.md)

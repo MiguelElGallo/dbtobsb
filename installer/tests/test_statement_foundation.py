@@ -817,13 +817,12 @@ def test_cancellation_client_cannot_return_a_terminal_or_untyped_success_signal(
 
 def test_full_packaged_source_has_no_legacy_credential_or_direct_statement_sender() -> None:
     package = Path(__file__).parents[1] / "src" / "dbtobsb_installer"
-    source = "\n".join(path.read_text(encoding="utf-8") for path in sorted(package.rglob("*.py")))
+    sources = {path: path.read_text(encoding="utf-8") for path in sorted(package.rglob("*.py"))}
+    source = "\n".join(sources.values())
     forbidden = (
         "AccessToken",
         "OAuthU2MCredentialProvider",
         "resolve_credential",
-        '"Authorization"',
-        "Bearer ",
         "http.client",
         "HTTPSConnection",
         "/api/2.0/sql/statements",
@@ -833,6 +832,14 @@ def test_full_packaged_source_has_no_legacy_credential_or_direct_statement_sende
     )
 
     assert all(value not in source for value in forbidden)
+    release_cli = sources[package / "release_cli.py"]
+    assert release_cli.count('"Authorization"') == 1
+    assert release_cli.count("Bearer ") == 1
+    assert all(
+        '"Authorization"' not in contents and "Bearer " not in contents
+        for path, contents in sources.items()
+        if path.name != "release_cli.py"
+    )
     assert not (package / "transport.py").exists()
 
 

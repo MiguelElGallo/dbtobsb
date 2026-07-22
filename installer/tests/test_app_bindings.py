@@ -1,4 +1,4 @@
-"""Closed shell, bound-deployment, and user-access App overlay tests."""
+"""Closed shell and bound-deployment App overlay tests."""
 
 from __future__ import annotations
 
@@ -93,14 +93,6 @@ def test_bound_overlay_is_one_exact_read_only_binding_set_without_users() -> Non
             },
         },
     ]
-
-
-def test_final_overlay_changes_only_end_user_access_after_deployment() -> None:
-    bound = _app(app_bindings.render_bound_app_overlay(_inputs()))
-    final = _app(app_bindings.render_final_app_overlay(_inputs()))
-
-    assert final | {"permissions": []} == bound
-    assert final["permissions"] == [{"group_name": "dbtobsb-users", "level": "CAN_USE"}]
 
 
 @pytest.mark.parametrize(

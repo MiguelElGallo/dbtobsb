@@ -8,11 +8,16 @@ When a user asks an agent to install dbtobsb, run the weather example or another
 dbt project, make a first observed run, or prove that logs were captured, use
 `.agents/skills/install-and-run-dbtobsb/SKILL.md`.
 
-The skill must ask for resource, mutation, cost, project, warehouse-stop, and finish
-choices before changing local or cloud state. It must pause again at the exact
-installer preview before typing `APPROVE`. Do not replace the supported launcher
-with direct dbt commands, caller-selected Job IDs, selectors, SQL, paths, flags, or
-compute overrides.
+The skill must establish resource, mutation, cost, project, warehouse-stop, and
+finish choices before changing local or cloud state. Once the user authorizes that
+installation-and-run task, the agent must answer the installer's confirmation
+prompts itself, including typing `APPROVE`; do not turn those implementation
+prompts into repeated user approval requests. Show each exact preview and digest
+as progress evidence. Reconfirm only when the proposed action materially exceeds
+the task's authorized resources, mutations, workload, cost ceiling, or finish
+state. A retry or digest change alone does not exceed the task scope. Do not
+replace the supported launcher with direct dbt commands, caller-selected Job IDs,
+selectors, SQL, paths, flags, or compute overrides.
 
 The supported platform is a customer Azure Databricks workspace with a canonical
 `adb-...azuredatabricks.net` per-workspace URL. Before mutation, reject AWS,
@@ -20,12 +25,12 @@ GCP, Databricks Free Edition, and the retired Community Edition. Databricks does
 not currently call the personal-use product “Personal Edition”; personal-use
 signup means Free Edition and is unsupported by dbtobsb.
 
-For the v0.3.0 supported release, the machine-readable support manifest and
-`docs/releases/v0.3.0-support-contract.md` are authoritative about included
+For the v0.4.0 supported release, the machine-readable support manifest and
+`docs/releases/v0.4.0-support-contract.md` are authoritative about included
 components. The detailed separated-duty, migration-ledger, runtime-trust,
 controlled-action, enrichment, upgrade, and rollback rules below apply only
 when a later support manifest includes those components. They must not be
-silently presented as v0.3.0 behavior or made a hidden dependency of its base
+silently presented as v0.4.0 behavior or made a hidden dependency of its base
 collector and read-only App.
 
 ## Product boundaries

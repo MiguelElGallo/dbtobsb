@@ -17,8 +17,10 @@ dbtobsb collects selected details from those files and stores them in Databricks
 tables. It also creates read-only views that make the history safer and easier to
 search. Instead of opening files one at a time, you can use SQL or the dbtobsb App
 to see each run, the result of each model and test, how long it took, and whether
-the record was collected. The original files stay in restricted storage, and
-dbtobsb does not send logs or results to an external monitoring service.
+the record was collected. The App also charts failed node results and observed
+model-result counts across recent runs. The original files stay in restricted
+storage, and dbtobsb does not send logs or results to an external monitoring
+service.
 
 dbtobsb gives operators one place to answer three questions:
 
@@ -34,17 +36,18 @@ and a successful dbt build can still have missing evidence.
 
 !!! warning "Azure Databricks only"
 
-    dbtobsb `v0.3.0` does not run on AWS Databricks, GCP Databricks, or
+    dbtobsb `v0.4.0` does not run on AWS Databricks, GCP Databricks, or
     **Databricks Free Edition**. Databricks does not use “Personal Edition” as the
     product name; personal-use signup creates a Free Edition workspace. Install
     only in a supported Azure Databricks workspace. See
     [Supported environment](reference/supported-environment.md).
 
-!!! info "Private release"
+!!! info "Qualified private release"
 
-    Version `0.3.0` is a private release. It is not distributed through Databricks
-    Marketplace. The source repository and this documentation are public; customer
-    installation and runtime evidence remain private to the customer's workspace.
+    Version `0.4.0` passed its independent reviews and complete live Azure
+    qualification. It is not distributed through Databricks Marketplace. The
+    source repository and this documentation are public; customer installation
+    and runtime evidence remain private to the customer's workspace.
 
 ## Choose what you need
 
@@ -89,5 +92,5 @@ environment values, or secrets.
 ## Supported release
 
 The supported path uses Azure Databricks—not Free Edition—dbt Core `1.11.12`,
-dbt-databricks `1.12.2`, Python `3.12`, and Databricks CLI `1.7.0`.
+dbt-databricks `1.12.2`, Python `3.12`, and Databricks CLI `1.8.0`.
 See [Supported environment](reference/supported-environment.md) before installing.

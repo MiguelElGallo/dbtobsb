@@ -10,6 +10,7 @@ from dbtobsb_app.models import (
     ErrorDetail,
     NodeHealth,
     RunHealth,
+    TrendPoint,
 )
 
 
@@ -78,10 +79,27 @@ def _document(content: str, *, title: str = "dbtobsb observability") -> str:
       background:var(--accent); color:#111; font-weight:700; text-decoration:none; }}
     .badge {{ display:inline-block; padding:.15rem .5rem; border-radius:999px;
       background:#243244; }}
+    .chart-grid {{ display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));
+      gap:1rem; margin-top:1rem; }}
+    .chart {{ min-width:0; margin:0; padding:1rem; border:1px solid #344252;
+      border-radius:12px; }}
+    .chart h3 {{ margin:.1rem 0 .25rem; }}
+    .chart svg {{ display:block; min-width:0; width:100%; height:auto; margin-top:.75rem;
+      overflow:visible; }}
+    .chart-axis {{ stroke:#718096; stroke-width:1; }}
+    .chart-label {{ fill:var(--muted); font:12px system-ui,sans-serif; }}
+    .chart-bar-failure {{ fill:#ff5f46; }} .chart-bar-model {{ fill:#59b7ff; }}
+    .metric-row {{ display:flex; flex-wrap:wrap; gap:.75rem; margin:.75rem 0 0; }}
+    .metric {{ min-width:7rem; padding:.55rem .7rem; background:#111821; border-radius:8px; }}
+    .metric strong {{ display:block; font-size:1.25rem; }}
+    details {{ margin-top:1rem; }} summary {{ cursor:pointer; font-weight:700; }}
+    @media (max-width:600px) {{ .chart-label {{ font-size:24px; }} }}
     @media (prefers-color-scheme:light) {{
       :root {{ --panel:#fff; --muted:#52606d; }} body {{ background:#f4f6f8; color:#17212b; }}
       .table-wrap,th,td {{ border-color:#d6dde5; }} a {{ color:#a32d1c; }}
       .badge {{ background:#edf1f5; }}
+      .chart {{ border-color:#d6dde5; }} .metric {{ background:#f0f3f6; }}
     }}
   </style>
 </head>
@@ -246,6 +264,7 @@ def installation_runbook_page() -> str:
 
 def _failure_panel(*, heading: str, failure: ErrorDetail) -> str:
     heading_ids = {
+        "Dashboard trends": "dashboard-trends-failed-heading",
         "Recent runs": "recent-runs-failed-heading",
         "Recent nodes": "recent-nodes-failed-heading",
         "Collection health": "collection-health-failed-heading",
@@ -263,6 +282,115 @@ def _failure_panel(*, heading: str, failure: ErrorDetail) -> str:
   <strong>Next action:</strong> <a href="{action_path}">{escape(failure.action)}</a></p>
   <p class="muted">Code: <code>{escape(failure.code)}</code> · Correlation:
   <code>{escape(failure.correlation_id)}</code></p>
+</section>"""
+
+
+def _bar_chart(
+    points: tuple[TrendPoint, ...],
+    *,
+    metric: str,
+    title: str,
+    description: str,
+    chart_id: str,
+    css_class: str,
+) -> str:
+    values = tuple(
+        point.failed_node_results if metric == "failed_node_results" else point.model_results
+        for point in points
+    )
+    maximum = max((*values, 1))
+    width = 720
+    height = 260
+    left = 48
+    top = 20
+    plot_width = width - left - 20
+    plot_height = height - top - 50
+    slot = plot_width / len(points)
+    bar_width = max(2.0, slot * 0.7)
+    bars: list[str] = []
+    for index, (point, value) in enumerate(zip(points, values, strict=True)):
+        bar_height = plot_height * value / maximum
+        x = left + index * slot + (slot - bar_width) / 2
+        y = top + plot_height - bar_height
+        observed = escape(point.observed_at.isoformat(), quote=True)
+        bars.append(
+            f'<rect class="{css_class}" x="{x:.2f}" y="{y:.2f}" '
+            f'width="{bar_width:.2f}" height="{bar_height:.2f}">'
+            f"<title>{observed}: {value}</title></rect>"
+        )
+    first_label = escape(points[0].observed_at.strftime("%Y-%m-%d"), quote=True)
+    last_label = escape(points[-1].observed_at.strftime("%Y-%m-%d"), quote=True)
+    latest = values[-1]
+    return f"""<figure class="chart" aria-labelledby="{chart_id}-heading">
+  <h3 id="{chart_id}-heading">{escape(title)}</h3>
+  <figcaption id="{chart_id}-description" class="muted">{escape(description)}</figcaption>
+  <div class="metric-row" aria-label="Chart summary">
+    <div class="metric"><span>Latest</span><strong>{latest}</strong></div>
+    <div class="metric"><span>Maximum</span><strong>{max(values)}</strong></div>
+    <div class="metric"><span>Runs</span><strong>{len(points)}</strong></div>
+  </div>
+  <svg viewBox="0 0 {width} {height}" role="img"
+    aria-labelledby="{chart_id}-heading {chart_id}-description">
+    <line class="chart-axis" x1="{left}" y1="{top + plot_height}" x2="{width - 20}"
+      y2="{top + plot_height}" />
+    <text class="chart-label" x="{left - 8}" y="{top + 5}" text-anchor="end">{maximum}</text>
+    <text class="chart-label" x="{left - 8}" y="{top + plot_height + 4}"
+      text-anchor="end">0</text>
+    {"".join(bars)}
+    <text class="chart-label" x="{left}" y="{height - 14}">{first_label}</text>
+    <text class="chart-label" x="{width - 20}" y="{height - 14}"
+      text-anchor="end">{last_label}</text>
+  </svg>
+</figure>"""
+
+
+def _trend_panel(points: tuple[TrendPoint, ...]) -> str:
+    if not points:
+        return """<section class="panel" aria-labelledby="dashboard-trends-heading">
+  <h2 id="dashboard-trends-heading">Trends over time <span class="badge">0</span></h2>
+  <p>No accepted trend data yet. Run an onboarded dbt Job and verify that its artifact pair
+  was accepted, then refresh this page.</p>
+</section>"""
+    rows = "".join(
+        "<tr>"
+        + _row_header(point.observed_job_run_id)
+        + _cell(point.observed_at)
+        + _cell(point.failed_node_results)
+        + _cell(point.model_results)
+        + "</tr>"
+        for point in points
+    )
+    failure_chart = _bar_chart(
+        points,
+        metric="failed_node_results",
+        title="Failures over time",
+        description=("Accepted node results with native dbt status error or fail, grouped by run."),
+        chart_id="failures-over-time",
+        css_class="chart-bar-failure",
+    )
+    model_chart = _bar_chart(
+        points,
+        metric="model_results",
+        title="Total models over time",
+        description=(
+            "Accepted model-result rows in each run; this is not total project inventory."
+        ),
+        chart_id="models-over-time",
+        css_class="chart-bar-model",
+    )
+    return f"""<section class="panel" aria-labelledby="dashboard-trends-heading">
+  <h2 id="dashboard-trends-heading">Trends over time
+  <span class="badge">{len(points)}</span></h2>
+  <p class="muted">Newest accepted runs are selected first, then displayed chronologically.
+  The aggregates use only the existing sanitized run-health and node-health views.</p>
+  <div class="chart-grid">{failure_chart}{model_chart}</div>
+  <details><summary>View chart data as a table</summary>
+  <div class="table-wrap" role="region" tabindex="0" aria-labelledby="dashboard-trends-heading"
+    aria-describedby="dashboard-trends-caption"><table>
+  <caption id="dashboard-trends-caption">Exact values represented by both charts.</caption>
+  <thead><tr><th scope="col">Job run</th><th scope="col">Observed</th>
+  <th scope="col">Failed node results</th><th scope="col">Model results</th></tr></thead>
+  <tbody>{rows}</tbody></table></div></details>
 </section>"""
 
 
@@ -297,10 +425,12 @@ def dashboard_page(
     runs: tuple[RunHealth, ...],
     nodes: tuple[NodeHealth, ...],
     collection: tuple[CollectionHealth, ...],
+    trends: tuple[TrendPoint, ...],
     *,
     run_failure: ErrorDetail | None = None,
     node_failure: ErrorDetail | None = None,
     collection_failure: ErrorDetail | None = None,
+    trend_failure: ErrorDetail | None = None,
 ) -> str:
     """Render only the public model allowlists with HTML escaping."""
     run_rows = "".join(
@@ -404,17 +534,24 @@ the current schedule state.</caption>
 <th scope="col">Published</th><th scope="col">Reconciliation run</th>
 </tr></thead><tbody>{collection_rows}</tbody></table></div>"""
     )
+    trend_panel = (
+        _failure_panel(heading="Dashboard trends", failure=trend_failure)
+        if trend_failure is not None
+        else _trend_panel(trends)
+    )
     return _document(
         f"""<header><div><div class="eyebrow">dbt Core · Databricks</div><h1>Observability</h1>
 <div class="muted">Customer-local evidence · read only</div></div>
 <nav aria-label="Observability"><a href="/">Cost notice</a> ·
 <a href="/observability">Refresh data</a></nav></header>
 {_cost_notice()}
+{trend_panel}
 {collection_panel}
 {run_panel}
 {node_panel}
 {_status_help()}
 <p class="muted">JSON: <a href="/api/v1/collection">collection</a> ·
 <a href="/api/v1/runs">runs</a> · <a href="/api/v1/nodes">nodes</a> ·
+<a href="/api/v1/trends">trends</a> ·
 <a href="/api/readiness">readiness</a></p>"""
     )

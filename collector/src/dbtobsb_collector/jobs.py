@@ -51,7 +51,7 @@ _COLLECTOR_CHILD_JOB_PARAMETERS = {
     "execution_count": "{{tasks.dbt_build.execution_count}}",
 }
 _PRODUCT_WHEEL = re.compile(
-    r"^dbtobsb_(?:contracts|capture|collector)-0\.3\.0"
+    r"^dbtobsb_(?:contracts|capture|collector)-0\.4\.0"
     r"(?:\+dbtobsb\.(?:candidate|final)\.[0-9a-f]{64})?-py3-none-any\.whl$"
 )
 _DEPLOYMENT_JOB_ERRORS = {

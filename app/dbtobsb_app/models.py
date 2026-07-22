@@ -75,6 +75,7 @@ ErrorCode: TypeAlias = Literal[
     "DBTOBSB_APP_RUN_VIEW_CONTRACT_MISMATCH",
     "DBTOBSB_APP_NODE_VIEW_CONTRACT_MISMATCH",
     "DBTOBSB_APP_COLLECTION_VIEW_CONTRACT_MISMATCH",
+    "DBTOBSB_APP_TREND_VIEW_CONTRACT_MISMATCH",
 ]
 ResponsibleActor: TypeAlias = Literal["deployment/seal verifier", "data operator"]
 DbtResourceType: TypeAlias = Literal[
@@ -269,6 +270,15 @@ class CollectionHealth(PublicModel):
         return self
 
 
+class TrendPoint(PublicModel):
+    """Per-run aggregate used by the native observability charts."""
+
+    observed_job_run_id: int = Field(ge=1)
+    observed_at: datetime
+    failed_node_results: int = Field(ge=0)
+    model_results: int = Field(ge=0)
+
+
 class RunList(PublicModel):
     """Recent run response, including the explicit setup-only state."""
 
@@ -293,6 +303,15 @@ class CollectionList(PublicModel):
     state: Literal["ready", "setup_required"]
     limit: int
     items: tuple[CollectionHealth, ...]
+    required_bindings: tuple[str, ...] = ()
+
+
+class TrendList(PublicModel):
+    """Recent per-run chart points, including the explicit setup-only state."""
+
+    state: Literal["ready", "setup_required"]
+    limit: int
+    items: tuple[TrendPoint, ...]
     required_bindings: tuple[str, ...] = ()
 
 
