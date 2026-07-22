@@ -1109,7 +1109,7 @@ def test_app_readback_requires_exact_resource_names_permissions_and_targets(
     assert not manager._app_resources_match(_state(), changed)
 
 
-def test_cli_1_8_guard_accepts_only_absent_terraform_state(tmp_path: Path) -> None:
+def test_terraform_state_guard_accepts_only_absent_state(tmp_path: Path) -> None:
     manager = _TerraformStateManager(tmp_path, "missing")
 
     manager._reject_terraform_state(_state(stage="ONBOARDED"))
@@ -1120,7 +1120,7 @@ def test_cli_1_8_guard_accepts_only_absent_terraform_state(tmp_path: Path) -> No
     ]
 
 
-def test_cli_1_8_guard_rejects_local_or_remote_terraform_state(tmp_path: Path) -> None:
+def test_terraform_state_guard_rejects_local_or_remote_state(tmp_path: Path) -> None:
     local_state = (
         tmp_path / ".databricks" / "bundle" / "release_v050" / "terraform" / "terraform.tfstate"
     )
@@ -1150,7 +1150,9 @@ def test_cli_1_8_guard_rejects_local_or_remote_terraform_state(tmp_path: Path) -
     assert remote_direct_manager.workspace.paths[-1].endswith("state/resources.json")
 
 
-def test_cli_1_8_guard_fails_closed_when_remote_state_cannot_be_read(tmp_path: Path) -> None:
+def test_terraform_state_guard_fails_closed_when_remote_state_cannot_be_read(
+    tmp_path: Path,
+) -> None:
     manager = _TerraformStateManager(tmp_path, "error")
 
     with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_TERRAFORM_STATE_CHECK_FAILED"):
@@ -1226,7 +1228,7 @@ def test_resume_requires_identical_local_remote_direct_state_and_bound_identity(
         ReleaseManager._reject_terraform_state(manager, state)
 
 
-def test_cli_1_8_direct_state_accepts_exact_permission_subresources(tmp_path: Path) -> None:
+def test_direct_state_accepts_exact_permission_subresources(tmp_path: Path) -> None:
     raw = _direct_state_raw(include_app_permissions=True)
     path = tmp_path / ".databricks" / "bundle" / "release_v050" / "resources.json"
     path.parent.mkdir(parents=True)

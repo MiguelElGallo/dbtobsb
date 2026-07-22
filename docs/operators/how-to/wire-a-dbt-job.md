@@ -1,6 +1,6 @@
 # Wire a supported dbt Job
 
-Use this guide to onboard one dbt Core project into the sealed dbtobsb observed Job. The supported release does not scan or rewrite arbitrary Jobs and does not depend on Databricks returning a native dbt artifact link.
+Use this guide to onboard one dbt Core project into the sealed dbtobsb observed Job. The release candidate does not scan or rewrite arbitrary Jobs and does not depend on Databricks returning a native dbt artifact link.
 
 ## Generate the immutable project and Job patch
 

@@ -25,7 +25,7 @@ GCP, Databricks Free Edition, and the retired Community Edition. Databricks does
 not currently call the personal-use product “Personal Edition”; personal-use
 signup means Free Edition and is unsupported by dbtobsb.
 
-For the v0.5.0 supported release, the machine-readable support manifest and
+For the v0.5.0 release candidate, the machine-readable support manifest and
 `docs/releases/v0.5.0-support-contract.md` are authoritative about included
 components. The detailed separated-duty, migration-ledger, runtime-trust,
 controlled-action, enrichment, upgrade, and rollback rules below apply only

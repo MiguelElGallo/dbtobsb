@@ -802,6 +802,8 @@ def test_real_hatch_build_produces_three_fully_inspected_wheels(tmp_path: Path) 
         version_seed_raw=version_seed,
         phase="candidate",
     )
+    release_package_version = "0.5.0"
+    assert version != release_package_version
 
     first = runtime_seal._build_private_artifact_set(
         work=tmp_path / "first",
@@ -849,7 +851,7 @@ def test_real_hatch_build_produces_three_fully_inspected_wheels(tmp_path: Path) 
             next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))
         ).decode()
         assert f"Requires-Dist: dbtobsb-contracts=={version}" in metadata
-        assert "Requires-Dist: dbtobsb-contracts==0.5.0\n" not in metadata
+        assert f"Requires-Dist: dbtobsb-contracts=={release_package_version}\n" not in metadata
     with zipfile.ZipFile(collector_wheel) as archive:
         metadata = archive.read(
             next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))

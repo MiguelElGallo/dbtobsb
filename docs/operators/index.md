@@ -8,4 +8,4 @@ Current operator guidance is part of the reader documentation:
 - [Explanation](../site/explanation/index.md)
 
 Files below `docs/operators` are retained as development history. They are not the
-navigation or starting point for the supported `v0.5.0` release.
+navigation or starting point for the `v0.5.0` release candidate.

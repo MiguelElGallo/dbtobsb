@@ -1,6 +1,6 @@
 # Security and permissions
 
-The private `v0.5.0` release keeps evidence customer-local and is designed for regulated deployment constraints. Its supported route uses one combined administrator; it does not claim independent separation of duties.
+The private `v0.5.0` release candidate keeps evidence customer-local and is designed for regulated deployment constraints. Its candidate route uses one combined administrator; it does not claim independent separation of duties before or after qualification.
 
 ## Trust boundary
 
@@ -26,7 +26,7 @@ The attended launcher deploys one temporary bootstrap Job that runs as the deplo
 
 ## Minimum Unity Catalog capabilities
 
-The supported route uses the exact grant manifest rendered by the attended installer.
+The candidate route uses the exact grant manifest rendered by the attended installer.
 
 An installer that creates a new schema needs `USE CATALOG` and `CREATE SCHEMA` on the selected catalog. Databricks documents those requirements in [Create schemas](https://learn.microsoft.com/en-us/azure/databricks/schemas/create-schema). Within an existing dedicated schema, object creation additionally requires the applicable schema create privileges.
 

@@ -1,6 +1,6 @@
-# Install the private v0.5 release
+# Qualify the private v0.5 release candidate
 
-This is the supported route for one Azure Databricks workspace and one dbt Core project. The installer discovers existing customer resources, shows the selected boundary, and leaves the read-only App stopped. It does not require an external telemetry service or Databricks Marketplace.
+This retained operator page describes the candidate route for one Azure Databricks workspace and one dbt Core project. The installer discovers existing customer resources, shows the selected boundary, and leaves the read-only App stopped. The candidate is not supported until live Azure acceptance passes. It does not require an external telemetry service or Databricks Marketplace.
 
 > **Azure Databricks only:** Do not use this procedure with Databricks Free
 > Edition, the retired Community Edition, AWS, or GCP. “Personal Edition” is not a
