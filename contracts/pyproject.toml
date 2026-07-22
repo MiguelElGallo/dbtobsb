@@ -1,6 +1,6 @@
 [project]
 name = "dbtobsb-contracts"
-version = "0.4.0"
+version = "0.5.0"
 description = "Executable support and command contracts for dbtobsb"
 requires-python = ">=3.12,<3.13"
 dependencies = []

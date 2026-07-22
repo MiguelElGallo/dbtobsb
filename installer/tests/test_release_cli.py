@@ -37,9 +37,9 @@ from dbtobsb_installer.release_cli import (
 
 _DIGEST = "a" * 64
 _FINAL_WHEELS = {
-    "contracts": f"dbtobsb_contracts-0.4.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
-    "capture": f"dbtobsb_capture-0.4.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
-    "collector": f"dbtobsb_collector-0.4.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
+    "contracts": f"dbtobsb_contracts-0.5.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
+    "capture": f"dbtobsb_capture-0.5.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
+    "collector": f"dbtobsb_collector-0.5.0+dbtobsb.final.{_DIGEST}-py3-none-any.whl",
 }
 _CANDIDATE_WHEELS = {
     key: value.replace("+dbtobsb.final.", "+dbtobsb.candidate.")
@@ -130,10 +130,10 @@ def _state(*, stage: str = "INSTALLED") -> InstallationState:
     has_direct_state = stage not in {"CONFIGURED", "ONBOARDED"}
     return InstallationState(
         schema="dbtobsb.installer-state.v2",
-        release_version="0.4.0",
+        release_version="0.5.0",
         support_contract_sha256=load_support_manifest().canonical_sha256,
         release_source_commit=_COMMIT,
-        databricks_cli_sha256=("e6107da75e9dfc16c462563e11958c65689ea47d04d54cb4b31d0eb961f40be7"),
+        databricks_cli_sha256=("5ee48369334289c1828a1fd96b6aa5e7f54c8adb5b1ab7cc97da625c9adf2782"),
         stage=stage,
         profile="paid-azure-test",
         host="https://adb-1234567890123456.10.azuredatabricks.net",
@@ -383,7 +383,7 @@ def test_agent_install_docs_do_not_reintroduce_repeated_approval_prompts() -> No
         "docs/operators/tutorials/install-private-release.md": (
             "enters `APPROVE` itself at matching previews"
         ),
-        "docs/releases/v0.4.0-support-contract.md": "Agent task authorization",
+        "docs/releases/v0.5.0-support-contract.md": "Agent task authorization",
     }
 
     for relative_path, required_text in expected_policy.items():
@@ -637,7 +637,9 @@ def test_world_readable_state_is_rejected(tmp_path: Path) -> None:
         _load_state(tmp_path)
 
 
-def test_v04_rejects_legacy_state_before_lifecycle_or_success(tmp_path: Path) -> None:
+def test_current_release_rejects_legacy_state_before_lifecycle_or_success(
+    tmp_path: Path,
+) -> None:
     legacy = tmp_path / ".dbtobsb" / "release-installation-v1.json"
     legacy.parent.mkdir()
     legacy.write_text('{"schema":"dbtobsb.installer-state.v1","stage":"INSTALLED"}\n')
@@ -661,21 +663,21 @@ def test_v04_rejects_legacy_state_before_lifecycle_or_success(tmp_path: Path) ->
             {
                 "final_wheels": {
                     **_FINAL_WHEELS,
-                    "collector": _FINAL_WHEELS["collector"].replace("0.4.0", "0.3.0"),
+                    "collector": _FINAL_WHEELS["collector"].replace("0.5.0", "0.4.0"),
                 }
             },
             "DBTOBSB_INSTALLER_STATE_INVALID",
         ),
     ],
 )
-def test_v04_state_rejects_unknown_or_mixed_release_identity(
+def test_current_release_state_rejects_unknown_or_mixed_release_identity(
     changes: dict[str, Any], code: str
 ) -> None:
     with pytest.raises(ReleaseCliError, match=code):
         replace(_state(), **changes)
 
 
-def test_v04_state_rejects_changed_source_before_success(tmp_path: Path) -> None:
+def test_current_release_state_rejects_changed_source_before_success(tmp_path: Path) -> None:
     _save_state(tmp_path, replace(_state(), release_source_commit="c" * 40))
     manager = _LifecycleManager(tmp_path)
 
@@ -1025,7 +1027,7 @@ def _preflight(*, warehouse_state: str = "STOPPED") -> BootstrapPreflight:
                 "databricks_cli_sha256": _DIGEST,
                 "release_source_commit": _COMMIT,
                 "support_contract_sha256": _DIGEST,
-                "version": "0.4.0",
+                "version": "0.5.0",
             },
         }
     )
@@ -1052,7 +1054,7 @@ def test_exact_preview_is_digest_bound_and_denial_has_zero_mutation(tmp_path: Pa
 
     output = cast(io.StringIO, manager.output).getvalue()
     assert f"Preview SHA-256: {snapshot.sha256}" in output
-    assert "v0.4.0 fresh installation only" in output
+    assert "v0.5.0 fresh installation only" in output
     assert "App deployment: one bounded check, followed by stopped ACL readback" in output
     assert "dbtobsb does not manage or stop it" in output
     for expected in (
@@ -1107,19 +1109,21 @@ def test_app_readback_requires_exact_resource_names_permissions_and_targets(
     assert not manager._app_resources_match(_state(), changed)
 
 
-def test_cli_1_8_guard_accepts_only_absent_terraform_state(tmp_path: Path) -> None:
+def test_terraform_state_guard_accepts_only_absent_state(tmp_path: Path) -> None:
     manager = _TerraformStateManager(tmp_path, "missing")
 
     manager._reject_terraform_state(_state(stage="ONBOARDED"))
 
     assert manager.workspace.paths == [
-        "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/state/terraform.tfstate",
-        "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/state/resources.json",
+        "/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/state/terraform.tfstate",
+        "/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/state/resources.json",
     ]
 
 
-def test_cli_1_8_guard_rejects_local_or_remote_terraform_state(tmp_path: Path) -> None:
-    local_state = tmp_path / ".databricks" / "bundle" / "smoke" / "terraform" / "terraform.tfstate"
+def test_terraform_state_guard_rejects_local_or_remote_state(tmp_path: Path) -> None:
+    local_state = (
+        tmp_path / ".databricks" / "bundle" / "release_v050" / "terraform" / "terraform.tfstate"
+    )
     local_state.parent.mkdir(parents=True)
     local_state.write_text("{}", encoding="utf-8")
     local_manager = _TerraformStateManager(tmp_path, "missing")
@@ -1129,7 +1133,7 @@ def test_cli_1_8_guard_rejects_local_or_remote_terraform_state(tmp_path: Path) -
     assert local_manager.workspace.paths == []
 
     local_state.unlink()
-    direct_state = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    direct_state = tmp_path / ".databricks" / "bundle" / "release_v050" / "resources.json"
     direct_state.write_text("{}", encoding="utf-8")
     with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_FRESH_INSTALL_REQUIRED"):
         local_manager._reject_terraform_state(_state(stage="ONBOARDED"))
@@ -1146,7 +1150,9 @@ def test_cli_1_8_guard_rejects_local_or_remote_terraform_state(tmp_path: Path) -
     assert remote_direct_manager.workspace.paths[-1].endswith("state/resources.json")
 
 
-def test_cli_1_8_guard_fails_closed_when_remote_state_cannot_be_read(tmp_path: Path) -> None:
+def test_terraform_state_guard_fails_closed_when_remote_state_cannot_be_read(
+    tmp_path: Path,
+) -> None:
     manager = _TerraformStateManager(tmp_path, "error")
 
     with pytest.raises(ReleaseCliError, match="DBTOBSB_INSTALLER_TERRAFORM_STATE_CHECK_FAILED"):
@@ -1172,7 +1178,7 @@ def _direct_state_raw(
     return (
         json.dumps(
             {
-                "cli_version": "1.8.0",
+                "cli_version": "1.9.0",
                 "lineage": "12345678-1234-1234-1234-123456789abc",
                 "serial": 7,
                 "state": resources,
@@ -1203,7 +1209,7 @@ def test_resume_requires_identical_local_remote_direct_state_and_bound_identity(
     tmp_path: Path,
 ) -> None:
     raw = _direct_state_raw()
-    path = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    path = tmp_path / ".databricks" / "bundle" / "release_v050" / "resources.json"
     path.parent.mkdir(parents=True)
     path.write_bytes(raw)
 
@@ -1222,9 +1228,9 @@ def test_resume_requires_identical_local_remote_direct_state_and_bound_identity(
         ReleaseManager._reject_terraform_state(manager, state)
 
 
-def test_cli_1_8_direct_state_accepts_exact_permission_subresources(tmp_path: Path) -> None:
+def test_direct_state_accepts_exact_permission_subresources(tmp_path: Path) -> None:
     raw = _direct_state_raw(include_app_permissions=True)
-    path = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    path = tmp_path / ".databricks" / "bundle" / "release_v050" / "resources.json"
     path.parent.mkdir(parents=True)
     path.write_bytes(raw)
     manager = _LifecycleManager(tmp_path)
@@ -1241,7 +1247,7 @@ def test_bootstrap_verifies_direct_state_before_resumed_mutation_or_success(
     tmp_path: Path,
 ) -> None:
     raw = _direct_state_raw()
-    path = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    path = tmp_path / ".databricks" / "bundle" / "release_v050" / "resources.json"
     path.parent.mkdir(parents=True)
     path.write_bytes(raw)
 
@@ -1318,7 +1324,7 @@ def test_bootstrap_verifies_direct_state_before_resumed_mutation_or_success(
 def test_direct_state_changed_bytes_require_higher_serial(tmp_path: Path) -> None:
     original = _direct_state_raw()
     changed = original.rstrip() + b" \n"
-    path = tmp_path / ".databricks" / "bundle" / "smoke" / "resources.json"
+    path = tmp_path / ".databricks" / "bundle" / "release_v050" / "resources.json"
     path.parent.mkdir(parents=True)
     path.write_bytes(changed)
     manager = _LifecycleManager(tmp_path)
@@ -1338,7 +1344,7 @@ def test_direct_state_changed_bytes_require_higher_serial(tmp_path: Path) -> Non
 def test_app_deployment_match_requires_exact_snapshot_source_and_environment() -> None:
     deployment = {
         "mode": "SNAPSHOT",
-        "source_code_path": "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/files/app",
+        "source_code_path": "/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/files/app",
         "env_vars": [
             {"name": "DBTOBSB_WAREHOUSE_ID"},
             {"name": "DBTOBSB_RUN_HEALTH_VIEW"},
@@ -1593,7 +1599,7 @@ def test_app_deploy_uses_one_apply_one_deployment_and_one_stopped_acl_update(
     deployment = {
         "deployment_id": "deployment",
         "mode": "SNAPSHOT",
-        "source_code_path": "/Workspace/dbtobsb/.bundle/dbtobsb/smoke/files/app",
+        "source_code_path": "/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/files/app",
         "env_vars": [
             {"name": "DBTOBSB_WAREHOUSE_ID"},
             {"name": "DBTOBSB_RUN_HEALTH_VIEW"},

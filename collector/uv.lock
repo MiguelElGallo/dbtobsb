@@ -128,7 +128,7 @@ wheels = [
 
 [[package]]
 name = "dbtobsb-capture"
-version = "0.4.0"
+version = "0.5.0"
 source = { directory = "../capture" }
 dependencies = [
     { name = "attrs" },
@@ -161,7 +161,7 @@ dev = [
 
 [[package]]
 name = "dbtobsb-collector"
-version = "0.4.0"
+version = "0.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "databricks-sdk" },
@@ -192,7 +192,7 @@ dev = [
 
 [[package]]
 name = "dbtobsb-contracts"
-version = "0.4.0"
+version = "0.5.0"
 source = { directory = "../contracts" }
 
 [package.metadata]

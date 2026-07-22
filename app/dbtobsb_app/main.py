@@ -43,7 +43,7 @@ from dbtobsb_app.ui import (
 )
 
 SERVICE_NAME = "dbtobsb"
-SERVICE_VERSION = "0.4.0"
+SERVICE_VERSION = "0.5.0"
 LOGO_PATH = Path(__file__).parent / "static" / "logo.png"
 
 RepositoryFactory = Callable[[ResourceBindings], ObservabilityRepository]

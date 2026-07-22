@@ -1,8 +1,7 @@
 # Supported environment
 
-dbtobsb `v0.4.0` is supported only for the combination on this page. A newer
-compatible-looking version is not supported until it passes the same tests and live
-Azure qualification.
+The qualified private dbtobsb `v0.5.0` release is limited to the combination on
+this page. Its immutable artifacts passed the complete live Azure qualification.
 
 !!! danger "Not Databricks Free Edition"
 
@@ -20,7 +19,7 @@ Azure qualification.
 | Workspace offering | Customer Azure Databricks workspace; Free Edition unsupported |
 | Workspace URL | Canonical `https://adb-<workspace-id>.<number>.azuredatabricks.net` URL |
 | Distribution | Private Databricks App and Declarative Automation Bundle |
-| Databricks CLI | `1.8.0` |
+| Databricks CLI | `1.9.0` |
 | Bundle engine | Direct, the built-in Bundle deployment engine |
 | Installer workstation | Managed Apple-silicon Mac |
 | Local Python | `3.12` |

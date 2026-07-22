@@ -65,9 +65,9 @@ _VARIABLE_DEFAULTS = {
     "observed_service_principal_name": "replace_me",
     "collector_service_principal_name": "replace_me",
     "job_manager_group_name": "replace_me",
-    "contracts_wheel_filename": "dbtobsb_contracts-0.4.0-py3-none-any.whl",
-    "capture_wheel_filename": "dbtobsb_capture-0.4.0-py3-none-any.whl",
-    "collector_wheel_filename": "dbtobsb_collector-0.4.0-py3-none-any.whl",
+    "contracts_wheel_filename": "dbtobsb_contracts-0.5.0-py3-none-any.whl",
+    "capture_wheel_filename": "dbtobsb_capture-0.5.0-py3-none-any.whl",
+    "collector_wheel_filename": "dbtobsb_collector-0.5.0-py3-none-any.whl",
 }
 _EXPECTED_ARTIFACTS = {
     "contracts_wheel": {
@@ -361,12 +361,15 @@ def _validate_bundle_envelope(root: Mapping[str, object]) -> None:
         _fail("DBTOBSB_BUNDLE_ARTIFACTS_INVALID")
 
     targets = _mapping(root.get("targets"), code="DBTOBSB_BUNDLE_TARGET_INVALID")
-    if frozenset(targets) != {"smoke"}:
+    if frozenset(targets) != {"release_v050"}:
         _fail("DBTOBSB_BUNDLE_TARGET_INVALID")
-    smoke = _mapping(targets.get("smoke"), code="DBTOBSB_BUNDLE_TARGET_INVALID")
-    if frozenset(smoke) != {"default", "workspace"} or smoke.get("default") is not True:
+    release_target = _mapping(targets.get("release_v050"), code="DBTOBSB_BUNDLE_TARGET_INVALID")
+    if (
+        frozenset(release_target) != {"default", "workspace"}
+        or release_target.get("default") is not True
+    ):
         _fail("DBTOBSB_BUNDLE_TARGET_INVALID")
-    workspace = _mapping(smoke.get("workspace"), code="DBTOBSB_BUNDLE_TARGET_INVALID")
+    workspace = _mapping(release_target.get("workspace"), code="DBTOBSB_BUNDLE_TARGET_INVALID")
     if workspace != {"root_path": "/Workspace/dbtobsb/.bundle/${bundle.name}/${bundle.target}"}:
         _fail("DBTOBSB_BUNDLE_TARGET_INVALID")
 

@@ -44,15 +44,15 @@ _GROUP_KILL_GRACE_SECONDS = 0.75
 _MAX_MANIFEST_BYTES = 4_096
 _VERIFIED_EXECUTABLE_TOKEN = object()
 _EXPECTED_CLI = {
-    "commit": "3b9fe151888df8fe937090e5f2be0a5c6dc0ff18",
+    "commit": "51ce3c7c5c4d5ba7ea20b8c8742f8ee995b3f6f6",
     "module": "github.com/databricks/cli",
-    "module_sum": "h1:+1aoZobpIBqGPuS1gyveIFeOC1BVK2jn8G6qYaQ/GwM=",
-    "version": "v1.8.0",
+    "module_sum": "h1:LY1uF6TP+3MT+VuIziaKLd1jjHua+OEeXd15uu4OxU4=",
+    "version": "v1.9.0",
 }
 _EXPECTED_SDK = {
     "module": "github.com/databricks/databricks-sdk-go",
-    "module_sum": "h1:Vmif0i0rbu7kgphoEBPRroZNd5uLBOITvjU4dr2lwXY=",
-    "version": "v0.154.0",
+    "module_sum": "h1:vwgT/11y2vMw41BxcKbUUqarg45lmoEdukk9yYJg5AM=",
+    "version": "v0.160.0",
 }
 
 try:

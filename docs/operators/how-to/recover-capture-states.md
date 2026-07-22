@@ -56,7 +56,7 @@ Do not replace `run-dbt` with a shell wrapper or caller-supplied `--target-path`
 
 When retrieval succeeded, the exact archive is already stored in the restricted managed Volume before parsing. Keep access to that Volume and `dbt_artifact_registry` narrower than access to the health views.
 
-The v0.4 release does not provide a supported raw-artifact export or automated retention workflow. If policy requires investigation, an authorized custodian should follow the customer's approved Databricks procedure without copying content into an issue, chat, email, or ordinary support ticket.
+The v0.5 release does not provide a supported raw-artifact export or automated retention workflow. If policy requires investigation, an authorized custodian should follow the customer's approved Databricks procedure without copying content into an issue, chat, email, or ordinary support ticket.
 
 ## 5. Run a new attempt
 

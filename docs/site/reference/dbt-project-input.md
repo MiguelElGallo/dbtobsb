@@ -1,7 +1,7 @@
 # dbt project input
 
 This page defines the dbt Core project that `dbtobsb bootstrap` accepts in version
-`0.4.0`. For the step-by-step path, use
+`0.5.0`. For the step-by-step path, use
 [Prepare a dbt project](../how-to-guides/add-a-dbt-project.md).
 
 ## Source and installed files

@@ -1,8 +1,8 @@
 # Compatibility and limitations
 
-This page describes the qualified private `v0.4.0` release. Its complete Azure
+This page describes the qualified private `v0.5.0` release. Its complete Azure
 qualification is recorded in the
-[v0.4.0 acceptance evidence](../../evidence/v0.4.0-live-acceptance-2026-07-22.md).
+[v0.5.0 acceptance evidence](../../evidence/v0.5.0-live-acceptance-2026-07-22.md).
 Marketplace distribution remains out of scope.
 
 > **Platform boundary:** This release does not support Databricks Free Edition,
@@ -16,7 +16,7 @@ Marketplace distribution remains out of scope.
 | Component | Qualified value |
 | --- | --- |
 | Cloud | Azure Databricks only; Free Edition excluded |
-| Deployment CLI | Databricks CLI `1.8.0` |
+| Deployment CLI | Databricks CLI `1.9.0` |
 | Bundle engine | Direct |
 | dbt process compute | Serverless Jobs environment client `5` |
 | dbt SQL target | Existing Databricks SQL warehouse |

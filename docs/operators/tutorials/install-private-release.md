@@ -1,6 +1,6 @@
-# Install the private v0.4 release
+# Qualify the private v0.5 release candidate
 
-This is the supported route for one Azure Databricks workspace and one dbt Core project. The installer discovers existing customer resources, shows the selected boundary, and leaves the read-only App stopped. It does not require an external telemetry service or Databricks Marketplace.
+This retained operator page describes the candidate route for one Azure Databricks workspace and one dbt Core project. The installer discovers existing customer resources, shows the selected boundary, and leaves the read-only App stopped. The candidate is not supported until live Azure acceptance passes. It does not require an external telemetry service or Databricks Marketplace.
 
 > **Azure Databricks only:** Do not use this procedure with Databricks Free
 > Edition, the retired Community Edition, AWS, or GCP. “Personal Edition” is not a
@@ -10,7 +10,7 @@ This is the supported route for one Azure Databricks workspace and one dbt Core 
 
 ## Before you begin
 
-Use a managed Apple-silicon Mac with Python 3.12, `uv`, and Databricks CLI `1.8.0`. Run from a private checkout of this repository. The signed-in person must use a named Azure Databricks OAuth U2M profile and must be both account and workspace administrator.
+Use a managed Apple-silicon Mac with Python 3.12, `uv`, and Databricks CLI `1.9.0`. Run from a private checkout of this repository. The signed-in person must use a named Azure Databricks OAuth U2M profile and must be both account and workspace administrator.
 
 Prepare these customer-owned resources first:
 
@@ -45,7 +45,7 @@ Installation may take several minutes while Databricks allocates serverless comp
 
 ## Resume safely
 
-The private `.dbtobsb/release-installation-v2.json` file records the last completed stage and is created with owner-only permissions. If the terminal or network is interrupted, do not delete it and do not edit generated Bundle files. v0.4.0 has no upgrade or legacy-state adoption path; a v1 state or prior product installation blocks before mutation. Run the same command again:
+The private `.dbtobsb/release-installation-v2.json` file records the last completed stage and is created with owner-only permissions. If the terminal or network is interrupted, do not delete it and do not edit generated Bundle files. v0.5.0 has no upgrade or legacy-state adoption path; a v1 state or prior product installation blocks before mutation. Run the same command again:
 
 ```console
 uv run --project installer --no-sync dbtobsb bootstrap

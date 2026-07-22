@@ -14,7 +14,7 @@ so the same command can resume safely.
 
 ## Supported responsibility model
 
-One combined administrator installs `v0.4.0`. This person is an Azure Databricks
+One combined administrator installs `v0.5.0`. This person is an Azure Databricks
 account and workspace administrator and owns the selected evidence schema. The
 release does not claim independent approval or separation of duties.
 
@@ -65,7 +65,7 @@ Give ordinary readers parent `USE` privileges and `SELECT` on:
 Do not give ordinary App or dashboard users access to the raw Volume, staging
 Volume, archive locator, or restricted tables.
 
-The v0.4 charts are part of the existing App. They query only `dbt_run_health`
+The v0.5 charts are part of the existing App. They query only `dbt_run_health`
 and `dbt_node_health` through the App's existing bindings. They do not create an
 AI/BI dashboard, iframe, table, view, grant, or external telemetry connection.
 
@@ -76,4 +76,4 @@ prefixes. Do not paste raw artifacts, logs, SQL, environment values, native
 tracebacks, or operational identifiers into an ordinary support channel.
 
 The customer decides access, retention, export, legal hold, backup, and deletion.
-`v0.4.0` does not automate those policies.
+`v0.5.0` does not automate those policies.

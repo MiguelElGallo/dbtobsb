@@ -162,7 +162,7 @@ _PACKAGE_VERSIONS = {
     "dbt-protos": "1.0.541",
     "dbt-spark": "1.10.3",
 }
-_EXPECTED_CANONICAL_SHA256 = "00cd8d3633474ad8b5e8a9153aa55a44f02e00fc90ef61fbab7a8f302474a5e2"
+_EXPECTED_CANONICAL_SHA256 = "d5fd46343f8bf09590f39641301b81fa623aa4c2e8308396c54d3648889b2715"
 
 
 def _mapping(value: Any, *, name: str, keys: set[str]) -> dict[str, Any]:
@@ -243,7 +243,7 @@ def parse_support_manifest(raw: bytes) -> SupportManifest:
         "release_state": "FINAL",
         "cloud": "AZURE_DATABRICKS",
         "bundle_engine": "DIRECT",
-        "databricks_cli": "1.8.0",
+        "databricks_cli": "1.9.0",
         "bootstrap_compute": "SERVERLESS_LAKEFLOW_PYTHON_WHEEL_JOB",
         "dbt_task_compute": "SERVERLESS_LAKEFLOW_JOB",
         "app_compute": "DATABRICKS_APP_SERVERLESS",
@@ -359,11 +359,11 @@ def parse_support_manifest(raw: bytes) -> SupportManifest:
         "schema_requirement": "EXISTING_DEDICATED_SCHEMA_SESSION_USER_IS_OWNER",
         "bootstrap_run_as": "BUNDLE_DEPLOYER_COMBINED_ADMIN",
         "bootstrap_job_lifecycle": "TEMPORARY_REMOVE_AFTER_TERMINAL_READBACK",
-        "native_mutation_registry": "FOUNDATION_NOT_INVOKED_V0_4",
+        "native_mutation_registry": "FOUNDATION_NOT_INVOKED_V0_5",
         "bundle_sql_hooks": False,
         "bootstrap_idempotency": "EXACT_PRE_BINDING_ONLY",
         "post_binding_resume": "LIFECYCLE_READBACK_NO_BOOTSTRAP_REPLAY",
-        "runtime_trust_ledger": "NOT_IN_V0_4_SUPPORTED_PATH",
+        "runtime_trust_ledger": "NOT_IN_V0_5_SUPPORTED_PATH",
     }
     if installation != expected_installation:
         raise ValueError("DBTOBSB_SUPPORT_MANIFEST_INSTALLATION_INVALID")

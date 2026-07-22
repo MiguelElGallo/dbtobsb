@@ -30,18 +30,18 @@ PROTOCOL = "dbtobsb.native-bridge.v1"
 WHEEL_TAG = "py3-none-macosx_11_0_arm64"
 SOURCE_DATE_EPOCH = "315532800"
 EXPECTED_CLI = {
-    "commit": "3b9fe151888df8fe937090e5f2be0a5c6dc0ff18",
+    "commit": "51ce3c7c5c4d5ba7ea20b8c8742f8ee995b3f6f6",
     "module": "github.com/databricks/cli",
-    "module_sum": "h1:+1aoZobpIBqGPuS1gyveIFeOC1BVK2jn8G6qYaQ/GwM=",
-    "version": "v1.8.0",
+    "module_sum": "h1:LY1uF6TP+3MT+VuIziaKLd1jjHua+OEeXd15uu4OxU4=",
+    "version": "v1.9.0",
 }
-EXPECTED_CLI_SHA256 = "e6107da75e9dfc16c462563e11958c65689ea47d04d54cb4b31d0eb961f40be7"
+EXPECTED_CLI_SHA256 = "5ee48369334289c1828a1fd96b6aa5e7f54c8adb5b1ab7cc97da625c9adf2782"
 MACHO_64_MAGIC = 0xFEEDFACF
 CPU_TYPE_ARM64 = 0x0100000C
 EXPECTED_SDK = {
     "module": "github.com/databricks/databricks-sdk-go",
-    "module_sum": "h1:Vmif0i0rbu7kgphoEBPRroZNd5uLBOITvjU4dr2lwXY=",
-    "version": "v0.154.0",
+    "module_sum": "h1:vwgT/11y2vMw41BxcKbUUqarg45lmoEdukk9yYJg5AM=",
+    "version": "v0.160.0",
 }
 
 

@@ -7,10 +7,10 @@ if [[ $- == *x* ]]; then
   exit 2
 fi
 
-readonly REQUIRED_CLI_VERSION='Databricks CLI v1.8.0'
+readonly REQUIRED_CLI_VERSION='Databricks CLI v1.9.0'
 readonly APP_NAME='dbtobsb-smoke'
 readonly APP_RESOURCE_KEY='dbtobsb_smoke'
-readonly BUNDLE_TARGET='smoke'
+readonly BUNDLE_TARGET='release_v050'
 readonly EXPECTED_COMPUTE_SIZE='MEDIUM'
 readonly PROFILE="${DBTOBSB_DATABRICKS_PROFILE:?Set DBTOBSB_DATABRICKS_PROFILE to an OAuth U2M profile.}"
 readonly EXPECTED_HOST="${DBTOBSB_EXPECTED_HOST:?Set DBTOBSB_EXPECTED_HOST to the exact workspace URL.}"

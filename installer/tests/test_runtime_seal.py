@@ -38,15 +38,15 @@ from dbtobsb_installer.runtime_seal import (
 )
 
 PROFILE = "dbtobsb-smoke"
-TARGET = "smoke"
+TARGET = "release_v050"
 HOST = "https://adb-1234567890123456.10.azuredatabricks.net"
 WORKSPACE_ID = 1234567890123456
-WORKSPACE_ROOT = "/Workspace/dbtobsb/.bundle/dbtobsb/smoke"
+WORKSPACE_ROOT = f"/Workspace/dbtobsb/.bundle/dbtobsb/{TARGET}"
 ARTIFACT_ROOT = f"{WORKSPACE_ROOT}/artifacts/.internal"
 RESOLVED_DEPENDENCIES = (
-    f"{ARTIFACT_ROOT}/dbtobsb_contracts-0.4.0-py3-none-any.whl",
-    f"{ARTIFACT_ROOT}/dbtobsb_capture-0.4.0-py3-none-any.whl",
-    f"{ARTIFACT_ROOT}/dbtobsb_collector-0.4.0-py3-none-any.whl",
+    f"{ARTIFACT_ROOT}/dbtobsb_contracts-0.5.0-py3-none-any.whl",
+    f"{ARTIFACT_ROOT}/dbtobsb_capture-0.5.0-py3-none-any.whl",
+    f"{ARTIFACT_ROOT}/dbtobsb_collector-0.5.0-py3-none-any.whl",
     "databricks-sdk==0.117.0",
 )
 
@@ -122,7 +122,7 @@ def _summary(*, host: str | None = HOST) -> bytes:
     return json.dumps(
         {
             "bundle": {
-                "databricks_cli_version": "1.8.0",
+                "databricks_cli_version": "1.9.0",
                 "name": "dbtobsb",
                 "engine": "direct",
                 "target": TARGET,
@@ -802,6 +802,8 @@ def test_real_hatch_build_produces_three_fully_inspected_wheels(tmp_path: Path) 
         version_seed_raw=version_seed,
         phase="candidate",
     )
+    release_package_version = "0.5.0"
+    assert version != release_package_version
 
     first = runtime_seal._build_private_artifact_set(
         work=tmp_path / "first",
@@ -849,7 +851,7 @@ def test_real_hatch_build_produces_three_fully_inspected_wheels(tmp_path: Path) 
             next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))
         ).decode()
         assert f"Requires-Dist: dbtobsb-contracts=={version}" in metadata
-        assert "Requires-Dist: dbtobsb-contracts==0.4.0\n" not in metadata
+        assert f"Requires-Dist: dbtobsb-contracts=={release_package_version}\n" not in metadata
     with zipfile.ZipFile(collector_wheel) as archive:
         metadata = archive.read(
             next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))

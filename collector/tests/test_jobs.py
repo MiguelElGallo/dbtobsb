@@ -36,9 +36,9 @@ def _enum(value: str) -> SimpleNamespace:
 
 
 _COLLECTOR_DEPENDENCIES = (
-    "/Workspace/product/artifacts/.internal/dbtobsb_contracts-0.4.0-py3-none-any.whl",
-    "/Workspace/product/artifacts/.internal/dbtobsb_capture-0.4.0-py3-none-any.whl",
-    "/Workspace/product/artifacts/.internal/dbtobsb_collector-0.4.0-py3-none-any.whl",
+    "/Workspace/product/artifacts/.internal/dbtobsb_contracts-0.5.0-py3-none-any.whl",
+    "/Workspace/product/artifacts/.internal/dbtobsb_capture-0.5.0-py3-none-any.whl",
+    "/Workspace/product/artifacts/.internal/dbtobsb_collector-0.5.0-py3-none-any.whl",
     "databricks-sdk==0.117.0",
 )
 _SOURCE_FILES = {
@@ -128,7 +128,7 @@ def _resolved_commands() -> list[str]:
 
 def _resolved_runner_task() -> SimpleNamespace:
     project = (
-        "/Workspace/Users/reviewer@example.com/.bundle/dbtobsb/smoke/files/"
+        "/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/files/"
         f"{_policy().project_directory.removeprefix('./')}"
     )
     configured = [
@@ -433,7 +433,7 @@ def _task(
     dbt_overrides: dict[str, Any] | None = None,
 ) -> SimpleNamespace:
     resolved_project_directory = project_directory or (
-        "/Workspace/Users/reviewer@example.com/.bundle/dbtobsb/smoke/files/"
+        "/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/files/"
         f"{_policy().project_directory.removeprefix('./')}"
     )
     dbt_task = SimpleNamespace(

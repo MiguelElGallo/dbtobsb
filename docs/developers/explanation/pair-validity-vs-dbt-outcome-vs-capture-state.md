@@ -16,7 +16,7 @@ Conversely, a successful Databricks task cannot make a malformed or mismatched p
 
 ## Why P1.1 does not say `COMPLETE`
 
-The v0.4 capture-state engine also needs to know whether staged artifacts were retrievable, whether required artifacts were present, how early failures and cancellation were represented, and what structured logs prove. P1.1 receives none of that context. Calling a pair `COMPLETE` would overstate the evidence.
+The v0.5 capture-state engine also needs to know whether staged artifacts were retrievable, whether required artifacts were present, how early failures and cancellation were represented, and what structured logs prove. P1.1 receives none of that context. Calling a pair `COMPLETE` would overstate the evidence.
 
 Use `PAIR_VALID` and `PAIR_INVALID` only for this local contract. Use native status counts only for dbt outcomes. Use capture-state labels only after the collector supplies and validates the outer attempt evidence.
 

@@ -21,7 +21,7 @@ def test_bundle_keeps_smoke_app_stopped_and_unbound_by_default() -> None:
     )
     app_resource = overlay["resources"]["apps"]["dbtobsb_smoke"]
 
-    assert bundle["targets"]["smoke"]["default"] is True
+    assert bundle["targets"]["release_v050"]["default"] is True
     assert app_resource["lifecycle"]["started"] is False
     assert app_resource["resources"] == []
     assert app_resource["permissions"] == []
@@ -88,7 +88,7 @@ if [ "${DATABRICKS_AUTH_STORAGE:-}" != secure ]; then
 fi
 printf '%s\\n' "$*" >> "$FAKE_CALL_LOG"
 case "$*" in
-  "--version") printf '%s\\n' 'Databricks CLI v1.8.0' ;;
+  "--version") printf '%s\\n' 'Databricks CLI v1.9.0' ;;
   "auth describe"*)
     printf '%s' '{"username":"smoke@example.com","details":{"auth_type":"databricks-cli",'
     printf '%s\\n' '"host":"https://example.azuredatabricks.net"}}'

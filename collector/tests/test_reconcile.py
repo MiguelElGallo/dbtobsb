@@ -39,9 +39,9 @@ def _enum(value: str) -> SimpleNamespace:
 
 
 _COLLECTOR_DEPENDENCIES = (
-    "/Workspace/product/artifacts/.internal/dbtobsb_contracts-0.4.0-py3-none-any.whl",
-    "/Workspace/product/artifacts/.internal/dbtobsb_capture-0.4.0-py3-none-any.whl",
-    "/Workspace/product/artifacts/.internal/dbtobsb_collector-0.4.0-py3-none-any.whl",
+    "/Workspace/product/artifacts/.internal/dbtobsb_contracts-0.5.0-py3-none-any.whl",
+    "/Workspace/product/artifacts/.internal/dbtobsb_capture-0.5.0-py3-none-any.whl",
+    "/Workspace/product/artifacts/.internal/dbtobsb_collector-0.5.0-py3-none-any.whl",
     "databricks-sdk==0.117.0",
 )
 _SOURCE_FILES = {
@@ -122,7 +122,7 @@ def _resolved_commands(*, task_run_id: int, repair_count: int) -> list[str]:
 
 def _dbt_task(*, task_run_id: int, repair_count: int) -> SimpleNamespace:
     project = (
-        "/Workspace/Users/reviewer@example.com/.bundle/dbtobsb/smoke/files/"
+        "/Workspace/dbtobsb/.bundle/dbtobsb/release_v050/files/"
         f"{_policy().project_directory.removeprefix('./')}"
     )
     configured = [

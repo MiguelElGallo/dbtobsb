@@ -44,7 +44,7 @@ CGO_ENABLED=0 go build -trimpath -buildvcs=false -ldflags='-buildid=' ./cmd/dbto
 go run ./cmd/verify-databricks-cli-release /absolute/path/to/databricks
 ```
 
-`release/manifest.json` freezes Databricks CLI `v1.8.0`, release commit `3b9fe151888df8fe937090e5f2be0a5c6dc0ff18`, SDK `v0.154.0`, both Go module sums, and the official darwin-arm64 executable SHA-256. Its parser rejects duplicate and unknown fields. The bridge verifies its embedded dependency versions and sums before environment parsing, authentication, or network setup.
+`release/manifest.json` freezes Databricks CLI `v1.9.0`, release commit `51ce3c7c5c4d5ba7ea20b8c8742f8ee995b3f6f6`, SDK `v0.160.0`, both Go module sums, and the official darwin-arm64 executable SHA-256. Its parser rejects duplicate and unknown fields. The bridge verifies its embedded dependency versions and sums before environment parsing, authentication, or network setup.
 
 ## Parent integration and remaining qualification
 
