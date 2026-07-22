@@ -167,11 +167,11 @@ not claim to count every model in the project, because unselected models do not
 produce a result row. Expand **View chart data as a table** for the exact accessible
 values behind both charts.
 
-![The dbtobsb App showing published collection health and recent runs](../images/app-observability-dashboard.png){ loading="lazy" }
+![The dbtobsb App showing failures and model results over time for four accepted runs](../images/app-observability-dashboard.jpg){ loading="lazy" }
 
-*Historical v0.3 App evidence after loading data. In v0.4, the native trend charts
-appear above the same collection and run history; replace this image only after
-the v0.4 live qualification is complete.*
+*Qualified v0.4 App evidence after loading data. The four accepted runs have zero
+failed node results and three model results each. The exact accessible chart-data
+table is collapsed in this image.*
 
 ## 6. Stop compute
 
